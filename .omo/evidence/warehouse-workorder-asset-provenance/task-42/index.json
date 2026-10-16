@@ -6,11 +6,11 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "mobile/domain/src/commonMain/kotlin/com/duluin/ftth/mobile/domain/MaterialContracts.kt",
+      "path": "mobile/domain/src/commonMain/kotlin/com/karuhun/ftth/mobile/domain/MaterialContracts.kt",
       "sha256": "55d05911a2871b07257e5f016ff4b7c90f33e7dcd13eb870b634998c7d0103a8"
     },
     {
-      "path": "mobile/data/src/commonMain/kotlin/com/duluin/ftth/mobile/data/MaterialRepository.kt",
+      "path": "mobile/data/src/commonMain/kotlin/com/karuhun/ftth/mobile/data/MaterialRepository.kt",
       "sha256": "4fd30a0334686ebcae6117389a9ee4359401c2c21f473daafda172f74aef595d"
     },
     {
@@ -18,23 +18,23 @@
       "kind": "directory",
       "files": [
         {
-          "path": "mobile/feature/materials/src/jvmTest/kotlin/com/duluin/ftth/mobile/materials/MaterialScreenUiTest.kt",
+          "path": "mobile/feature/materials/src/jvmTest/kotlin/com/karuhun/ftth/mobile/materials/MaterialScreenUiTest.kt",
           "sha256": "cd74ffb4469b5ed5428ef0417993ebcd4b0c960316acea043e761da4e82519f8"
         },
         {
-          "path": "mobile/feature/materials/src/commonTest/kotlin/com/duluin/ftth/mobile/materials/MaterialFeatureTest.kt",
+          "path": "mobile/feature/materials/src/commonTest/kotlin/com/karuhun/ftth/mobile/materials/MaterialFeatureTest.kt",
           "sha256": "ca24ed460e6128d7569f691c4936b895a87e6814802823867bbdfbb9b8d61204"
         },
         {
-          "path": "mobile/feature/materials/src/commonMain/kotlin/com/duluin/ftth/mobile/materials/MaterialScreen.kt",
+          "path": "mobile/feature/materials/src/commonMain/kotlin/com/karuhun/ftth/mobile/materials/MaterialScreen.kt",
           "sha256": "f8ff4b5d0b3d86b8106f375adfa7feebeb55cb4f1669dd725d3b14849394ec5e"
         },
         {
-          "path": "mobile/feature/materials/src/commonMain/kotlin/com/duluin/ftth/mobile/materials/MaterialMvi.kt",
+          "path": "mobile/feature/materials/src/commonMain/kotlin/com/karuhun/ftth/mobile/materials/MaterialMvi.kt",
           "sha256": "5dc823efb2a020d98cc76faff54d4785f804d9aa3b7f7a3c62d11db4c8750973"
         },
         {
-          "path": "mobile/feature/materials/src/commonMain/kotlin/com/duluin/ftth/mobile/materials/MaterialFeature.kt",
+          "path": "mobile/feature/materials/src/commonMain/kotlin/com/karuhun/ftth/mobile/materials/MaterialFeature.kt",
           "sha256": "4eaf754029f1bed7855a422afe961203de047e2beb6149a9482ed20c28c81955"
         },
         {
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "path": "mobile/app/src/commonMain/kotlin/com/duluin/ftth/mobile/app/Di.kt",
+      "path": "mobile/app/src/commonMain/kotlin/com/karuhun/ftth/mobile/app/Di.kt",
       "sha256": "5f32494c6de14a4d2ccf6744b0e6895d04a3e4752b0bdf430f5710faaa0214fc"
     },
     {
@@ -106,12 +106,12 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "mobile/domain/src/commonMain/kotlin/com/duluin/ftth/mobile/domain/MaterialContracts.kt",
+        "path": "mobile/domain/src/commonMain/kotlin/com/karuhun/ftth/mobile/domain/MaterialContracts.kt",
         "line": 6,
         "sha256": "55d05911a2871b07257e5f016ff4b7c90f33e7dcd13eb870b634998c7d0103a8"
       },
       {
-        "path": "mobile/data/src/commonMain/kotlin/com/duluin/ftth/mobile/data/MaterialRepository.kt",
+        "path": "mobile/data/src/commonMain/kotlin/com/karuhun/ftth/mobile/data/MaterialRepository.kt",
         "line": 16,
         "sha256": "4fd30a0334686ebcae6117389a9ee4359401c2c21f473daafda172f74aef595d"
       },
@@ -120,7 +120,7 @@
         "directory": true
       },
       {
-        "path": "mobile/app/src/commonMain/kotlin/com/duluin/ftth/mobile/app/Di.kt",
+        "path": "mobile/app/src/commonMain/kotlin/com/karuhun/ftth/mobile/app/Di.kt",
         "line": 31,
         "sha256": "5f32494c6de14a4d2ccf6744b0e6895d04a3e4752b0bdf430f5710faaa0214fc"
       },
@@ -272,79 +272,79 @@
         },
         "matchingCurrentSource": [
           {
-            "path": "mobile/feature/workorders/src/jvmTest/kotlin/com/duluin/ftth/mobile/workorders/WorkOrderScreenUiTest.kt",
+            "path": "mobile/feature/workorders/src/jvmTest/kotlin/com/karuhun/ftth/mobile/workorders/WorkOrderScreenUiTest.kt",
             "sha256": "2c9833a113dc5c30a350282cddc3d8d4d231f41ab4b5c7d2c98f112fb95419a2"
           },
           {
-            "path": "mobile/feature/workorders/src/commonTest/kotlin/com/duluin/ftth/mobile/workorders/WorkOrderReducerTest.kt",
+            "path": "mobile/feature/workorders/src/commonTest/kotlin/com/karuhun/ftth/mobile/workorders/WorkOrderReducerTest.kt",
             "sha256": "a1e5841e13dd55eca1e996de984c935eb63ee4e8059387eaf55938a44ecc76f9"
           },
           {
-            "path": "mobile/feature/payroll/src/jvmTest/kotlin/com/duluin/ftth/mobile/payroll/PayrollScreenUiTest.kt",
+            "path": "mobile/feature/payroll/src/jvmTest/kotlin/com/karuhun/ftth/mobile/payroll/PayrollScreenUiTest.kt",
             "sha256": "ccd08c1ea9153bcdb58bdd049110b04dc139d805723fdb1343c11557a624a970"
           },
           {
-            "path": "mobile/feature/payroll/src/commonTest/kotlin/com/duluin/ftth/mobile/payroll/PayrollReducerTest.kt",
+            "path": "mobile/feature/payroll/src/commonTest/kotlin/com/karuhun/ftth/mobile/payroll/PayrollReducerTest.kt",
             "sha256": "c6943355f61ef1eec9382e80717f9c72f684a3babdd175eb12abf231db158cea"
           },
           {
-            "path": "mobile/feature/materials/src/jvmTest/kotlin/com/duluin/ftth/mobile/materials/MaterialScreenUiTest.kt",
+            "path": "mobile/feature/materials/src/jvmTest/kotlin/com/karuhun/ftth/mobile/materials/MaterialScreenUiTest.kt",
             "sha256": "cd74ffb4469b5ed5428ef0417993ebcd4b0c960316acea043e761da4e82519f8"
           },
           {
-            "path": "mobile/feature/materials/src/commonTest/kotlin/com/duluin/ftth/mobile/materials/MaterialFeatureTest.kt",
+            "path": "mobile/feature/materials/src/commonTest/kotlin/com/karuhun/ftth/mobile/materials/MaterialFeatureTest.kt",
             "sha256": "ca24ed460e6128d7569f691c4936b895a87e6814802823867bbdfbb9b8d61204"
           },
           {
-            "path": "mobile/feature/attendance/src/jvmTest/kotlin/com/duluin/ftth/mobile/attendance/AttendanceScreenUiTest.kt",
+            "path": "mobile/feature/attendance/src/jvmTest/kotlin/com/karuhun/ftth/mobile/attendance/AttendanceScreenUiTest.kt",
             "sha256": "6b204be562d66fef2c08880d1a1c1fb8f9e2d6e2f10355025ec0370f018b3b51"
           },
           {
-            "path": "mobile/feature/attendance/src/commonTest/kotlin/com/duluin/ftth/mobile/attendance/AttendanceReducerTest.kt",
+            "path": "mobile/feature/attendance/src/commonTest/kotlin/com/karuhun/ftth/mobile/attendance/AttendanceReducerTest.kt",
             "sha256": "bd71dbee00d07dd82b235ce7639b0bf5dab1e80fee8e74f058596d45ba2cf927"
           },
           {
-            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/WorkOrderReducerTest.kt",
+            "path": "mobile/domain/src/commonTest/kotlin/com/karuhun/ftth/mobile/domain/WorkOrderReducerTest.kt",
             "sha256": "86092d8e80a63fafde645effe16a01b26952514e492156c1067a519a033eb2a5"
           },
           {
-            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/OutboxTest.kt",
+            "path": "mobile/domain/src/commonTest/kotlin/com/karuhun/ftth/mobile/domain/OutboxTest.kt",
             "sha256": "6056b61e30e38d0adb805aaa86d07cbc4513c8efe61db587abb3e921beee802c"
           },
           {
-            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/NavigationTest.kt",
+            "path": "mobile/domain/src/commonTest/kotlin/com/karuhun/ftth/mobile/domain/NavigationTest.kt",
             "sha256": "f78a7933e4b1f42479715a3f337e96fe91774a482f2ec1309cd954046f64598a"
           },
           {
-            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/MaterialQuantityTest.kt",
+            "path": "mobile/domain/src/commonTest/kotlin/com/karuhun/ftth/mobile/domain/MaterialQuantityTest.kt",
             "sha256": "3ee1a9192efd58595b3656ee0a1c69bc7615c181198bdb128886f964372808c3"
           },
           {
-            "path": "mobile/data/src/commonTest/kotlin/com/duluin/ftth/mobile/data/WorkOrderRepositoryTest.kt",
+            "path": "mobile/data/src/commonTest/kotlin/com/karuhun/ftth/mobile/data/WorkOrderRepositoryTest.kt",
             "sha256": "61f2d27ef593e57d603e4c30a139fd551ccb3ccd7da85ed678dd9463ef8fbb40"
           },
           {
-            "path": "mobile/data/src/commonTest/kotlin/com/duluin/ftth/mobile/data/MaterialRepositoryTest.kt",
+            "path": "mobile/data/src/commonTest/kotlin/com/karuhun/ftth/mobile/data/MaterialRepositoryTest.kt",
             "sha256": "5baa20c1639b703049b2f92dca431405f52ee910633af8eed94b0ed233fd4af1"
           },
           {
-            "path": "mobile/core/ui/src/commonTest/kotlin/com/duluin/ftth/mobile/ui/ScreenContentTest.kt",
+            "path": "mobile/core/ui/src/commonTest/kotlin/com/karuhun/ftth/mobile/ui/ScreenContentTest.kt",
             "sha256": "def6ac1ff3c3b7e543e64b2faffdd429595d793bcf4f8c77f8ae6100c9fee38e"
           },
           {
-            "path": "mobile/app/src/commonTest/kotlin/com/duluin/ftth/mobile/app/DiTest.kt",
+            "path": "mobile/app/src/commonTest/kotlin/com/karuhun/ftth/mobile/app/DiTest.kt",
             "sha256": "bcbb135431ba2bb330403637f23cf4c13607c09bc995fb75e655da124a1bff49"
           },
           {
-            "path": "mobile/core/storage/src/commonTest/kotlin/com/duluin/ftth/mobile/storage/EncryptedOutboxTest.kt",
+            "path": "mobile/core/storage/src/commonTest/kotlin/com/karuhun/ftth/mobile/storage/EncryptedOutboxTest.kt",
             "sha256": "47386e22abb20f5b1b2ca892593c9097df7b6e9905bfb2f1c5f1862d79564cfd"
           },
           {
-            "path": "mobile/core/mvi/src/commonTest/kotlin/com/duluin/ftth/mobile/mvi/MviViewModelTest.kt",
+            "path": "mobile/core/mvi/src/commonTest/kotlin/com/karuhun/ftth/mobile/mvi/MviViewModelTest.kt",
             "sha256": "e78f22383c2edcb4a03953b0b1795ac75066f3f13cd5be58616b92e102b0afa5"
           },
           {
-            "path": "mobile/core/mvi/src/commonTest/kotlin/com/duluin/ftth/mobile/mvi/MviStoreTest.kt",
+            "path": "mobile/core/mvi/src/commonTest/kotlin/com/karuhun/ftth/mobile/mvi/MviStoreTest.kt",
             "sha256": "460b4f342901b8fc8b785a6be2554649b002e14945d3c2be94acf80a111bdcb1"
           }
         ],
@@ -360,7 +360,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "cab157de5057016ff265e5c5cd9429119f8f0296c0d750286083aa04c54e6070",
-              "rawReference": "mobile/app/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.app.DiTest.xml"
+              "rawReference": "mobile/app/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.app.DiTest.xml"
             },
             {
               "suite": "MviStoreTest[jvm]",
@@ -369,7 +369,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "029af4d54ecd1a78dbe9bfaf643f52763ac2c8128f627f53d34aea80aa7548a7",
-              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.mvi.MviStoreTest.xml"
+              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.mvi.MviStoreTest.xml"
             },
             {
               "suite": "MviViewModelTest[jvm]",
@@ -378,7 +378,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "4735632a466dbaa33ef8516c4c24e3668bf4c19999be5a4dbf03a426a6b36d7e",
-              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.mvi.MviViewModelTest.xml"
+              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.mvi.MviViewModelTest.xml"
             },
             {
               "suite": "EncryptedOutboxTest[jvm]",
@@ -387,7 +387,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "d73ef72efe2ba15f3ebe4137f5269c6c54d12f53b5fd6e0162ebaadc8d1672d6",
-              "rawReference": "mobile/core/storage/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.storage.EncryptedOutboxTest.xml"
+              "rawReference": "mobile/core/storage/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.storage.EncryptedOutboxTest.xml"
             },
             {
               "suite": "MaterialRepositoryTest[jvm]",
@@ -396,7 +396,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "19ef79ee31a2b1170e3fe63a425a899a96c91be3cc2b199c89a0e236d3e19f72",
-              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.data.MaterialRepositoryTest.xml"
+              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.data.MaterialRepositoryTest.xml"
             },
             {
               "suite": "WorkOrderRepositoryTest[jvm]",
@@ -405,7 +405,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "1f7a5e00486111761e67225613cf42d55c1e23d585ae62dfd49180a9c644d6f3",
-              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.data.WorkOrderRepositoryTest.xml"
+              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.data.WorkOrderRepositoryTest.xml"
             },
             {
               "suite": "MaterialQuantityTest[jvm]",
@@ -414,7 +414,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "c12fe6c117c6e92febd8b1d3c319c9d4af4af6a6ceb783d6e44ff080b08bc115",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.MaterialQuantityTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.MaterialQuantityTest.xml"
             },
             {
               "suite": "NavigationTest[jvm]",
@@ -423,7 +423,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "2463d27998db89051ea8aace66e76a50a9e66a52cd0481f4c863047c9d6c0a38",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.NavigationTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.NavigationTest.xml"
             },
             {
               "suite": "OutboxTest[jvm]",
@@ -432,7 +432,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "3a88d3e16d381d82c823f70180e4fb6345cb825d84ff5ed02f14b82da0d9c1b8",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.OutboxTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.OutboxTest.xml"
             },
             {
               "suite": "WorkOrderReducerTest[jvm]",
@@ -441,7 +441,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "7329f7a1f6be77bd5f9213bdf26bf2319fa4c02445d6a0f811408b43e1c39719",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.WorkOrderReducerTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.WorkOrderReducerTest.xml"
             },
             {
               "suite": "MaterialFeatureTest[jvm]",
@@ -450,7 +450,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "78231bf5c43595f4285b7e40e2d79e464f4c193e8cd922458c33cc4813b334eb",
-              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.materials.MaterialFeatureTest.xml"
+              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.materials.MaterialFeatureTest.xml"
             },
             {
               "suite": "MaterialScreenUiTest[jvm]",
@@ -459,7 +459,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "776e463dd048690d8a78932748893b95a3cfb7e764532ae53e3b889330c534c0",
-              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.materials.MaterialScreenUiTest.xml"
+              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.materials.MaterialScreenUiTest.xml"
             },
             {
               "suite": "WorkOrderReducerTest[jvm]",
@@ -468,7 +468,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "28085b6fb521fc2db4d4adfdf8a6333bf1850785c54d6887b3347219b13af588",
-              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.workorders.WorkOrderReducerTest.xml"
+              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.workorders.WorkOrderReducerTest.xml"
             },
             {
               "suite": "WorkOrderScreenUiTest[jvm]",
@@ -477,7 +477,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "8fdc1c4623713073823ed1148f17bb07a079c0b75595edde99113f2c5822e089",
-              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.workorders.WorkOrderScreenUiTest.xml"
+              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.workorders.WorkOrderScreenUiTest.xml"
             }
           ],
           "nativeCompileTasks": 2,
@@ -499,7 +499,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "ab10df3f459d00b6c44c6b45e52e2717f4199d98c63ecef15d28926ff53784f7",
-              "rawReference": "mobile/app/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.app.DiTest.xml"
+              "rawReference": "mobile/app/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.app.DiTest.xml"
             },
             {
               "suite": "MviStoreTest[jvm]",
@@ -508,7 +508,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "cf4c268004152d8e6e4e63e4ef5f3ad9000b37ac3cef31fdf9e0f5570164cf50",
-              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.mvi.MviStoreTest.xml"
+              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.mvi.MviStoreTest.xml"
             },
             {
               "suite": "MviViewModelTest[jvm]",
@@ -517,7 +517,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "5b3606925898bec57ab3a69212c63c32e7b9aeecf53d3f8e73f1ce9cfa2263b6",
-              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.mvi.MviViewModelTest.xml"
+              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.mvi.MviViewModelTest.xml"
             },
             {
               "suite": "EncryptedOutboxTest[jvm]",
@@ -526,7 +526,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "3e0523473f1dbc81d8facbe81b7af66f3a7f539f96e77612a9d2f0ca09fc861d",
-              "rawReference": "mobile/core/storage/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.storage.EncryptedOutboxTest.xml"
+              "rawReference": "mobile/core/storage/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.storage.EncryptedOutboxTest.xml"
             },
             {
               "suite": "MaterialRepositoryTest[jvm]",
@@ -535,7 +535,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "5f0fd7c91a895de15087b832056ed6eae1fba113d9d3f62fd387e0a68e5b8841",
-              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.data.MaterialRepositoryTest.xml"
+              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.data.MaterialRepositoryTest.xml"
             },
             {
               "suite": "WorkOrderRepositoryTest[jvm]",
@@ -544,7 +544,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "3eb872dcc11e32c07266956fc47a9ed07c761d1ce37d71f8085bc282a1ddd195",
-              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.data.WorkOrderRepositoryTest.xml"
+              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.data.WorkOrderRepositoryTest.xml"
             },
             {
               "suite": "MaterialQuantityTest[jvm]",
@@ -553,7 +553,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "c4efec74c3fb7f749781f42fdb0ef7fe9f4c04bf3044046c8f9cd3b7ccc414c9",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.MaterialQuantityTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.MaterialQuantityTest.xml"
             },
             {
               "suite": "NavigationTest[jvm]",
@@ -562,7 +562,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "742f6c301d38669cd4baf7a7199c384d897af67b7168a777efb42bb79fd7e7a7",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.NavigationTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.NavigationTest.xml"
             },
             {
               "suite": "OutboxTest[jvm]",
@@ -571,7 +571,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "a56428e71e5efd3fa5a763d249d16e67f9621793eafa5ede11082e91da979966",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.OutboxTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.OutboxTest.xml"
             },
             {
               "suite": "WorkOrderReducerTest[jvm]",
@@ -580,7 +580,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "1927de2622ff51879514c0fbbd6c1b6e7d6d5470c286fe9675fed71611dd8b2f",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.WorkOrderReducerTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.WorkOrderReducerTest.xml"
             },
             {
               "suite": "MaterialFeatureTest[jvm]",
@@ -589,7 +589,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "cd97ad699487427c68dcf099b78e78920324170bd761bf1775096beb645155d4",
-              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.materials.MaterialFeatureTest.xml"
+              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.materials.MaterialFeatureTest.xml"
             },
             {
               "suite": "MaterialScreenUiTest[jvm]",
@@ -598,7 +598,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "638180669c8f1a3bd89e1d49d9531af06e4e5fc46184a45e848464a9472b5e7c",
-              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.materials.MaterialScreenUiTest.xml"
+              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.materials.MaterialScreenUiTest.xml"
             },
             {
               "suite": "WorkOrderReducerTest[jvm]",
@@ -607,7 +607,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "90d78b0384cb56a64480ec9a261e1633d695d9b5d793b6a1818b20a594292c37",
-              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.workorders.WorkOrderReducerTest.xml"
+              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.workorders.WorkOrderReducerTest.xml"
             },
             {
               "suite": "WorkOrderScreenUiTest[jvm]",
@@ -616,7 +616,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "1a147f79352661f55401d1f8bfe633add49f3a69e867a004b693b050339f794b",
-              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.workorders.WorkOrderScreenUiTest.xml"
+              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.workorders.WorkOrderScreenUiTest.xml"
             }
           ],
           "proof": {
@@ -779,79 +779,79 @@
         },
         "matchingCurrentSource": [
           {
-            "path": "mobile/feature/workorders/src/jvmTest/kotlin/com/duluin/ftth/mobile/workorders/WorkOrderScreenUiTest.kt",
+            "path": "mobile/feature/workorders/src/jvmTest/kotlin/com/karuhun/ftth/mobile/workorders/WorkOrderScreenUiTest.kt",
             "sha256": "2c9833a113dc5c30a350282cddc3d8d4d231f41ab4b5c7d2c98f112fb95419a2"
           },
           {
-            "path": "mobile/feature/workorders/src/commonTest/kotlin/com/duluin/ftth/mobile/workorders/WorkOrderReducerTest.kt",
+            "path": "mobile/feature/workorders/src/commonTest/kotlin/com/karuhun/ftth/mobile/workorders/WorkOrderReducerTest.kt",
             "sha256": "a1e5841e13dd55eca1e996de984c935eb63ee4e8059387eaf55938a44ecc76f9"
           },
           {
-            "path": "mobile/feature/payroll/src/jvmTest/kotlin/com/duluin/ftth/mobile/payroll/PayrollScreenUiTest.kt",
+            "path": "mobile/feature/payroll/src/jvmTest/kotlin/com/karuhun/ftth/mobile/payroll/PayrollScreenUiTest.kt",
             "sha256": "ccd08c1ea9153bcdb58bdd049110b04dc139d805723fdb1343c11557a624a970"
           },
           {
-            "path": "mobile/feature/payroll/src/commonTest/kotlin/com/duluin/ftth/mobile/payroll/PayrollReducerTest.kt",
+            "path": "mobile/feature/payroll/src/commonTest/kotlin/com/karuhun/ftth/mobile/payroll/PayrollReducerTest.kt",
             "sha256": "c6943355f61ef1eec9382e80717f9c72f684a3babdd175eb12abf231db158cea"
           },
           {
-            "path": "mobile/feature/materials/src/jvmTest/kotlin/com/duluin/ftth/mobile/materials/MaterialScreenUiTest.kt",
+            "path": "mobile/feature/materials/src/jvmTest/kotlin/com/karuhun/ftth/mobile/materials/MaterialScreenUiTest.kt",
             "sha256": "cd74ffb4469b5ed5428ef0417993ebcd4b0c960316acea043e761da4e82519f8"
           },
           {
-            "path": "mobile/feature/materials/src/commonTest/kotlin/com/duluin/ftth/mobile/materials/MaterialFeatureTest.kt",
+            "path": "mobile/feature/materials/src/commonTest/kotlin/com/karuhun/ftth/mobile/materials/MaterialFeatureTest.kt",
             "sha256": "ca24ed460e6128d7569f691c4936b895a87e6814802823867bbdfbb9b8d61204"
           },
           {
-            "path": "mobile/feature/attendance/src/jvmTest/kotlin/com/duluin/ftth/mobile/attendance/AttendanceScreenUiTest.kt",
+            "path": "mobile/feature/attendance/src/jvmTest/kotlin/com/karuhun/ftth/mobile/attendance/AttendanceScreenUiTest.kt",
             "sha256": "6b204be562d66fef2c08880d1a1c1fb8f9e2d6e2f10355025ec0370f018b3b51"
           },
           {
-            "path": "mobile/feature/attendance/src/commonTest/kotlin/com/duluin/ftth/mobile/attendance/AttendanceReducerTest.kt",
+            "path": "mobile/feature/attendance/src/commonTest/kotlin/com/karuhun/ftth/mobile/attendance/AttendanceReducerTest.kt",
             "sha256": "bd71dbee00d07dd82b235ce7639b0bf5dab1e80fee8e74f058596d45ba2cf927"
           },
           {
-            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/WorkOrderReducerTest.kt",
+            "path": "mobile/domain/src/commonTest/kotlin/com/karuhun/ftth/mobile/domain/WorkOrderReducerTest.kt",
             "sha256": "86092d8e80a63fafde645effe16a01b26952514e492156c1067a519a033eb2a5"
           },
           {
-            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/OutboxTest.kt",
+            "path": "mobile/domain/src/commonTest/kotlin/com/karuhun/ftth/mobile/domain/OutboxTest.kt",
             "sha256": "6056b61e30e38d0adb805aaa86d07cbc4513c8efe61db587abb3e921beee802c"
           },
           {
-            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/NavigationTest.kt",
+            "path": "mobile/domain/src/commonTest/kotlin/com/karuhun/ftth/mobile/domain/NavigationTest.kt",
             "sha256": "f78a7933e4b1f42479715a3f337e96fe91774a482f2ec1309cd954046f64598a"
           },
           {
-            "path": "mobile/domain/src/commonTest/kotlin/com/duluin/ftth/mobile/domain/MaterialQuantityTest.kt",
+            "path": "mobile/domain/src/commonTest/kotlin/com/karuhun/ftth/mobile/domain/MaterialQuantityTest.kt",
             "sha256": "3ee1a9192efd58595b3656ee0a1c69bc7615c181198bdb128886f964372808c3"
           },
           {
-            "path": "mobile/data/src/commonTest/kotlin/com/duluin/ftth/mobile/data/WorkOrderRepositoryTest.kt",
+            "path": "mobile/data/src/commonTest/kotlin/com/karuhun/ftth/mobile/data/WorkOrderRepositoryTest.kt",
             "sha256": "61f2d27ef593e57d603e4c30a139fd551ccb3ccd7da85ed678dd9463ef8fbb40"
           },
           {
-            "path": "mobile/data/src/commonTest/kotlin/com/duluin/ftth/mobile/data/MaterialRepositoryTest.kt",
+            "path": "mobile/data/src/commonTest/kotlin/com/karuhun/ftth/mobile/data/MaterialRepositoryTest.kt",
             "sha256": "5baa20c1639b703049b2f92dca431405f52ee910633af8eed94b0ed233fd4af1"
           },
           {
-            "path": "mobile/core/ui/src/commonTest/kotlin/com/duluin/ftth/mobile/ui/ScreenContentTest.kt",
+            "path": "mobile/core/ui/src/commonTest/kotlin/com/karuhun/ftth/mobile/ui/ScreenContentTest.kt",
             "sha256": "def6ac1ff3c3b7e543e64b2faffdd429595d793bcf4f8c77f8ae6100c9fee38e"
           },
           {
-            "path": "mobile/app/src/commonTest/kotlin/com/duluin/ftth/mobile/app/DiTest.kt",
+            "path": "mobile/app/src/commonTest/kotlin/com/karuhun/ftth/mobile/app/DiTest.kt",
             "sha256": "bcbb135431ba2bb330403637f23cf4c13607c09bc995fb75e655da124a1bff49"
           },
           {
-            "path": "mobile/core/storage/src/commonTest/kotlin/com/duluin/ftth/mobile/storage/EncryptedOutboxTest.kt",
+            "path": "mobile/core/storage/src/commonTest/kotlin/com/karuhun/ftth/mobile/storage/EncryptedOutboxTest.kt",
             "sha256": "47386e22abb20f5b1b2ca892593c9097df7b6e9905bfb2f1c5f1862d79564cfd"
           },
           {
-            "path": "mobile/core/mvi/src/commonTest/kotlin/com/duluin/ftth/mobile/mvi/MviViewModelTest.kt",
+            "path": "mobile/core/mvi/src/commonTest/kotlin/com/karuhun/ftth/mobile/mvi/MviViewModelTest.kt",
             "sha256": "e78f22383c2edcb4a03953b0b1795ac75066f3f13cd5be58616b92e102b0afa5"
           },
           {
-            "path": "mobile/core/mvi/src/commonTest/kotlin/com/duluin/ftth/mobile/mvi/MviStoreTest.kt",
+            "path": "mobile/core/mvi/src/commonTest/kotlin/com/karuhun/ftth/mobile/mvi/MviStoreTest.kt",
             "sha256": "460b4f342901b8fc8b785a6be2554649b002e14945d3c2be94acf80a111bdcb1"
           }
         ],
@@ -867,7 +867,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "ab10df3f459d00b6c44c6b45e52e2717f4199d98c63ecef15d28926ff53784f7",
-              "rawReference": "mobile/app/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.app.DiTest.xml"
+              "rawReference": "mobile/app/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.app.DiTest.xml"
             },
             {
               "suite": "MviStoreTest[jvm]",
@@ -876,7 +876,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "cf4c268004152d8e6e4e63e4ef5f3ad9000b37ac3cef31fdf9e0f5570164cf50",
-              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.mvi.MviStoreTest.xml"
+              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.mvi.MviStoreTest.xml"
             },
             {
               "suite": "MviViewModelTest[jvm]",
@@ -885,7 +885,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "5b3606925898bec57ab3a69212c63c32e7b9aeecf53d3f8e73f1ce9cfa2263b6",
-              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.mvi.MviViewModelTest.xml"
+              "rawReference": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.mvi.MviViewModelTest.xml"
             },
             {
               "suite": "EncryptedOutboxTest[jvm]",
@@ -894,7 +894,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "3e0523473f1dbc81d8facbe81b7af66f3a7f539f96e77612a9d2f0ca09fc861d",
-              "rawReference": "mobile/core/storage/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.storage.EncryptedOutboxTest.xml"
+              "rawReference": "mobile/core/storage/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.storage.EncryptedOutboxTest.xml"
             },
             {
               "suite": "MaterialRepositoryTest[jvm]",
@@ -903,7 +903,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "5f0fd7c91a895de15087b832056ed6eae1fba113d9d3f62fd387e0a68e5b8841",
-              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.data.MaterialRepositoryTest.xml"
+              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.data.MaterialRepositoryTest.xml"
             },
             {
               "suite": "WorkOrderRepositoryTest[jvm]",
@@ -912,7 +912,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "3eb872dcc11e32c07266956fc47a9ed07c761d1ce37d71f8085bc282a1ddd195",
-              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.data.WorkOrderRepositoryTest.xml"
+              "rawReference": "mobile/data/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.data.WorkOrderRepositoryTest.xml"
             },
             {
               "suite": "MaterialQuantityTest[jvm]",
@@ -921,7 +921,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "c4efec74c3fb7f749781f42fdb0ef7fe9f4c04bf3044046c8f9cd3b7ccc414c9",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.MaterialQuantityTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.MaterialQuantityTest.xml"
             },
             {
               "suite": "NavigationTest[jvm]",
@@ -930,7 +930,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "742f6c301d38669cd4baf7a7199c384d897af67b7168a777efb42bb79fd7e7a7",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.NavigationTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.NavigationTest.xml"
             },
             {
               "suite": "OutboxTest[jvm]",
@@ -939,7 +939,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "a56428e71e5efd3fa5a763d249d16e67f9621793eafa5ede11082e91da979966",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.OutboxTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.OutboxTest.xml"
             },
             {
               "suite": "WorkOrderReducerTest[jvm]",
@@ -948,7 +948,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "1927de2622ff51879514c0fbbd6c1b6e7d6d5470c286fe9675fed71611dd8b2f",
-              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.WorkOrderReducerTest.xml"
+              "rawReference": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.WorkOrderReducerTest.xml"
             },
             {
               "suite": "MaterialFeatureTest[jvm]",
@@ -957,7 +957,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "cd97ad699487427c68dcf099b78e78920324170bd761bf1775096beb645155d4",
-              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.materials.MaterialFeatureTest.xml"
+              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.materials.MaterialFeatureTest.xml"
             },
             {
               "suite": "MaterialScreenUiTest[jvm]",
@@ -966,7 +966,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "638180669c8f1a3bd89e1d49d9531af06e4e5fc46184a45e848464a9472b5e7c",
-              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.materials.MaterialScreenUiTest.xml"
+              "rawReference": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.materials.MaterialScreenUiTest.xml"
             },
             {
               "suite": "WorkOrderReducerTest[jvm]",
@@ -975,7 +975,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "90d78b0384cb56a64480ec9a261e1633d695d9b5d793b6a1818b20a594292c37",
-              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.workorders.WorkOrderReducerTest.xml"
+              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.workorders.WorkOrderReducerTest.xml"
             },
             {
               "suite": "WorkOrderScreenUiTest[jvm]",
@@ -984,7 +984,7 @@
               "errors": 0,
               "skipped": 0,
               "sha256": "1a147f79352661f55401d1f8bfe633add49f3a69e867a004b693b050339f794b",
-              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.workorders.WorkOrderScreenUiTest.xml"
+              "rawReference": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.workorders.WorkOrderScreenUiTest.xml"
             }
           ],
           "proof": {
@@ -1033,11 +1033,11 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "mobile/domain/src/commonMain/kotlin/com/duluin/ftth/mobile/domain/MaterialContracts.kt",
+        "path": "mobile/domain/src/commonMain/kotlin/com/karuhun/ftth/mobile/domain/MaterialContracts.kt",
         "sha256": "55d05911a2871b07257e5f016ff4b7c90f33e7dcd13eb870b634998c7d0103a8"
       },
       {
-        "path": "mobile/data/src/commonMain/kotlin/com/duluin/ftth/mobile/data/MaterialRepository.kt",
+        "path": "mobile/data/src/commonMain/kotlin/com/karuhun/ftth/mobile/data/MaterialRepository.kt",
         "sha256": "4fd30a0334686ebcae6117389a9ee4359401c2c21f473daafda172f74aef595d"
       },
       {
@@ -1045,23 +1045,23 @@
         "kind": "directory",
         "files": [
           {
-            "path": "mobile/feature/materials/src/jvmTest/kotlin/com/duluin/ftth/mobile/materials/MaterialScreenUiTest.kt",
+            "path": "mobile/feature/materials/src/jvmTest/kotlin/com/karuhun/ftth/mobile/materials/MaterialScreenUiTest.kt",
             "sha256": "cd74ffb4469b5ed5428ef0417993ebcd4b0c960316acea043e761da4e82519f8"
           },
           {
-            "path": "mobile/feature/materials/src/commonTest/kotlin/com/duluin/ftth/mobile/materials/MaterialFeatureTest.kt",
+            "path": "mobile/feature/materials/src/commonTest/kotlin/com/karuhun/ftth/mobile/materials/MaterialFeatureTest.kt",
             "sha256": "ca24ed460e6128d7569f691c4936b895a87e6814802823867bbdfbb9b8d61204"
           },
           {
-            "path": "mobile/feature/materials/src/commonMain/kotlin/com/duluin/ftth/mobile/materials/MaterialScreen.kt",
+            "path": "mobile/feature/materials/src/commonMain/kotlin/com/karuhun/ftth/mobile/materials/MaterialScreen.kt",
             "sha256": "f8ff4b5d0b3d86b8106f375adfa7feebeb55cb4f1669dd725d3b14849394ec5e"
           },
           {
-            "path": "mobile/feature/materials/src/commonMain/kotlin/com/duluin/ftth/mobile/materials/MaterialMvi.kt",
+            "path": "mobile/feature/materials/src/commonMain/kotlin/com/karuhun/ftth/mobile/materials/MaterialMvi.kt",
             "sha256": "5dc823efb2a020d98cc76faff54d4785f804d9aa3b7f7a3c62d11db4c8750973"
           },
           {
-            "path": "mobile/feature/materials/src/commonMain/kotlin/com/duluin/ftth/mobile/materials/MaterialFeature.kt",
+            "path": "mobile/feature/materials/src/commonMain/kotlin/com/karuhun/ftth/mobile/materials/MaterialFeature.kt",
             "sha256": "4eaf754029f1bed7855a422afe961203de047e2beb6149a9482ed20c28c81955"
           },
           {
@@ -1071,7 +1071,7 @@
         ]
       },
       {
-        "path": "mobile/app/src/commonMain/kotlin/com/duluin/ftth/mobile/app/Di.kt",
+        "path": "mobile/app/src/commonMain/kotlin/com/karuhun/ftth/mobile/app/Di.kt",
         "sha256": "5f32494c6de14a4d2ccf6744b0e6895d04a3e4752b0bdf430f5710faaa0214fc"
       },
       {

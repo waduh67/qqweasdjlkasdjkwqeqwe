@@ -304,7 +304,7 @@
     "sha256": "45567211523a12983bd4765d269462c6be04ef2f816cda54dd5e6a81adc3dd27",
     "inputs": 3693,
     "changedPathsAtReviewedHead": [
-      "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseContractTest.kt"
+      "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseContractTest.kt"
     ],
     "interpretation": "Production, migration, workflow, web, browser, protocol and native inputs unchanged; only four server contract expectations corrected."
   },
@@ -317,22 +317,22 @@
     },
     "suites": [
       {
-        "suite": "com.duluin.ftth.ModularityTests",
+        "suite": "com.karuhun.ftth.ModularityTests",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0,
         "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
-        "rawReference": "reports/TEST-com.duluin.ftth.ModularityTests.xml"
+        "rawReference": "reports/TEST-com.karuhun.ftth.ModularityTests.xml"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0,
         "sha256": "fd8e40f769ce3e67d5f5ae7c018baf1ac23889bb6a51f7a01847380487dcbc85",
-        "rawReference": "reports/TEST-com.duluin.ftth.inventory.WarehouseContractTest.xml"
+        "rawReference": "reports/TEST-com.karuhun.ftth.inventory.WarehouseContractTest.xml"
       }
     ],
     "sourceInputCount": 3693,

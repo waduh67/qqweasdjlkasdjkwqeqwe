@@ -19,7 +19,7 @@
   "redaction": "Only test names/counts and source/result digests; no HTTP bodies, headers, tokens or raw logs",
   "suites": [
     {
-      "name": "com.duluin.ftth.ModularityTests",
+      "name": "com.karuhun.ftth.ModularityTests",
       "tests": 3,
       "failures": 0,
       "errors": 0,
@@ -32,7 +32,7 @@
       "xmlSha256": "7376a8b9d9a7cdc981250b986a03f5b73c021d8482a174d51f97f28fc95d2f68"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseDispositionAssetIT",
+      "name": "com.karuhun.ftth.inventory.WarehouseDispositionAssetIT",
       "tests": 4,
       "failures": 0,
       "errors": 0,
@@ -46,7 +46,7 @@
       "xmlSha256": "63aaec2e081e6739e9d94503cf84ec9db3ff7b64f842c84667aa44b48d2d3a10"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseDispositionGuardsIT",
+      "name": "com.karuhun.ftth.inventory.WarehouseDispositionGuardsIT",
       "tests": 11,
       "failures": 0,
       "errors": 0,
@@ -67,7 +67,7 @@
       "xmlSha256": "e2febd76326ce284f5c60e6e597bac7da9eaef01d78aa43598f211364ea7fe01"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+      "name": "com.karuhun.ftth.inventory.WarehouseDispositionIT",
       "tests": 2,
       "failures": 0,
       "errors": 0,

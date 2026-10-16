@@ -1,0 +1,65 @@
+package com.karuhun.ftth.workorder.application.port.outbound
+
+import com.karuhun.ftth.common.domain.Page
+import com.karuhun.ftth.common.domain.PageRequest
+import com.karuhun.ftth.workorder.domain.model.WorkOrder
+import com.karuhun.ftth.workorder.domain.model.WorkOrderApprovalStatus
+import com.karuhun.ftth.workorder.domain.model.WorkOrderEvent
+import com.karuhun.ftth.workorder.domain.model.WorkOrderStatus
+import com.karuhun.ftth.workorder.domain.model.WorkOrderType
+import java.time.Instant
+import java.util.UUID
+
+/** Port persistence untuk agregat [WorkOrder]. Query ter-scope tenant otomatis (Hibernate + RLS). */
+interface WorkOrderRepository {
+
+    /** Menyimpan agregat beserta event timeline yang tertunda, lalu mengosongkannya. */
+    fun save(workOrder: WorkOrder): WorkOrder
+
+    fun findById(id: UUID): WorkOrder?
+
+    fun search(
+        query: String?,
+        type: WorkOrderType?,
+        status: WorkOrderStatus?,
+        assignedTo: UUID?,
+        approvalStatus: WorkOrderApprovalStatus?,
+        customerId: UUID?,
+        pageRequest: PageRequest,
+        areaIds: Set<UUID>? = null,
+    ): Page<WorkOrder>
+
+    /** Timeline sebuah work order, terlama lebih dulu. */
+    fun timelineOf(workOrderId: UUID): List<WorkOrderEvent>
+
+    /** Jumlah WO per status (status tanpa data absen dari peta). */
+    fun countByStatus(areaIds: Set<UUID>? = null): Map<WorkOrderStatus, Long>
+
+    /** Jumlah WO per tipe (tipe tanpa data absen dari peta). */
+    fun countByType(areaIds: Set<UUID>? = null): Map<WorkOrderType, Long>
+
+    /** Beban WO terbuka per teknisi; kunci `null` = kelompok yang belum ditugaskan. */
+    fun countOpenByTechnician(areaIds: Set<UUID>? = null): Map<UUID?, Long>
+
+    /** Jumlah WO yang menunggu persetujuan (selesai tapi belum dikurasi). */
+    fun countPendingApproval(areaIds: Set<UUID>? = null): Long
+
+    /**
+     * Apakah pelanggan ini sudah punya WO preventif yang masih terbuka. Dasar
+     * idempotensi pemeliharaan prediktif: satu pelanggan cukup satu kunjungan
+     * preventif terjadwal, meski pemindaian berulang terus menandainya memburuk.
+     */
+    fun existsOpenPreventiveForCustomer(customerId: UUID): Boolean
+
+    /** Semua WO ber-[type] yang masih terbuka (belum selesai/batal) — bahan pencocokan lintas-module. */
+    fun findOpenByType(type: WorkOrderType): List<WorkOrder>
+
+    /**
+     * WO yang SELESAI (`completedAt`) di [from]..[toExclusive) — dasar MTTR & produktivitas
+     * teknisi. Setengah-terbuka di ujung kanan supaya batas hari/bulan tak dobel-hitung.
+     * Roster teknisi ikut terisi karena laporan produktivitas membacanya.
+     */
+    fun findCompletedBetween(from: Instant, toExclusive: Instant): List<WorkOrder>
+
+    fun deleteById(id: UUID)
+}

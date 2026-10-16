@@ -6,23 +6,23 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDeploymentApi.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryDeploymentApi.kt",
       "sha256": "c84d821b57b62e61a5c4097fe007503831b33ca088daa6b9b987f4c16381a74d"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryDeploymentService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryDeploymentService.kt",
       "sha256": "4d945b192244039cea4ae0bb1f7d3757396cba2334d75e03a01fbba193b14cfe"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryValidationAdapter.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryValidationAdapter.kt",
       "sha256": "85ad9a8909505a67c0698150de3faa7373d583d642482331e74ae001c16958ab"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/CustomerAssetWorkflowService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/CustomerAssetWorkflowService.kt",
       "sha256": "bffa70e3a7d0576f80d304ffb5bd167664a2489fbbe079bd85c314086d7df46c"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetService.kt",
       "sha256": "e3aa6bc49bd731e59d40fc2027396bc5b0d21ccbfdca11f4d647853e92f5e357"
     }
   ],
@@ -43,7 +43,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.customer.CustomerWarehouseProvenanceIT",
+            "suite": "com.karuhun.ftth.customer.CustomerWarehouseProvenanceIT",
             "tests": 31,
             "failures": 0,
             "errors": 0,
@@ -57,7 +57,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.ModularityTests",
+            "suite": "com.karuhun.ftth.ModularityTests",
             "tests": 3,
             "failures": 0,
             "errors": 0,
@@ -85,27 +85,27 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDeploymentApi.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryDeploymentApi.kt",
         "line": 6,
         "sha256": "c84d821b57b62e61a5c4097fe007503831b33ca088daa6b9b987f4c16381a74d"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryDeploymentService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryDeploymentService.kt",
         "line": 18,
         "sha256": "4d945b192244039cea4ae0bb1f7d3757396cba2334d75e03a01fbba193b14cfe"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryValidationAdapter.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryValidationAdapter.kt",
         "line": 16,
         "sha256": "85ad9a8909505a67c0698150de3faa7373d583d642482331e74ae001c16958ab"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/CustomerAssetWorkflowService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/CustomerAssetWorkflowService.kt",
         "line": 15,
         "sha256": "bffa70e3a7d0576f80d304ffb5bd167664a2489fbbe079bd85c314086d7df46c"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetService.kt",
         "line": 20,
         "sha256": "e3aa6bc49bd731e59d40fc2027396bc5b0d21ccbfdca11f4d647853e92f5e357"
       }
@@ -130,7 +130,7 @@
       "G(CustomerWarehouseProvenanceIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerWarehouseProvenanceIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerWarehouseProvenanceIT.kt",
             "sha256": "edfca6d1f7eb2ab2cec0a9e0aa7fb4feb6699751543ca70d4ae701c1b3da47ab",
             "testAnnotations": 10
           }
@@ -148,13 +148,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerWarehouseProvenanceIT",
+              "suite": "com.karuhun.ftth.customer.CustomerWarehouseProvenanceIT",
               "tests": 31,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "27f5c8b95a76fd8a3f68fc8be0ef0398173ea5afd60c7374a8bfff859adea411",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerWarehouseProvenanceIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerWarehouseProvenanceIT.xml"
             }
           ],
           "proof": {
@@ -169,13 +169,13 @@
           "tests": 31,
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerWarehouseProvenanceIT",
+              "suite": "com.karuhun.ftth.customer.CustomerWarehouseProvenanceIT",
               "tests": 31,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "d267fd18ab373d5625840b3e8c7e9dc28832ac702e583c7c9cc4ffad08e300b4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerWarehouseProvenanceIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerWarehouseProvenanceIT.xml"
             }
           ]
         },
@@ -200,7 +200,7 @@
       "G(ModularityTests)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/ModularityTests.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/ModularityTests.kt",
             "sha256": "b4c97c3e8fee808e638539dcd3c8f3dd2f90bfdf0b1ac6e77f21e05b12e2dfbc",
             "testAnnotations": 3
           }
@@ -218,13 +218,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "03aae0f8819d45efaa2bcb1ef755874a1e2bf60674a81b9f0fa740f421528f52",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "proof": {
@@ -239,13 +239,13 @@
           "tests": 3,
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1b84c43a06b9cdf58f7e1d42b21aa2e3590e68ac4e4eef1adf957c688dd64ca1",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ]
         },
@@ -261,13 +261,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "ac36aefabee49d2c2532d9c2efc02e6ee9473b07ac8f370daf3c11426a81fbdc",
-              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "proof": {
@@ -290,13 +290,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
-              "rawReference": "reports/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "reports/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "fullServerPassClaim": false
@@ -332,7 +332,7 @@
       "G(CustomerWarehouseProvenanceIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerWarehouseProvenanceIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerWarehouseProvenanceIT.kt",
             "sha256": "edfca6d1f7eb2ab2cec0a9e0aa7fb4feb6699751543ca70d4ae701c1b3da47ab",
             "testAnnotations": 10
           }
@@ -350,13 +350,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerWarehouseProvenanceIT",
+              "suite": "com.karuhun.ftth.customer.CustomerWarehouseProvenanceIT",
               "tests": 31,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "27f5c8b95a76fd8a3f68fc8be0ef0398173ea5afd60c7374a8bfff859adea411",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerWarehouseProvenanceIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerWarehouseProvenanceIT.xml"
             }
           ],
           "proof": {
@@ -371,13 +371,13 @@
           "tests": 31,
           "suites": [
             {
-              "suite": "com.duluin.ftth.customer.CustomerWarehouseProvenanceIT",
+              "suite": "com.karuhun.ftth.customer.CustomerWarehouseProvenanceIT",
               "tests": 31,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "d267fd18ab373d5625840b3e8c7e9dc28832ac702e583c7c9cc4ffad08e300b4",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.customer.CustomerWarehouseProvenanceIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.customer.CustomerWarehouseProvenanceIT.xml"
             }
           ]
         },
@@ -402,7 +402,7 @@
       "G(ModularityTests)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/ModularityTests.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/ModularityTests.kt",
             "sha256": "b4c97c3e8fee808e638539dcd3c8f3dd2f90bfdf0b1ac6e77f21e05b12e2dfbc",
             "testAnnotations": 3
           }
@@ -420,13 +420,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "03aae0f8819d45efaa2bcb1ef755874a1e2bf60674a81b9f0fa740f421528f52",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "proof": {
@@ -441,13 +441,13 @@
           "tests": 3,
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1b84c43a06b9cdf58f7e1d42b21aa2e3590e68ac4e4eef1adf957c688dd64ca1",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ]
         },
@@ -463,13 +463,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "ac36aefabee49d2c2532d9c2efc02e6ee9473b07ac8f370daf3c11426a81fbdc",
-              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "proof": {
@@ -492,13 +492,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.ModularityTests",
+              "suite": "com.karuhun.ftth.ModularityTests",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
-              "rawReference": "reports/TEST-com.duluin.ftth.ModularityTests.xml"
+              "rawReference": "reports/TEST-com.karuhun.ftth.ModularityTests.xml"
             }
           ],
           "fullServerPassClaim": false
@@ -543,23 +543,23 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryDeploymentApi.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryDeploymentApi.kt",
         "sha256": "c84d821b57b62e61a5c4097fe007503831b33ca088daa6b9b987f4c16381a74d"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryDeploymentService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryDeploymentService.kt",
         "sha256": "4d945b192244039cea4ae0bb1f7d3757396cba2334d75e03a01fbba193b14cfe"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryValidationAdapter.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/workorder/adapter/outbound/persistence/WorkOrderInventoryValidationAdapter.kt",
         "sha256": "85ad9a8909505a67c0698150de3faa7373d583d642482331e74ae001c16958ab"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/CustomerAssetWorkflowService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/CustomerAssetWorkflowService.kt",
         "sha256": "bffa70e3a7d0576f80d304ffb5bd167664a2489fbbe079bd85c314086d7df46c"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/customer/application/service/CustomerAssetService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/customer/application/service/CustomerAssetService.kt",
         "sha256": "e3aa6bc49bd731e59d40fc2027396bc5b0d21ccbfdca11f4d647853e92f5e357"
       }
     ],

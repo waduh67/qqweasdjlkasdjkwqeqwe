@@ -6,8 +6,8 @@
       "currentCommit": "3624efb8d1bcc7e8d9457a7b44972a17def220ed",
       "historicalApplication": "3bfe12331428eb43740c8c0399b61a956c8820a7",
       "classes": [
-        "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
-        "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade"
+        "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
+        "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade"
       ],
       "sourceInputs": {
         "scripts/warehouse/historical-upgrades.sh": "aae7eb3669c8bf0a522e01fb34d4620abf54591fc465bfff6bdd9f782a6248c2",
@@ -375,16 +375,16 @@
         "server/src/main/resources/db/migration/V178_7__warehouse_rma_optional_category.sql": "726b103ef37215b2af736cde9b6cedb336b02b7726b042f4707b673ee02fc081",
         "server/src/main/resources/db/migration/V178_8__warehouse_return_title_scope_entry.sql": "8c17b2d252004b2c2d3c4770e7ab2327bc1bd3cb9892aa5e7763aaf32f097e55",
         "server/src/main/resources/db/migration/V178_9__warehouse_empty_tenant_control_cleanup.sql": "a131c3545965c9514fcf3f58420bf6ef0bb2e0d297d4a797d55c0bb126413e73",
-        "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITOwnerUpgrade.kt": "7778ff7ca2f9806a33ea892dcbe9eada05a4b161d37460704d4197cbd79aeef2",
-        "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngLineageUpgrade.kt": "ad538ce6085cd89e82f191c351fb3e8ad53101fdc0cd8d5bf7aafea245bd1b4f",
-        "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
-        "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationInventory.kt": "ba09d70fd180da30bd74faafc44bbf8dc8fef5b186e0d01ceb808b59360aae1d",
+        "server/src/historicalTest/kotlin/com/karuhun/ftth/fulfillment/WarehouseFulfillmentITOwnerUpgrade.kt": "7778ff7ca2f9806a33ea892dcbe9eada05a4b161d37460704d4197cbd79aeef2",
+        "server/src/historicalTest/kotlin/com/karuhun/ftth/fulfillment/WarehouseFulfillmentITBngLineageUpgrade.kt": "ad538ce6085cd89e82f191c351fb3e8ad53101fdc0cd8d5bf7aafea245bd1b4f",
+        "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
+        "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationInventory.kt": "ba09d70fd180da30bd74faafc44bbf8dc8fef5b186e0d01ceb808b59360aae1d",
         "server/src/test/resources/warehouse/task17-migration-inventory.txt": "2f5e25b16aad819a67e4ade46285446403f7c45ffec4f6688004b91e3a5167fa"
       },
       "status": "PASSED",
       "suites": [
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
           "tests": 1,
           "failures": 0,
           "errors": 0,
@@ -392,7 +392,7 @@
           "reportSha256": "0efb390d14d3fa4f412f2fc7218a5a32b2d2e62ef044f5792d4080836e2a809b"
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade",
           "tests": 1,
           "failures": 0,
           "errors": 0,
@@ -410,8 +410,8 @@
       "currentCommit": "3624efb8d1bcc7e8d9457a7b44972a17def220ed",
       "historicalApplication": "fd2cf7c58f02022525e655a8b0884ac2f5df49b0",
       "classes": [
-        "com.duluin.ftth.customer.CustomerAssetTitleUpgradeIT",
-        "com.duluin.ftth.customer.CustomerDeploymentUpgradeIT"
+        "com.karuhun.ftth.customer.CustomerAssetTitleUpgradeIT",
+        "com.karuhun.ftth.customer.CustomerDeploymentUpgradeIT"
       ],
       "sourceInputs": {
         "scripts/warehouse/historical-upgrades.sh": "aae7eb3669c8bf0a522e01fb34d4620abf54591fc465bfff6bdd9f782a6248c2",
@@ -779,17 +779,17 @@
         "server/src/main/resources/db/migration/V178_7__warehouse_rma_optional_category.sql": "726b103ef37215b2af736cde9b6cedb336b02b7726b042f4707b673ee02fc081",
         "server/src/main/resources/db/migration/V178_8__warehouse_return_title_scope_entry.sql": "8c17b2d252004b2c2d3c4770e7ab2327bc1bd3cb9892aa5e7763aaf32f097e55",
         "server/src/main/resources/db/migration/V178_9__warehouse_empty_tenant_control_cleanup.sql": "a131c3545965c9514fcf3f58420bf6ef0bb2e0d297d4a797d55c0bb126413e73",
-        "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerAssetTitleUpgradeIT.kt": "24e1ca5cce7b97524f98ba038b0190b9b07a49c954babed9bda75fb063ddbcac",
-        "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerDeploymentUpgradeIT.kt": "b9739b5352d76ede129ea5b10fb6f9e10212fcaf34863c8d6ccdc4c633fa921e",
-        "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
-        "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationInventory.kt": "ba09d70fd180da30bd74faafc44bbf8dc8fef5b186e0d01ceb808b59360aae1d",
+        "server/src/historicalTest/kotlin/com/karuhun/ftth/customer/CustomerAssetTitleUpgradeIT.kt": "24e1ca5cce7b97524f98ba038b0190b9b07a49c954babed9bda75fb063ddbcac",
+        "server/src/historicalTest/kotlin/com/karuhun/ftth/customer/CustomerDeploymentUpgradeIT.kt": "b9739b5352d76ede129ea5b10fb6f9e10212fcaf34863c8d6ccdc4c633fa921e",
+        "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
+        "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationInventory.kt": "ba09d70fd180da30bd74faafc44bbf8dc8fef5b186e0d01ceb808b59360aae1d",
         "server/src/test/resources/warehouse/task17-migration-inventory.txt": "2f5e25b16aad819a67e4ade46285446403f7c45ffec4f6688004b91e3a5167fa",
-        "server/src/test/kotlin/com/duluin/ftth/customer/CustomerDeploymentGraphFixture.kt": "e5a8c01a9fc83c130fac379b6053e7a223ef87e8e092d7ef01e16b08425fb5fe"
+        "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerDeploymentGraphFixture.kt": "e5a8c01a9fc83c130fac379b6053e7a223ef87e8e092d7ef01e16b08425fb5fe"
       },
       "status": "PASSED",
       "suites": [
         {
-          "suite": "com.duluin.ftth.customer.CustomerAssetTitleUpgradeIT",
+          "suite": "com.karuhun.ftth.customer.CustomerAssetTitleUpgradeIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
@@ -797,7 +797,7 @@
           "reportSha256": "ba73708ea5286cfae2e01d2da3b8d7422a55f0e868fa55fce6d25c87ca2ea250"
         },
         {
-          "suite": "com.duluin.ftth.customer.CustomerDeploymentUpgradeIT",
+          "suite": "com.karuhun.ftth.customer.CustomerDeploymentUpgradeIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
@@ -815,8 +815,8 @@
       "currentCommit": "3624efb8d1bcc7e8d9457a7b44972a17def220ed",
       "historicalApplication": "dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb",
       "classes": [
-        "com.duluin.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT",
-        "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewHistorical"
+        "com.karuhun.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT",
+        "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewHistorical"
       ],
       "sourceInputs": {
         "scripts/warehouse/historical-upgrades.sh": "aae7eb3669c8bf0a522e01fb34d4620abf54591fc465bfff6bdd9f782a6248c2",
@@ -1184,16 +1184,16 @@
         "server/src/main/resources/db/migration/V178_7__warehouse_rma_optional_category.sql": "726b103ef37215b2af736cde9b6cedb336b02b7726b042f4707b673ee02fc081",
         "server/src/main/resources/db/migration/V178_8__warehouse_return_title_scope_entry.sql": "8c17b2d252004b2c2d3c4770e7ab2327bc1bd3cb9892aa5e7763aaf32f097e55",
         "server/src/main/resources/db/migration/V178_9__warehouse_empty_tenant_control_cleanup.sql": "a131c3545965c9514fcf3f58420bf6ef0bb2e0d297d4a797d55c0bb126413e73",
-        "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerAssetEpisodeRevisionUpgradeIT.kt": "fa807a09b01014a9277f1043675ee22a6f86559480aee83e6f3985c1ab0b98ef",
-        "server/src/historicalTest/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewHistorical.kt": "5bed88dc2be06119e49b318f7defdaf0412b249cc2ea89d848faf0e0a20a78ec",
-        "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
-        "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationInventory.kt": "ba09d70fd180da30bd74faafc44bbf8dc8fef5b186e0d01ceb808b59360aae1d",
+        "server/src/historicalTest/kotlin/com/karuhun/ftth/customer/CustomerAssetEpisodeRevisionUpgradeIT.kt": "fa807a09b01014a9277f1043675ee22a6f86559480aee83e6f3985c1ab0b98ef",
+        "server/src/historicalTest/kotlin/com/karuhun/ftth/monitoring/WarehouseDiscoveryITReviewHistorical.kt": "5bed88dc2be06119e49b318f7defdaf0412b249cc2ea89d848faf0e0a20a78ec",
+        "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
+        "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationInventory.kt": "ba09d70fd180da30bd74faafc44bbf8dc8fef5b186e0d01ceb808b59360aae1d",
         "server/src/test/resources/warehouse/task17-migration-inventory.txt": "2f5e25b16aad819a67e4ade46285446403f7c45ffec4f6688004b91e3a5167fa"
       },
       "status": "PASSED",
       "suites": [
         {
-          "suite": "com.duluin.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT",
+          "suite": "com.karuhun.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
@@ -1201,7 +1201,7 @@
           "reportSha256": "1448256d377f5293588aa0056732193cf49ffc0b8ab727213b2231924445a55d"
         },
         {
-          "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewHistorical",
+          "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewHistorical",
           "tests": 1,
           "failures": 0,
           "errors": 0,
@@ -1219,7 +1219,7 @@
       "currentCommit": "3624efb8d1bcc7e8d9457a7b44972a17def220ed",
       "historicalApplication": "1580145c27d41a63cb2485f2bfadcba7cc0fb8a3",
       "classes": [
-        "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Upgrade"
+        "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Upgrade"
       ],
       "sourceInputs": {
         "scripts/warehouse/historical-upgrades.sh": "aae7eb3669c8bf0a522e01fb34d4620abf54591fc465bfff6bdd9f782a6248c2",
@@ -1587,15 +1587,15 @@
         "server/src/main/resources/db/migration/V178_7__warehouse_rma_optional_category.sql": "726b103ef37215b2af736cde9b6cedb336b02b7726b042f4707b673ee02fc081",
         "server/src/main/resources/db/migration/V178_8__warehouse_return_title_scope_entry.sql": "8c17b2d252004b2c2d3c4770e7ab2327bc1bd3cb9892aa5e7763aaf32f097e55",
         "server/src/main/resources/db/migration/V178_9__warehouse_empty_tenant_control_cleanup.sql": "a131c3545965c9514fcf3f58420bf6ef0bb2e0d297d4a797d55c0bb126413e73",
-        "server/src/historicalTest/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Upgrade.kt": "36d6232af2b81ab26e9fc4999b812e178fc4d5577968dff9f630cd84e25b7639",
-        "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
-        "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationInventory.kt": "ba09d70fd180da30bd74faafc44bbf8dc8fef5b186e0d01ceb808b59360aae1d",
+        "server/src/historicalTest/kotlin/com/karuhun/ftth/monitoring/WarehouseDiscoveryITR2Upgrade.kt": "36d6232af2b81ab26e9fc4999b812e178fc4d5577968dff9f630cd84e25b7639",
+        "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
+        "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationInventory.kt": "ba09d70fd180da30bd74faafc44bbf8dc8fef5b186e0d01ceb808b59360aae1d",
         "server/src/test/resources/warehouse/task17-migration-inventory.txt": "2f5e25b16aad819a67e4ade46285446403f7c45ffec4f6688004b91e3a5167fa"
       },
       "status": "PASSED",
       "suites": [
         {
-          "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Upgrade",
+          "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Upgrade",
           "tests": 1,
           "failures": 0,
           "errors": 0,
@@ -1615,49 +1615,49 @@
     "tests": 7,
     "suites": [
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewHistorical",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewHistorical",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetTitleUpgradeIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetTitleUpgradeIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerDeploymentUpgradeIT",
+        "suite": "com.karuhun.ftth.customer.CustomerDeploymentUpgradeIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Upgrade",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Upgrade",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -1666,13 +1666,13 @@
     ]
   },
   "rawReportSha256": {
-    "customer-episode/TEST-com.duluin.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT.xml": "1448256d377f5293588aa0056732193cf49ffc0b8ab727213b2231924445a55d",
-    "customer-episode/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewHistorical.xml": "a359fb768b3b3f0e70431212630161756b68ca8f0d5055cfbd7f3ecf034a763b",
-    "customer-title/TEST-com.duluin.ftth.customer.CustomerAssetTitleUpgradeIT.xml": "ba73708ea5286cfae2e01d2da3b8d7422a55f0e868fa55fce6d25c87ca2ea250",
-    "customer-title/TEST-com.duluin.ftth.customer.CustomerDeploymentUpgradeIT.xml": "e489214f63d066630ec4889b9092f56dac598b55839c1f63cc08f100b20f265a",
-    "discovery-receipt/TEST-com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Upgrade.xml": "fd34c56a60e253010df86e423f3925419c9db7ab151f644f93aca78900ba78b2",
-    "fulfillment/TEST-com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade.xml": "ada57af1b7f0f814b8cbfe1c87c61b2090ad66b751007c54e4e22c7fd8230e82",
-    "fulfillment/TEST-com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade.xml": "0efb390d14d3fa4f412f2fc7218a5a32b2d2e62ef044f5792d4080836e2a809b"
+    "customer-episode/TEST-com.karuhun.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT.xml": "1448256d377f5293588aa0056732193cf49ffc0b8ab727213b2231924445a55d",
+    "customer-episode/TEST-com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewHistorical.xml": "a359fb768b3b3f0e70431212630161756b68ca8f0d5055cfbd7f3ecf034a763b",
+    "customer-title/TEST-com.karuhun.ftth.customer.CustomerAssetTitleUpgradeIT.xml": "ba73708ea5286cfae2e01d2da3b8d7422a55f0e868fa55fce6d25c87ca2ea250",
+    "customer-title/TEST-com.karuhun.ftth.customer.CustomerDeploymentUpgradeIT.xml": "e489214f63d066630ec4889b9092f56dac598b55839c1f63cc08f100b20f265a",
+    "discovery-receipt/TEST-com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Upgrade.xml": "fd34c56a60e253010df86e423f3925419c9db7ab151f644f93aca78900ba78b2",
+    "fulfillment/TEST-com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade.xml": "ada57af1b7f0f814b8cbfe1c87c61b2090ad66b751007c54e4e22c7fd8230e82",
+    "fulfillment/TEST-com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade.xml": "0efb390d14d3fa4f412f2fc7218a5a32b2d2e62ef044f5792d4080836e2a809b"
   },
   "runnerExitCode": 0,
   "latestMigration": "178.9",

@@ -14,12 +14,12 @@ Status: **REJECT current source — one high security finding; runtime gates pen
 
 Primary locations:
 
-- `server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt:27`
-- `server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt:30`
-- `server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt:41`
-- `server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt:44`
-- `server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/InventoryQueryController.kt:14`
-- `server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/InventoryController.kt:23`
+- `server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryApiService.kt:27`
+- `server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryApiService.kt:30`
+- `server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryApiService.kt:41`
+- `server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryApiService.kt:44`
+- `server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/inbound/web/InventoryQueryController.kt:14`
+- `server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/inbound/web/InventoryController.kt:23`
 
 The feature scopes the new warehouse readers and legacy `/api/inventory/stock` through `WarehouseQueryService.access()`. However, the other legacy routes still call tenant-only repository readers. `locations()`, `items()`, and `custody()` use `findAll(TenantContext.tenantId())`; `findSerializedAsset()` uses an ID lookup. The repository implementation in `InventoryPersistence.kt` does not add warehouse/area predicates. These HTTP routes check only their permission family and never obtain current warehouse/area visibility.
 
@@ -35,7 +35,7 @@ Validation status: independently traced in current source; no runtime reproducti
 
 ### F2-02 — MEDIUM / P2: the legacy reservation projection misses canonical reservations
 
-Location: `server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryApiService.kt:37`.
+Location: `server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryApiService.kt:37`.
 
 `GET /api/inventory/reservations` filters serialized assets by `InventoryStatus.RESERVED`. Canonical reservations are now durable `inventory_reservation` rows. They encumber availability without changing the asset's physical status; `WarehousePostingService` rejects physical legs with status `RESERVED`, and `docs/warehouse-queries.md:40` documents this distinction.
 

@@ -77,7 +77,7 @@
     "web/src/pages/MyMaterialsPage.tsx"
   ],
   "changedSince6b": [
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseContractTest.kt",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseContractTest.kt",
     "web/src/components/organisms/warehouse/WarehouseStatus.tsx",
     "web/src/pages/MyMaterialsPage.tsx"
   ],

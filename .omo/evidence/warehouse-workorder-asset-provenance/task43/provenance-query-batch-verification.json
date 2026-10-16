@@ -4,7 +4,7 @@
     "build": "SUCCESSFUL in 51s",
     "suites": [
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITQuery",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -14,21 +14,21 @@
   },
   "supportingSuites": [
     {
-      "suite": "com.duluin.ftth.ModularityTests",
+      "suite": "com.karuhun.ftth.ModularityTests",
       "tests": 3,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+      "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITBoot",
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseMigrationInventoryTest",
+      "suite": "com.karuhun.ftth.inventory.WarehouseMigrationInventoryTest",
       "tests": 10,
       "failures": 0,
       "errors": 0,
@@ -39,10 +39,10 @@
   "tests": 17,
   "files": {
     "server/src/main/resources/db/migration/V177_1__warehouse_migration_command_receipt.sql": "456b3c169eb30a406629fc52ae520442e130c81d9cb4fd97eb7aeff9861a4023",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt": "7b00f6f37b395d79a68fe65999cd68fd3fa70b866dca1b53d652ca8a04b6bf56",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseProvenanceStore.kt": "adfc5a39c667e744da8ad9a0eed4b6f913000edc3d072102eaff755a36e3801a",
-    "server/src/main/kotlin/com/duluin/ftth/customer/adapter/outbound/persistence/ProvenanceCustomerAdapter.kt": "26ff70fd9d73ae5b69548b9c285d5ab64e5eb7a4369a7d738731640a1c652bc2",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationITQuery.kt": "23f5bc2b38817d946daa7152694ed83e2588769ba79500ec7b38102f0abeadc3"
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt": "7b00f6f37b395d79a68fe65999cd68fd3fa70b866dca1b53d652ca8a04b6bf56",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseProvenanceStore.kt": "adfc5a39c667e744da8ad9a0eed4b6f913000edc3d072102eaff755a36e3801a",
+    "server/src/main/kotlin/com/karuhun/ftth/customer/adapter/outbound/persistence/ProvenanceCustomerAdapter.kt": "26ff70fd9d73ae5b69548b9c285d5ab64e5eb7a4369a7d738731640a1c652bc2",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationITQuery.kt": "23f5bc2b38817d946daa7152694ed83e2588769ba79500ec7b38102f0abeadc3"
   },
   "checks": [
     "full packaged Spring Boot from V172 legacy fixture",

@@ -4,7 +4,7 @@
     "tests": 7,
     "suites": [
       {
-        "suite": "com.duluin.ftth.fulfillment.MyMaterialsIT",
+        "suite": "com.karuhun.ftth.fulfillment.MyMaterialsIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -12,7 +12,7 @@
         "xmlSha256": "c35eb75d6fa65a21107c28e2daf9012ccfa4106d57c1966b0cae6eb840b7d74d"
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MyMaterialsRefreshIT",
+        "suite": "com.karuhun.ftth.fulfillment.MyMaterialsRefreshIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -20,7 +20,7 @@
         "xmlSha256": "e8d33ee32a14f92f0b30ce8e4271f8daf83222c99672edbcdb7bb6aedc95be75"
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MaterialWorkbenchIT",
+        "suite": "com.karuhun.ftth.fulfillment.MaterialWorkbenchIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,

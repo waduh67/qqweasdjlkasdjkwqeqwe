@@ -58,4 +58,4 @@ ftth:
 
 logging:
   level:
-    com.duluin.ftth.simulator: INFO
+    com.karuhun.ftth.simulator: INFO

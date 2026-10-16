@@ -2,7 +2,7 @@
   "scope": "Dedicated database migration fixtures and non-owner application compatibility",
   "counts": [
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseSchemaITUpgrade",
+      "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITUpgrade",
       "tests": 3,
       "failures": 0,
       "errors": 0,
@@ -10,7 +10,7 @@
       "seconds": 42.114
     },
     {
-      "suite": "com.duluin.ftth.provisioning.ProvisioningMigrationCompatibilityIT",
+      "suite": "com.karuhun.ftth.provisioning.ProvisioningMigrationCompatibilityIT",
       "tests": 4,
       "failures": 0,
       "errors": 0,
@@ -18,7 +18,7 @@
       "seconds": 106.782
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseDatabaseIsolationIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseDatabaseIsolationIT",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -26,7 +26,7 @@
       "seconds": 23.659
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseReceiptITRestart",
+      "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITRestart",
       "tests": 2,
       "failures": 0,
       "errors": 0,
@@ -37,12 +37,12 @@
   "sourceHashes": {
     "scripts/warehouse/database-fixture.sh": "9123c3459475dc73c210f7a0e60123714688ac811b7d0f5024637948e6d34983",
     "scripts/warehouse/test-environment.sh": "b5622ffacdedb569ff1ca6b7e8bad91d692cebff516ed2aec37568285bfca0b5",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaITUpgrade.kt": "d9a52f2a7ffa00ebcfa612b75b6b9613c7ee6118512fd0683dfb7c7f92a5e1b3",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDatabaseIsolationIT.kt": "bc26ccdd3395cf5126499bf3e5443eaad16a49c59a7079e18a0a33781b2a9194",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptRestartProcess.kt": "3bbcee20865211609aa2a893129a26f1ecf60a440ec8ba61b109f7a7b987c57b",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReceiptITRestart.kt": "3103e4fcca097d4a9b4be8ae7071e7534bfa89d803f829cc9e022d01412555c9",
-    "server/src/test/kotlin/com/duluin/ftth/provisioning/ProvisioningMigrationCompatibilityIT.kt": "d3269fc5e465165485ce8bc983ec104c8f68b401d73258ff837cb875bf78a741"
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSchemaITUpgrade.kt": "d9a52f2a7ffa00ebcfa612b75b6b9613c7ee6118512fd0683dfb7c7f92a5e1b3",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDatabaseIsolationIT.kt": "bc26ccdd3395cf5126499bf3e5443eaad16a49c59a7079e18a0a33781b2a9194",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReceiptRestartProcess.kt": "3bbcee20865211609aa2a893129a26f1ecf60a440ec8ba61b109f7a7b987c57b",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReceiptITRestart.kt": "3103e4fcca097d4a9b4be8ae7071e7534bfa89d803f829cc9e022d01412555c9",
+    "server/src/test/kotlin/com/karuhun/ftth/provisioning/ProvisioningMigrationCompatibilityIT.kt": "d3269fc5e465165485ce8bc983ec104c8f68b401d73258ff837cb875bf78a741"
   },
   "assertions": [
     "V175.131 through latest and repeat migration leave shared public warehouse function definitions unchanged",

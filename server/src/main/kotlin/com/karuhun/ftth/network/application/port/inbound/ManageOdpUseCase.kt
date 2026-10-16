@@ -1,0 +1,44 @@
+package com.karuhun.ftth.network.application.port.inbound
+
+import com.karuhun.ftth.common.domain.Page
+import com.karuhun.ftth.common.domain.PageRequest
+import com.karuhun.ftth.common.domain.geo.Coordinate
+import com.karuhun.ftth.network.domain.model.AssetStatus
+import com.karuhun.ftth.network.domain.model.MountingType
+import java.time.LocalDate
+import java.util.UUID
+
+interface ManageOdpUseCase {
+
+    fun search(query: String, odcId: UUID?, pageRequest: PageRequest): Page<OdpView>
+
+    fun get(id: UUID): OdpView
+
+    fun create(command: SaveOdpCommand): OdpView
+
+    fun update(id: UUID, command: SaveOdpCommand): OdpView
+
+    /** Memindah titik ODP di peta; ujung kabel yang menyentuhnya ikut menempel ulang. */
+    fun relocate(id: UUID, location: Coordinate): OdpView
+
+    fun connect(id: UUID, odcId: UUID?): OdpView
+
+    fun delete(id: UUID)
+}
+
+data class SaveOdpCommand(
+    val code: String,
+    val name: String,
+    val address: String?,
+    val location: Coordinate,
+    val areaId: UUID?,
+    val odcId: UUID?,
+    /** Lihat [SaveOdcCommand.splitterRatio]. */
+    val splitterRatio: String?,
+    val capacity: Int,
+    val status: AssetStatus,
+    /** Lihat [SaveOdcCommand.installedOn] dkk. */
+    val installedOn: LocalDate? = null,
+    val mounting: MountingType? = null,
+    val notes: String? = null,
+)

@@ -1,0 +1,412 @@
+package com.karuhun.ftth.onboarding.adapter.inbound.web
+
+import com.karuhun.ftth.common.domain.geo.Coordinate
+import com.karuhun.ftth.onboarding.application.port.inbound.CustomerExportLine
+import com.karuhun.ftth.onboarding.application.port.inbound.CustomerImportRow
+import com.karuhun.ftth.onboarding.application.port.inbound.ExportCustomersUseCase
+import com.karuhun.ftth.onboarding.application.port.inbound.ExpressOnboardingUseCase
+import com.karuhun.ftth.onboarding.application.port.inbound.ExpressPsbCommand
+import com.karuhun.ftth.onboarding.application.port.inbound.ExpressPsbResult
+import com.karuhun.ftth.onboarding.application.port.inbound.ImportCustomersCommand
+import com.karuhun.ftth.onboarding.application.port.inbound.ImportCustomersResult
+import com.karuhun.ftth.onboarding.application.port.inbound.ImportCustomersUseCase
+import com.karuhun.ftth.onboarding.application.port.inbound.ImportPppoeCommand
+import com.karuhun.ftth.onboarding.application.port.inbound.ImportPppoeResult
+import com.karuhun.ftth.onboarding.application.port.inbound.ImportPppoeUseCase
+import com.karuhun.ftth.onboarding.application.port.inbound.ImportMode
+import com.karuhun.ftth.onboarding.application.port.inbound.ImportRow
+import com.karuhun.ftth.onboarding.application.port.inbound.ImportSource
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Size
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestPart
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.multipart.MultipartFile
+import com.karuhun.ftth.onboarding.application.service.CustomerCsvParser
+import com.karuhun.ftth.onboarding.application.service.CustomerImportBatchService
+import java.math.BigDecimal
+import java.time.Instant
+import java.time.LocalDate
+import java.util.UUID
+
+/**
+ * PSB ekspres: satu POST untuk mendaftarkan pelanggan + langganan + akun jaringan + WO PSB
+ * sekaligus (wizard onboarding operator). Digating izin union keempat aksi yang dirangkainya —
+ * operator harus berhak melakukan setiap langkah, tanpa perlu izin baru yang harus disebar manual
+ * ke role tenant lama.
+ */
+@RestController
+@RequestMapping("/api/onboarding")
+@Tag(name = "Onboarding")
+@SecurityRequirement(name = "bearer-jwt")
+class OnboardingController(
+    private val onboarding: ExpressOnboardingUseCase,
+    private val importPppoe: ImportPppoeUseCase,
+    private val importCustomers: ImportCustomersUseCase,
+    private val exportCustomers: ExportCustomersUseCase,
+    private val customerBatches: CustomerImportBatchService,
+    private val migrationAccess: MigrationAreaAccess,
+) {
+
+    @PostMapping("/psb")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize(
+        "@authz.canAll('customer.customer.create','customer.subscription.update','bng.access.manage','workorder.order.create')",
+    )
+    fun onboardPsb(@Valid @RequestBody request: ExpressPsbRequest): ExpressPsbResult =
+        onboarding.onboardPsb(request.toCommand())
+
+    /**
+     * Migrasi pelanggan dari akun RouterOS; akun sumber tetap digunakan sampai RADIUS disiapkan.
+     * Digating union izin langkah yang dirangkainya + `bng.nas.manage` (baca `/ppp/secret` router
+     * pada sumber NAS). Membalas rekap per-baris (bukan resource tunggal) → 200, bukan 201.
+     */
+    @PostMapping("/import/pppoe")
+    @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize(
+        "@authz.canAll('customer.customer.create','customer.subscription.update','bng.nas.manage')",
+    )
+    fun importPppoe(@Valid @RequestBody request: ImportPppoeRequest): ImportPppoeResult {
+        migrationAccess.requireRadius(request.mode.includesRadius)
+        migrationAccess.requireArea(request.areaId)
+        return importPppoe.importPppoe(request.toCommand())
+    }
+
+    /**
+     * Impor CSV pelanggan: buat catatan layanan berdasarkan kode pelanggan atau username.
+     * Mode migrasi menentukan apakah akun RADIUS ikut dibuat. Izin mencakup buat &
+     * ubah pelanggan, ubah langganan, kelola akun jaringan). Membalas rekap per-baris → 200.
+     */
+    @PostMapping("/import/customers")
+    @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize(
+        "@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update')",
+    )
+    fun importCustomers(@Valid @RequestBody request: ImportCustomersRequest): ImportCustomersResult {
+        migrationAccess.requireRadius(request.mode.includesRadius)
+        request.rows.forEach { migrationAccess.requireArea(it.areaId) }
+        return importCustomers.importCustomers(request.toCommand())
+    }
+
+    @PostMapping("/v1/import/customers", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update')")
+    fun stageCustomerImport(
+        @RequestPart("file") file: MultipartFile,
+        @RequestParam operationKey: String,
+        @RequestParam(defaultValue = "ALREADY_INSTALLED") mode: ImportMode,
+        @RequestParam(required = false) firstInvoiceOn: LocalDate?,
+        @RequestParam(required = false) billingDay: Int?,
+        @RequestParam(required = false) areaId: UUID?,
+    ): com.karuhun.ftth.onboarding.application.service.CustomerImportBatchView {
+        migrationAccess.requireArea(areaId)
+        val parsed = CustomerCsvParser.parse(file.inputStream, file.size)
+        val settings = "$firstInvoiceOn|$billingDay|$areaId" + if (mode.includesRadius) "|RADIUS" else ""
+        val hash = java.security.MessageDigest.getInstance("SHA-256").digest((parsed.sha256 + settings).toByteArray()).joinToString("") { "%02x".format(it) }
+        return customerBatches.stage(operationKey, parsed.copy(sha256 = hash, rows = parsed.rows.map {
+            it.copy(firstInvoiceOn = it.firstInvoiceOn ?: firstInvoiceOn, nextBillingDay = it.nextBillingDay ?: billingDay, areaId = areaId)
+        }), mode)
+    }
+
+    @GetMapping("/v1/import/customers/{id}")
+    @PreAuthorize("@authz.can('customer.customer.view')")
+    fun customerImportStatus(@PathVariable id: UUID) = customerBatches.status(id)
+
+    @PostMapping("/v1/import/customers/{id}/commit")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update')")
+    fun commitCustomerImport(
+        @PathVariable id: UUID,
+        @RequestParam commitOperationKey: String,
+        @RequestParam commitHash: String,
+    ) = customerBatches.commit(id, commitOperationKey, commitHash)
+
+    @PostMapping("/v1/import/customers/{id}/cancel")
+    @PreAuthorize("@authz.can('customer.customer.update')")
+    fun cancelCustomerImport(@PathVariable id: UUID) = customerBatches.cancel(id)
+
+    @PostMapping("/v1/import/customers/{id}/retry")
+    @PreAuthorize("@authz.canAll('customer.customer.create','customer.customer.update','customer.subscription.update')")
+    fun retryCustomerImport(
+        @PathVariable id: UUID,
+        @RequestParam commitOperationKey: String,
+        @RequestParam commitHash: String,
+    ) = customerBatches.retry(id, commitOperationKey, commitHash)
+
+    @GetMapping("/v1/import/customers/{id}/report", produces = ["text/csv"])
+    @PreAuthorize("@authz.can('customer.customer.view')")
+    fun customerImportReport(@PathVariable id: UUID): ResponseEntity<ByteArray> = ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=customer-import-$id-report.csv")
+        .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+        .body(customerBatches.report(id).toByteArray(Charsets.UTF_8))
+
+    /**
+     * Ekspor CSV pelanggan (kebalikan simetris impor) — satu baris per akun jaringan, kolom cocok
+     * template impor sehingga hasilnya bisa diunggah kembali. `password` & `notes` selalu
+     * KOSONG (rahasia tak diekspor; kolom kosong = "pertahankan" saat diimpor ulang). Digating izin
+     * BACA union (lihat/telaah pelanggan, langganan, akun jaringan). Membalas `text/csv` sebagai
+     * unduhan berkas.
+     */
+    @GetMapping("/export/customers", produces = ["text/csv"])
+    @PreAuthorize(
+        "@authz.canAll('customer.customer.view','customer.subscription.view','bng.access.view')",
+    )
+    fun exportCustomers(): ResponseEntity<ByteArray> {
+        val csv = CustomerCsv.render(exportCustomers.exportCustomers())
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"pelanggan.csv\"")
+            .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+            .body(csv.toByteArray(Charsets.UTF_8))
+    }
+}
+
+/**
+ * Penulis CSV pelanggan (satu-satunya tempat urutan & escaping kolom hidup, di sisi adapter web).
+ * Header identik template impor agar keluaran ekspor bisa diunggah kembali tanpa penyesuaian.
+ * Kolom `password` & `notes` selalu kosong.
+ */
+internal object CustomerCsv {
+
+    private val negativeNumber = Regex("-\\d+(?:\\.\\d+)?")
+
+    /** Urutan kolom = template impor. Diubah = klien impor/ekspor harus ikut disesuaikan. */
+    private val HEADER = listOf(
+        "name", "phone", "address", "package_name", "connection_type", "installation_date",
+        "username", "password", "email", "router_name", "framed_ip", "id_card_number",
+        "next_billing", "latitude", "longitude", "notes", "customer_code", "service_status", "first_invoice_on", "monthly_fee",
+    )
+
+    fun render(lines: List<CustomerExportLine>): String {
+        val sb = StringBuilder()
+        sb.append(HEADER.joinToString(",") { escape(it) }).append("\r\n")
+        for (line in lines) {
+            sb.append(
+                listOf(
+                    line.name.orEmpty(),
+                    line.phone.orEmpty(),
+                    line.address.orEmpty(),
+                    line.packageName.orEmpty(),
+                    line.connectionType,
+                    line.installationDate?.toString().orEmpty(),
+                    line.mikrotikUsername,
+                    "", // password — sengaja kosong (rahasia tak diekspor)
+                    line.email.orEmpty(),
+                    line.routerName.orEmpty(),
+                    line.framedIp.orEmpty(),
+                    line.idCardNumber.orEmpty(),
+                    line.nextBillingDay?.toString().orEmpty(),
+                    line.latitude?.toString().orEmpty(),
+                    line.longitude?.toString().orEmpty(),
+                    "", // notes
+                    line.customerCode.orEmpty(), line.serviceStatus.orEmpty(),
+                    line.firstInvoiceOn?.toString().orEmpty(), line.monthlyFee?.toPlainString().orEmpty(),
+                ).joinToString(",") { escape(it) },
+            ).append("\r\n")
+        }
+        return sb.toString()
+    }
+
+    /** Escaping RFC-4180: bungkus tanda kutip bila mengandung koma/kutip/baris-baru; kutip digandakan. */
+    private fun escape(value: String): String =
+        if (value.trimStart().firstOrNull() in setOf('=', '+', '-', '@') && !negativeNumber.matches(value.trim())) {
+            escape("'$value")
+        } else if (value.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) {
+            "\"" + value.replace("\"", "\"\"") + "\""
+        } else {
+            value
+        }
+}
+
+/**
+ * Muatan impor CSV pelanggan: baris sudah diurai klien menjadi bentuk terstruktur. `username`
+ * jadi kunci upsert (kosong = baris dilewati). Kolom lain opsional — pada jalur update yang kosong
+ * dipertahankan.
+ */
+data class ImportCustomersRequest(
+    @field:Valid val rows: List<CustomerImportRowPayload> = emptyList(),
+    val schemaVersion: Int = 1,
+    val mode: ImportMode = ImportMode.ALREADY_INSTALLED,
+    val operationKey: String? = null,
+) {
+    fun toCommand() = ImportCustomersCommand(
+            rows = rows.map {
+            CustomerImportRow(
+                name = it.name,
+                phone = it.phone,
+                address = it.address,
+                packageName = it.packageName,
+                connectionType = it.connectionType,
+                installationDate = it.installationDate,
+                mikrotikUsername = it.mikrotikUsername,
+                mikrotikPassword = it.mikrotikPassword,
+                email = it.email,
+                routerName = it.routerName,
+                idCardNumber = it.idCardNumber,
+                nextBillingDay = it.nextBillingDay,
+                latitude = it.latitude,
+                longitude = it.longitude,
+                framedIp = it.framedIp,
+                customerCode = it.customerCode, serviceStatus = it.serviceStatus,
+                firstInvoiceOn = it.firstInvoiceOn, monthlyFee = it.monthlyFee, areaId = it.areaId,
+            )
+            },
+            schemaVersion = schemaVersion,
+            mode = mode,
+            operationKey = operationKey,
+        )
+}
+
+/**
+ * Satu baris impor CSV. [mikrotikUsername] = kunci upsert (MAC untuk tipe DHCP/Static). [installationDate]
+ * format ISO (`YYYY-MM-DD`). [nextBillingDay] hari tanggal tagih (di-clamp ≤28 di service). [framedIp]
+ * reservasi Framed-IP untuk Static (wajib)/DHCP (opsional). Batas panjang menahan payload absurd,
+ * bukan menegakkan aturan bisnis (itu di domain/service, agar satu baris jelek tak menjatuhkan batch).
+ */
+data class CustomerImportRowPayload(
+    @field:Size(max = 150) val name: String? = null,
+    @field:Size(max = 30) val phone: String? = null,
+    @field:Size(max = 500) val address: String? = null,
+    @field:Size(max = 100) val packageName: String? = null,
+    @field:Size(max = 30) val connectionType: String? = null,
+    val installationDate: LocalDate? = null,
+    @field:Size(max = 100) val mikrotikUsername: String? = null,
+    @field:Size(max = 100) val mikrotikPassword: String? = null,
+    @field:Size(max = 255) val email: String? = null,
+    @field:Size(max = 100) val routerName: String? = null,
+    @field:Size(max = 32) val idCardNumber: String? = null,
+    val nextBillingDay: Int? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    @field:Size(max = 45) val framedIp: String? = null,
+    @field:Size(max = 40) val customerCode: String? = null,
+    val serviceStatus: String = "ACTIVE",
+    val firstInvoiceOn: LocalDate? = null,
+    val monthlyFee: BigDecimal? = null,
+    val areaId: UUID? = null,
+)
+
+/**
+ * Muatan bulk-import PPPoE. [source] NAS → server menarik `/ppp/secret` dari [nasId] (abaikan
+ * [rows]); INLINE → baris dari [rows] (hasil paste/upload operator). [profilePlanId] memetakan
+ * profil RouterOS → paket; [defaultPlanId] fallback. [onlyNames] membatasi ke username terpilih.
+ * [defaultAddress]/[defaultLocation] mengisi data pelanggan yang tak ada di router (placeholder).
+ */
+data class ImportPppoeRequest(
+    @field:NotNull val nasId: UUID?,
+    @field:NotNull val source: ImportSource?,
+    @field:Valid val rows: List<ImportRowPayload> = emptyList(),
+    val profilePlanId: Map<String, UUID> = emptyMap(),
+    val defaultPlanId: UUID? = null,
+    val skipDisabled: Boolean = true,
+    val onlyNames: List<String>? = null,
+    val areaId: UUID? = null,
+    @field:Size(max = 500) val defaultAddress: String? = null,
+    @field:Valid val defaultLocation: LocationPayload? = null,
+    val schemaVersion: Int = 1,
+    val mode: ImportMode = ImportMode.ALREADY_INSTALLED,
+    val operationKey: String? = null,
+    val firstInvoiceOn: LocalDate? = null,
+    val billingDay: Int? = null,
+    val installationDate: LocalDate? = null,
+) {
+    fun toCommand() = ImportPppoeCommand(
+        nasId = nasId!!,
+        source = source!!,
+        rows = rows.map { ImportRow(it.name!!, it.password, it.profile, it.comment, it.disabled) },
+        profilePlanId = profilePlanId,
+        defaultPlanId = defaultPlanId,
+        skipDisabled = skipDisabled,
+        onlyNames = onlyNames?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet(),
+        areaId = areaId,
+        defaultAddress = defaultAddress,
+        defaultLocation = defaultLocation?.let { Coordinate(it.longitude, it.latitude) },
+        schemaVersion = schemaVersion,
+        mode = mode,
+        operationKey = operationKey,
+        firstInvoiceOn = firstInvoiceOn, billingDay = billingDay, installationDate = installationDate,
+    )
+}
+
+/** Satu baris impor INLINE (paste/upload). [name] = username PPPoE; sisanya opsional. */
+data class ImportRowPayload(
+    @field:NotBlank @field:Size(max = 100) val name: String?,
+    @field:Size(max = 100) val password: String? = null,
+    @field:Size(max = 100) val profile: String? = null,
+    @field:Size(max = 255) val comment: String? = null,
+    val disabled: Boolean = false,
+)
+
+/** Titik lokasi pelanggan; longitude dulu (urutan GeoJSON/PostGIS), sama seperti form pelanggan. */
+data class LocationPayload(
+    @field:Min(-180) @field:Max(180) val longitude: Double,
+    @field:Min(-90) @field:Max(90) val latitude: Double,
+)
+
+/**
+ * Muatan PSB ekspres. Kredensial ([username]/[secret]) boleh kosong (server generate — operator
+ * melihat password yang ia isi/generate di klien). [serviceType] kosong → PPPOE. [title] kosong →
+ * "PSB {nama}".
+ */
+data class ExpressPsbRequest(
+    // Pelanggan
+    /** Kosong = server membuat kode berurut otomatis (`CUST-000001`). */
+    @field:Size(max = 40) val code: String? = null,
+    @field:NotBlank @field:Size(max = 150) val name: String?,
+    @field:Size(max = 30) val phone: String? = null,
+    @field:Size(max = 255) val email: String? = null,
+    @field:NotBlank @field:Size(max = 500) val address: String?,
+    @field:Valid val location: LocationPayload? = null,
+    val areaId: UUID? = null,
+    // Langganan
+    @field:NotNull val planId: UUID?,
+    val monthlyFeeOverride: BigDecimal? = null,
+    // Akun jaringan
+    @field:Size(max = 100) val username: String? = null,
+    @field:Size(max = 100) val secret: String? = null,
+    @field:Size(max = 20) val serviceType: String? = null,
+    val nasId: UUID? = null,
+    @field:Size(max = 45) val framedIp: String? = null,
+    // Work order PSB
+    @field:Size(max = 200) val title: String? = null,
+    @field:Size(max = 2000) val description: String? = null,
+    val scheduledAt: Instant? = null,
+    /** Roster teknisi awal WO PSB (tim datar); null/kosong = belum ditugaskan. */
+    val assignees: Set<UUID>? = null,
+) {
+    fun toCommand() = ExpressPsbCommand(
+        code = code,
+        name = name!!,
+        phone = phone,
+        email = email,
+        address = address!!,
+        location = location?.let { Coordinate(it.longitude, it.latitude) },
+        areaId = areaId,
+        planId = planId!!,
+        monthlyFeeOverride = monthlyFeeOverride,
+        username = username,
+        secret = secret,
+        serviceType = serviceType,
+        nasId = nasId,
+        framedIp = framedIp,
+        title = title,
+        description = description,
+        scheduledAt = scheduledAt,
+        assignees = assignees ?: emptySet(),
+    )
+}

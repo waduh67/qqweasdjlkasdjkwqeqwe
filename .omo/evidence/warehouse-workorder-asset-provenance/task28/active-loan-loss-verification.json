@@ -19,7 +19,7 @@
   "redaction": "Only test names/counts and source/result digests; no raw HTTP logs or credentials",
   "suites": [
     {
-      "name": "com.duluin.ftth.ModularityTests",
+      "name": "com.karuhun.ftth.ModularityTests",
       "tests": 3,
       "failures": 0,
       "errors": 0,
@@ -32,7 +32,7 @@
       "xmlSha256": "21e7fd4a3fb7fbf17b0facb5d2429c68e77f983e5c91f2641b4b79a9b844acdb"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseAssetLossGuardsIT",
+      "name": "com.karuhun.ftth.inventory.WarehouseAssetLossGuardsIT",
       "tests": 10,
       "failures": 0,
       "errors": 0,
@@ -52,7 +52,7 @@
       "xmlSha256": "fc0dd29738644d1e3069cfecc96bd69a4821049402eb62408351c9e2f33706fd"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseAssetLossIT",
+      "name": "com.karuhun.ftth.inventory.WarehouseAssetLossIT",
       "tests": 2,
       "failures": 0,
       "errors": 0,

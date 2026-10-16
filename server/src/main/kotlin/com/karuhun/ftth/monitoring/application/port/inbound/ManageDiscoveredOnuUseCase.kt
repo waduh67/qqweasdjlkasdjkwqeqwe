@@ -1,0 +1,107 @@
+package com.karuhun.ftth.monitoring.application.port.inbound
+
+import com.karuhun.ftth.monitoring.domain.model.DiscoveredOnuState
+import java.time.Instant
+import java.util.UUID
+
+/**
+ * Kotak masuk provisioning: menampilkan ONU liar yang terdeteksi jaringan dan
+ * menuntaskannya menjadi pelanggan terpasang.
+ *
+ * Penautan sebenarnya (mendaftarkan ONU + memasang ke port ODP) milik module
+ * customer; module monitoring hanya mengorkestrasi lewat `CustomerApi` lalu
+ * menandai baris kotak masuknya selesai.
+ */
+interface ManageDiscoveredOnuUseCase {
+
+    /**
+     * Daftar ONU terdeteksi pada sebuah tahap; default yang masih menunggu tindakan.
+     * Bila [oltId] diisi, hasil disaring ke satu OLT saja — untuk pandangan per-OLT.
+     */
+    fun list(state: DiscoveredOnuState?, oltId: UUID? = null): List<DiscoveredOnuView>
+
+    /**
+     * Menuntaskan sebuah ONU terdeteksi: daftarkan serialnya untuk pelanggan, lalu — bila
+     * ODP+port dipilih — pasang ke port itu. ODP OPSIONAL: dikosongkan berarti ONU cukup
+     * ditautkan ke pelanggan dulu (dipasang ke ODP belakangan di peta). Entah bagaimana pun,
+     * baris kotak masuknya ditandai PROVISIONED (keluar dari daftar "menunggu").
+     */
+    fun provision(id: UUID, command: ProvisionDiscoveredOnuCommand): DiscoveredOnuView
+
+    /** Mengabaikan sebuah ONU terdeteksi (perangkat uji, ONU tetangga, dst). */
+    fun ignore(id: UUID): DiscoveredOnuView
+
+    /**
+     * Menghapus permanen sebuah baris ONU terdeteksi dari kotak masuk. Berbeda dari
+     * [ignore] yang menyimpannya sebagai IGNORED: ini mengeluarkannya dari basis data.
+     * Hanya menyentuh baris kotak masuk — ONU/pelanggan yang sudah terdaftar tak
+     * terpengaruh. Bila OLT masih melihat serialnya, ia muncul lagi sebagai baru pada
+     * polling berikutnya; yatim dari OLT yang sudah dihapus tidak.
+     */
+    fun delete(id: UUID)
+}
+
+data class ProvisionDiscoveredOnuCommand(
+    val customerId: UUID,
+    /** ODP tujuan; null = tempel ke pelanggan dulu, ODP menyusul. Harus utuh bersama [portNumber]. */
+    val odpId: UUID?,
+    /** Port pada [odpId]; null bila ODP dikosongkan. */
+    val portNumber: Int?,
+    /** Redaman baseline saat instalasi; bila null dipakai redaman terakhir yang teramati. */
+    val installRxPowerDbm: Double?,
+    val authorizationId: UUID? = null,
+    val expectedRevision: Long = 0,
+    val operationKey: String = "",
+)
+
+data class DiscoveredOnuView(
+    val id: UUID,
+    val serialNumber: String,
+    val oltId: UUID?,
+    val oltCode: String,
+    val ponPortLabel: String?,
+    val lastStatus: String,
+    val lastRxPowerDbm: Double?,
+    val firstSeenAt: Instant,
+    val lastSeenAt: Instant,
+    val seenCount: Int,
+    val state: DiscoveredOnuState,
+    /**
+     * Tebakan auto-link {pelanggan, ODP, port} dari topologi + backlog instalasi,
+     * agar operator cukup mengonfirmasi. `null` untuk baris yang tak lagi menunggu
+     * tindakan (sudah diprovisikan/diabaikan).
+     */
+    val suggestion: ProvisioningSuggestion? = null,
+)
+
+/** Seberapa yakin saran auto-link, menentukan cara UI menyajikannya. */
+enum class SuggestionConfidence {
+    /** Cocok tunggal: pelanggan menunggu instalasi + ODP + port jelas — layak 1-klik. */
+    HIGH,
+
+    /** Pelanggan & ODP tertebak tapi ada alternatif — pra-isi, tapi minta operator memeriksa. */
+    MEDIUM,
+
+    /** Hanya ODP + port yang bisa ditebak dari topologi; pelanggan dipilih manual. */
+    LOW,
+
+    /** Tak ada yang bisa ditebak (PON port belum terpetakan / OLT belum dikenal). */
+    NONE,
+}
+
+/**
+ * Saran penautan sebuah ONU liar. Field bernilai `null` berarti bagian itu tak
+ * bisa ditebak dan harus diisi operator; [reason] selalu menjelaskan alasannya.
+ */
+data class ProvisioningSuggestion(
+    val confidence: SuggestionConfidence,
+    val customerId: UUID?,
+    val customerName: String?,
+    val odpId: UUID?,
+    val odpCode: String?,
+    val portNumber: Int?,
+    val reason: String,
+) {
+    /** Lengkap untuk 1-klik: pelanggan, ODP, dan port sudah tertebak. */
+    val complete: Boolean get() = customerId != null && odpId != null && portNumber != null
+}

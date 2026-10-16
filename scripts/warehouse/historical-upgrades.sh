@@ -16,16 +16,19 @@ from pathlib import Path
 import hashlib, json, subprocess, sys
 old, current, destination = map(Path, sys.argv[1:4])
 classes = sys.argv[4:]
+sys.path.insert(0, str(current / 'scripts/warehouse'))
+from historical_namespace import HistoricalNamespace
+namespace = HistoricalNamespace(current, old)
 tests = {f'server/src/test/kotlin/{name.replace(".", "/")}.kt':
          f'server/src/historicalTest/kotlin/{name.replace(".", "/")}.kt' for name in classes}
-helpers = ['server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt',
-           'server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationInventory.kt',
+helpers = ['server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSchemaDatabase.kt',
+           'server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationInventory.kt',
            'server/src/test/resources/warehouse/task17-migration-inventory.txt']
 # The deployment orphan uses an unused physical revision so later sequence
 # uniqueness does not mask the document-lineage corruption being tested.
-if 'com.duluin.ftth.customer.CustomerDeploymentUpgradeIT' in classes:
-    helpers.append('server/src/test/kotlin/com/duluin/ftth/customer/CustomerDeploymentGraphFixture.kt')
-overlays = tests | {name: name for name in helpers}
+if 'com.karuhun.ftth.customer.CustomerDeploymentUpgradeIT' in classes:
+    helpers.append('server/src/test/kotlin/com/karuhun/ftth/customer/CustomerDeploymentGraphFixture.kt')
+overlays = {namespace.path(target): source for target, source in (tests | {name: name for name in helpers}).items()}
 migrations = 'server/src/main/resources/db/migration'
 current_migrations = {str(path.relative_to(current)): path for path in (current / migrations).glob('*.sql')}
 allowed = set(overlays) | set(current_migrations)
@@ -36,7 +39,7 @@ for name in pinned:
     original = subprocess.check_output(['git', '-C', str(old), 'show', 'HEAD:' + name])
     assert original == (old / name).read_bytes() == (current / name).read_bytes(), f'Historical migration changed: {name}'
 runner = 'scripts/warehouse/historical-upgrades.sh'
-inputs = {runner: hashlib.sha256((current / runner).read_bytes()).hexdigest()}
+inputs = {name: hashlib.sha256((current / name).read_bytes()).hexdigest() for name in [runner, 'scripts/warehouse/historical_namespace.py']}
 for name, source in current_migrations.items():
     target = old / name
     if target.exists():
@@ -47,18 +50,20 @@ for name, source in current_migrations.items():
 for target, source in overlays.items():
     path = old / target
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes((current / source).read_bytes())
+    data = (current / source).read_bytes()
+    path.write_bytes(namespace.content(data) if source.endswith('.kt') else data)
     inputs[source] = hashlib.sha256((current / source).read_bytes()).hexdigest()
 proof = {'currentCommit': subprocess.check_output(['git', '-C', str(current), 'rev-parse', 'HEAD'], text=True).strip(),
          'historicalApplication': subprocess.check_output(['git', '-C', str(old), 'rev-parse', 'HEAD'], text=True).strip(),
-         'classes': classes, 'sourceInputs': inputs}
+         'classes': [namespace.class_name(name) for name in classes], 'sourceInputs': inputs,
+         'currentPackage': namespace.current, 'historicalPackage': namespace.historical}
 (destination / 'inputs.json').write_text(json.dumps(proof, indent=2) + '\n')
 PY
     local arguments=() name result=0
-    for name in "${classes[@]}"; do
+    while IFS= read -r name; do
         arguments+=(--tests "$name")
         rm -f -- "$historical_base/server/build/test-results/test/TEST-$name.xml"
-    done
+    done < <(python3 -c 'import json,sys; print("\n".join(json.load(open(sys.argv[1]))["classes"]))' "$report_dir/inputs.json")
     (cd "$historical_base" && timeout --kill-after=30s 2400s ./gradlew :server:test \
         "${arguments[@]}" --no-daemon --no-parallel -Dorg.gradle.workers.max=2 \
         -Pkotlin.compiler.execution.strategy=in-process) || result=$?
@@ -98,15 +103,15 @@ historical_upgrades() {
     local report_root="$RUNTIME/historical-upgrades-$(date -u +%Y%m%dT%H%M%SZ)-$(openssl rand -hex 4)"
     mkdir -m 700 "$report_root"
     printf '%s\n' "$report_root" > "$RUNTIME/historical-upgrades-latest.txt"
-    historical_upgrade_group fulfillment 3bfe12331428eb43740c8c0399b61a956c8820a7 "$report_root"         com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade         com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade
+    historical_upgrade_group fulfillment 3bfe12331428eb43740c8c0399b61a956c8820a7 "$report_root"         com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade         com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade
     historical_upgrade_group customer-title fd2cf7c58f02022525e655a8b0884ac2f5df49b0 "$report_root" \
-        com.duluin.ftth.customer.CustomerAssetTitleUpgradeIT \
-        com.duluin.ftth.customer.CustomerDeploymentUpgradeIT
+        com.karuhun.ftth.customer.CustomerAssetTitleUpgradeIT \
+        com.karuhun.ftth.customer.CustomerDeploymentUpgradeIT
     historical_upgrade_group customer-episode dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb "$report_root" \
-        com.duluin.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT \
-        com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewHistorical
+        com.karuhun.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT \
+        com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewHistorical
     historical_upgrade_group discovery-receipt 1580145c27d41a63cb2485f2bfadcba7cc0fb8a3 "$report_root" \
-        com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Upgrade
+        com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Upgrade
     python3 - "$report_root" <<'PY'
 from pathlib import Path
 import json, sys

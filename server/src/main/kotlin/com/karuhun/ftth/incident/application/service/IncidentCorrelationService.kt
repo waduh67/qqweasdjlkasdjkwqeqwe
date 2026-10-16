@@ -1,0 +1,192 @@
+package com.karuhun.ftth.incident.application.service
+
+import com.karuhun.ftth.customer.CustomerApi
+import com.karuhun.ftth.incident.application.port.inbound.IncidentAlarm
+import com.karuhun.ftth.incident.domain.model.IncidentSuspectedCause
+import com.karuhun.ftth.monitoring.AlarmImpact
+import com.karuhun.ftth.monitoring.MonitoringApi
+import com.karuhun.ftth.network.NetworkApi
+import com.karuhun.ftth.network.UpstreamPath
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
+
+/** Hasil korelasi: satu kelompok alarm yang berbagi satu akar masalah. */
+data class CorrelatedIncident(
+    val key: String,
+    val rootType: String,
+    val rootId: UUID,
+    val rootLabel: String,
+    val severity: String,
+    val title: String,
+    val alarmCount: Int,
+    val affectedCustomerCount: Int,
+    /** Dugaan sebab blast-radius dari register ONU (mati listrik area vs fiber putus); `null` bila tak cukup data. */
+    val suspectedCause: IncidentSuspectedCause?,
+    val members: List<IncidentAlarm>,
+)
+
+/**
+ * Mesin korelasi alarm → insiden. Murni perhitungan (tanpa persistensi): dari
+ * alarm hidup + topologi, menghasilkan sedikit kelompok ber-akar-masalah.
+ *
+ * Aturannya menaiki pohon topologi mencari akar bersama:
+ * - Alarm perangkat (OLT/ODC/ODP) menjadi akarnya sendiri.
+ * - Alarm ONU dinaikkan ke hulu: melebur ke OLT/ODC yang juga beralarm; bila tak
+ *   ada alarm perangkat di atasnya tapi **≥2 ONU** di bawah satu ODC bermasalah,
+ *   ODC itu jadi tersangka akar bersama; ONU tunggal terisolasi berdiri sendiri —
+ *   itu gangguan per-pelanggan (drop/ONU-nya), bukan gangguan ODC.
+ *
+ * Semuanya lewat kontrak publik module lain; `incident` tidak menyentuh tabel
+ * mana pun secara langsung.
+ */
+@Service
+@Transactional(readOnly = true)
+class IncidentCorrelationService(
+    private val monitoringApi: MonitoringApi,
+    private val networkApi: NetworkApi,
+    private val customerApi: CustomerApi,
+) {
+    private data class Root(val type: String, val id: UUID, val label: String)
+    private class Bucket(val root: Root) {
+        val members = mutableListOf<AlarmImpact>()
+        val customers = HashSet<UUID>()
+    }
+
+    fun correlate(): List<CorrelatedIncident> {
+        // Customer/session alerts are still displayed by monitoring, but have no
+        // network-incident root in the persisted incident model. Do not let a new
+        // alert entity type prevent correlation of supported network devices.
+        val impacts = monitoringApi.activeImpacts().filter { it.entityType in INCIDENT_ENTITY_TYPES }
+        if (impacts.isEmpty()) return emptyList()
+
+        val alarmingDeviceIds = impacts
+            .filter { it.entityType == "OLT" || it.entityType == "ODC" || it.entityType == "ODP" }
+            .mapTo(HashSet()) { it.entityId }
+
+        val onuImpacts = impacts.filter { it.entityType == "ONU" }
+        val placementByOnu = if (onuImpacts.isEmpty()) emptyMap()
+        else customerApi.placementsForOnus(onuImpacts.mapTo(HashSet()) { it.entityId }).associateBy { it.onuId }
+        val upstreamByOdp = HashMap<UUID, UpstreamPath>()
+
+        val buckets = LinkedHashMap<String, Bucket>()
+        fun bucket(root: Root) = buckets.getOrPut("${root.type}:${root.id}") { Bucket(root) }
+
+        // Alarm perangkat & collector menyemai akarnya masing-masing.
+        impacts.filter { it.entityType != "ONU" }.forEach { imp ->
+            bucket(Root(imp.entityType, imp.entityId, imp.label)).members += imp
+        }
+
+        // Kelompokkan ONU menurut ODC hulunya dulu, agar "≥2 di bawah ODC yang sama"
+        // bisa dinilai sebelum menentukan akar.
+        val byOdc = onuImpacts.groupBy { imp ->
+            val odpId = placementByOnu[imp.entityId]?.odpId ?: return@groupBy null
+            upstreamByOdp.getOrPut(odpId) { networkApi.upstreamOf(odpId) }.odc?.id
+        }
+        byOdc.forEach { (_, group) ->
+            group.forEach { imp ->
+                val placement = placementByOnu[imp.entityId]
+                val upstream = placement?.odpId?.let { upstreamByOdp[it] }
+                val olt = upstream?.olt
+                val odc = upstream?.odc
+                val root = when {
+                    olt != null && olt.id in alarmingDeviceIds -> Root("OLT", olt.id, olt.code)
+                    odc != null && odc.id in alarmingDeviceIds -> Root("ODC", odc.id, odc.code)
+                    odc != null && group.size >= 2 -> Root("ODC", odc.id, odc.code)
+                    else -> Root("ONU", imp.entityId, imp.label)
+                }
+                bucket(root).apply {
+                    members += imp
+                    placement?.customerId?.let { customers += it }
+                }
+            }
+        }
+
+        return buckets.values.map { b ->
+            val severity = severityName(b.members.maxOf { severityRank(it.severity) })
+            CorrelatedIncident(
+                key = "${b.root.type}:${b.root.id}",
+                rootType = b.root.type,
+                rootId = b.root.id,
+                rootLabel = b.root.label,
+                severity = severity,
+                title = titleFor(b),
+                alarmCount = b.members.size,
+                affectedCustomerCount = b.customers.size,
+                suspectedCause = suspectedCauseOf(b.members),
+                members = b.members.map {
+                    IncidentAlarm(it.entityType, it.entityId, it.kind, it.severity, it.label, it.downCause)
+                },
+            )
+        }
+    }
+
+    /**
+     * Menyimpulkan sebab blast-radius dari register "last down cause" ONU-ONU yang
+     * padam. Hanya untuk kelompok ≥2 ONU: gangguan satu pelanggan bukan soal "area",
+     * dan sebab per-ONU sudah tampak dari badge Ldc-nya sendiri. Bila mayoritas
+     * (≥[DOMINANCE]) melapor dying-gasp, kemungkinan PLN mati di area itu; bila
+     * mayoritas LOS, fiber putus; selain itu polanya beragam ([MIXED]). `null` bila
+     * tak ada ONU dengan sebab terbaca — jujur bahwa datanya belum cukup.
+     */
+    private fun suspectedCauseOf(members: List<AlarmImpact>): IncidentSuspectedCause? {
+        val causes = members.filter { it.entityType == "ONU" }.mapNotNull { it.downCause }
+        if (causes.size < MIN_ONUS_FOR_CAUSE) return null
+        val dying = causes.count { it == "DYING_GASP" }
+        val los = causes.count { it == "LOS" }
+        val threshold = causes.size * DOMINANCE
+        return when {
+            dying >= threshold -> IncidentSuspectedCause.POWER_OUTAGE
+            los >= threshold -> IncidentSuspectedCause.FIBER_CUT
+            else -> IncidentSuspectedCause.MIXED
+        }
+    }
+
+    private fun titleFor(b: Bucket): String {
+        val single = b.members.singleOrNull()
+        if (single != null && single.entityId == b.root.id) {
+            return "${b.root.label} — ${humanKind(single.kind)}"
+        }
+        val n = b.customers.size.takeIf { it > 0 } ?: b.members.size
+        val unit = if (b.customers.isNotEmpty()) "pelanggan" else "alarm"
+        return "$n $unit terdampak di bawah ${b.root.label}"
+    }
+
+    /**
+     * Judul insiden dibaca orang yang sedang panik, bukan mesin: tiap jenis alarm
+     * wajib punya sebutan Indonesia di sini. Yang belum tertulis jatuh ke kode
+     * mentahnya (`ONU_HIGH_RX`) — bukan galat, tapi layar jadi berbicara bahasa enum.
+     * Tambahkan barisnya setiap kali `AlarmKind` bertambah.
+     */
+    private fun humanKind(kind: String): String = when (kind) {
+        "ONU_LOS" -> "sinyal hilang (LOS)"
+        "ONU_OFFLINE" -> "ONU offline"
+        "ONU_LOW_RX" -> "redaman lemah"
+        "ONU_HIGH_RX" -> "redaman terlalu kuat"
+        "PPPOE_DOWN" -> "sesi PPPoE putus"
+        "OLT_UNREACHABLE" -> "OLT tidak terjangkau"
+        "COLLECTOR_SILENT" -> "collector berhenti melapor"
+        else -> kind
+    }
+
+    private fun severityRank(severity: String): Int = when (severity) {
+        "CRITICAL" -> 2
+        "WARNING" -> 1
+        else -> 0
+    }
+
+    private fun severityName(rank: Int): String = when (rank) {
+        2 -> "CRITICAL"
+        1 -> "WARNING"
+        else -> "INFO"
+    }
+
+    private companion object {
+        val INCIDENT_ENTITY_TYPES = com.karuhun.ftth.incident.domain.model.IncidentRootType.entries.map { it.name }.toSet()
+        /** Di bawah ini bukan "area": gangguan satu pelanggan tak disimpulkan sebabnya. */
+        const val MIN_ONUS_FOR_CAUSE = 2
+
+        /** Ambang dominasi: ≥60% ONU sesebab untuk menyebut satu pola, sisanya MIXED. */
+        const val DOMINANCE = 0.6
+    }
+}

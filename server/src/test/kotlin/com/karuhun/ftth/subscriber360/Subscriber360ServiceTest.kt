@@ -1,0 +1,266 @@
+package com.karuhun.ftth.subscriber360
+
+import com.karuhun.ftth.billing.BillingAccountSummary
+import com.karuhun.ftth.billing.BillingApi
+import com.karuhun.ftth.bng.BngApi
+import com.karuhun.ftth.bng.ProvisionAccessSpec
+import com.karuhun.ftth.bng.ProvisionedAccessRef
+import com.karuhun.ftth.bng.SubscriberSessionRef
+import com.karuhun.ftth.common.FixedObjectProvider
+import com.karuhun.ftth.common.domain.UuidV7
+import com.karuhun.ftth.common.domain.error.NotFoundException
+import com.karuhun.ftth.common.domain.geo.Coordinate
+import com.karuhun.ftth.common.infrastructure.security.AccessChecker
+import com.karuhun.ftth.common.security.AuthenticatedUser
+import com.karuhun.ftth.common.security.CurrentUserProvider
+import com.karuhun.ftth.cpe.CpeApi
+import com.karuhun.ftth.cpe.CpeDeviceStatusRef
+import com.karuhun.ftth.customer.CustomerApi
+import com.karuhun.ftth.customer.CustomerPlacement
+import com.karuhun.ftth.customer.CustomerRef
+import com.karuhun.ftth.customer.OdpOccupant
+import com.karuhun.ftth.customer.OnuPlacementRef
+import com.karuhun.ftth.customer.OnuRef
+import com.karuhun.ftth.customer.ProvisionOnuCommand
+import com.karuhun.ftth.customer.RegisterCustomerCommand
+import com.karuhun.ftth.customer.SubscriptionRef
+import com.karuhun.ftth.subscriber360.application.service.Subscriber360Service
+import com.karuhun.ftth.workorder.RaisePsbCommand
+import com.karuhun.ftth.workorder.RaiseRepairCommand
+import com.karuhun.ftth.workorder.WorkOrderRef
+import com.karuhun.ftth.workorder.WorkorderApi
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Test
+import java.math.BigDecimal
+import java.util.UUID
+
+/**
+ * Menguji perakitan 360° dan — yang paling penting — gating izin per-facet: pengguna
+ * berizin penuh melihat semua facet; pengguna yang hanya boleh melihat pelanggan
+ * mendapat facet lintas-modul null/kosong dengan [access] menandai semuanya terkunci.
+ */
+class Subscriber360ServiceTest {
+
+    private val customerId = UuidV7.generate()
+
+    @Test
+    fun `pengguna berizin penuh melihat semua facet`() {
+        val service = service(
+            permissions = ALL_FACET_PERMISSIONS,
+            customer = FakeCustomerApi(present = true),
+        )
+
+        val view = service.assemble(customerId)
+
+        assertThat(view.customer.id).isEqualTo(customerId)
+        assertThat(view.subscription).isNotNull()
+        assertThat(view.placement).isNotNull()
+        assertThat(view.session).isNotNull()
+        assertThat(view.billing).isNotNull()
+        assertThat(view.cpeDevices).isNotNull().hasSize(1)
+        assertThat(view.openWorkOrder).isNotNull()
+        assertThat(view.access).isEqualTo(
+            com.karuhun.ftth.subscriber360.application.port.inbound.Subscriber360Access(
+                subscription = true, placement = true, session = true,
+                billing = true, cpe = true, workOrder = true,
+                materialHistory = true, materialHistoryV2 = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `pengguna hanya boleh lihat pelanggan mendapat facet lintas-modul terkunci`() {
+        val service = service(
+            permissions = setOf("customer.customer.view"),
+            customer = FakeCustomerApi(present = true),
+        )
+
+        val view = service.assemble(customerId)
+
+        // Facet inti tetap ada.
+        assertThat(view.customer.id).isEqualTo(customerId)
+        // Facet digating → null/kosong.
+        assertThat(view.subscription).isNull()
+        assertThat(view.placement).isNull()
+        assertThat(view.session).isNull()
+        assertThat(view.billing).isNull()
+        assertThat(view.cpeDevices).isNull() // null (ditolak), bukan list kosong
+        assertThat(view.openWorkOrder).isNull()
+        assertThat(view.access.subscription).isFalse()
+        assertThat(view.access.billing).isFalse()
+        assertThat(view.access.cpe).isFalse()
+    }
+
+    @Test
+    fun `pelanggan tak ditemukan melempar NotFound`() {
+        val service = service(
+            permissions = ALL_FACET_PERMISSIONS,
+            customer = FakeCustomerApi(present = false),
+        )
+
+        assertThatThrownBy { service.assemble(customerId) }
+            .isInstanceOf(NotFoundException::class.java)
+    }
+
+    // --- Perkakas uji ---
+
+    @Test
+    fun `material query failure propagates while forbidden facet never queries inventory`() {
+        val failure = IllegalStateException("material query unavailable")
+        assertThatThrownBy { service(ALL_FACET_PERMISSIONS, FakeCustomerApi(true), failure).assemble(customerId) }
+            .isSameAs(failure)
+        val denied = service(setOf("customer.customer.view"), FakeCustomerApi(true), failure).assemble(customerId)
+        assertThat(denied.materialHistory).isNull()
+        assertThat(denied.materialHistoryV2).isNull()
+        assertThat(denied.access.materialHistoryV2).isFalse()
+    }
+
+    private fun service(permissions: Set<String>, customer: CustomerApi, materialFailure: RuntimeException? = null) = Subscriber360Service(
+        customerApi = customer,
+        bngApi = FakeBngApi(),
+        billingApi = FakeBillingApi(),
+        cpeApi = FakeCpeApi(),
+        workorderApi = FakeWorkorderApi(customerId),
+        // Tanpa penjaga kunci baca-saja: kelas ini menguji izin, bukan status langganan.
+        authz = AccessChecker(FakeCurrentUser(permissions), FixedObjectProvider(null)),
+        currentUser = FakeCurrentUser(permissions),
+        customerReadAccess = org.mockito.Mockito.mock(com.karuhun.ftth.customer.CustomerReadAccessApi::class.java),
+        materialApi = org.mockito.Mockito.mock(com.karuhun.ftth.inventory.MaterialConsumptionApi::class.java) { invocation ->
+            if (invocation.method.name == "forCustomer") emptyList<com.karuhun.ftth.inventory.CustomerMaterialFactRef>()
+            else throw UnsupportedOperationException(invocation.method.name)
+        },
+        materialApiV2 = object : com.karuhun.ftth.inventory.MaterialConsumptionApiV2 {
+            override fun forCustomer(customerId: UUID, page: com.karuhun.ftth.inventory.WarehousePageRequest): com.karuhun.ftth.inventory.WarehousePage<com.karuhun.ftth.inventory.CustomerMaterialFactV2> {
+                materialFailure?.let { throw it }
+                return com.karuhun.ftth.inventory.WarehousePage(emptyList(), page.page, page.size, 0)
+            }
+        },
+    )
+
+    private inner class FakeCurrentUser(private val permissions: Set<String>) : CurrentUserProvider {
+        override fun currentOrNull(): AuthenticatedUser = AuthenticatedUser(
+            userId = UuidV7.generate(),
+            tenantId = UuidV7.generate(),
+            email = "op@tenant.test",
+            name = "Operator",
+            platformAdmin = false,
+            permissions = permissions,
+            areaIds = emptySet(),
+        )
+    }
+
+    private inner class FakeCustomerApi(private val present: Boolean) : CustomerApi {
+        override fun findCustomer(id: UUID): CustomerRef? =
+            if (present) CustomerRef(id, "C-001", "Budi", "0812", null, Coordinate(106.8, -6.2), "ACTIVE") else null
+
+        override fun findSubscriptionByCustomer(customerId: UUID): SubscriptionRef =
+            SubscriptionRef(UuidV7.generate(), customerId, UuidV7.generate(), "Home 100", 100, "ACTIVE")
+
+        override fun findPlacementOf(customerId: UUID): CustomerPlacement =
+            CustomerPlacement(UuidV7.generate(), UuidV7.generate(), 3, "SN-1", "ONLINE", "GOOD", -22.0)
+
+        override fun findSubscription(id: UUID) = throw UnsupportedOperationException()
+        override fun findCustomersByIds(ids: Set<UUID>) = throw UnsupportedOperationException()
+        override fun findOccupantsOfOdp(odpId: UUID): List<OdpOccupant> = throw UnsupportedOperationException()
+        override fun findAwaitingInstallation(areaIds: Set<UUID>?) = throw UnsupportedOperationException()
+        override fun occupiedPortsOn(odpId: UUID) = throw UnsupportedOperationException()
+        override fun countOccupantsByOdp(odpIds: Set<UUID>) = throw UnsupportedOperationException()
+        override fun renderMapTile(z: Int, x: Int, y: Int, areaIds: Set<UUID>?) = throw UnsupportedOperationException()
+        override fun findOnusBySerialNumbers(serialNumbers: Set<String>): List<OnuRef> = throw UnsupportedOperationException()
+        override fun placementsForOnus(onuIds: Set<UUID>): List<OnuPlacementRef> = throw UnsupportedOperationException()
+        override fun recordObservedOnuStatuses(statuses: Map<UUID, String>) = throw UnsupportedOperationException()
+        override fun provisionOnu(command: ProvisionOnuCommand) = throw UnsupportedOperationException()
+        override fun findBillableSubscriptions() = throw UnsupportedOperationException()
+        override fun findBillableSubscription(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun isolateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun reactivateForBilling(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun activateForInstallation(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun terminateForDismantle(subscriptionId: UUID) = throw UnsupportedOperationException()
+        override fun registerCustomer(command: RegisterCustomerCommand) = throw UnsupportedOperationException()
+        override fun subscriberStats() = throw UnsupportedOperationException()
+        override fun updateCustomerBiodata(command: com.karuhun.ftth.customer.UpdateCustomerBiodataCommand) = throw UnsupportedOperationException()
+        override fun activateImportedSubscription(subscriptionId: UUID, activatedAt: java.time.Instant?, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
+        override fun overrideSubscriptionBillingDay(subscriptionId: UUID, billingDayOfMonth: Int?) = throw UnsupportedOperationException()
+        override fun subscriptionDimensions(subscriptionIds: Set<java.util.UUID>) = throw UnsupportedOperationException()
+        override fun churnReport(from: java.time.LocalDate, to: java.time.LocalDate) = throw UnsupportedOperationException()
+        override fun findExportRows(subscriptionIds: Set<java.util.UUID>): List<com.karuhun.ftth.customer.CustomerExportRow> = throw UnsupportedOperationException()
+    }
+
+    private inner class FakeBngApi : BngApi {
+        override fun findPppoeByCustomerIds(customerIds: Set<UUID>): Map<UUID, com.karuhun.ftth.bng.SubscriberPppoeRef> =
+            throw UnsupportedOperationException()
+
+        override fun findSubscriberSession(customerId: UUID): SubscriberSessionRef = SubscriberSessionRef(
+            subscriberAccessId = UuidV7.generate(), username = "budi", accessStatus = "ACTIVE",
+            rateProfileName = "Home 100", online = true, framedIp = "100.64.0.5",
+            nasId = null, nasName = null, nasIp = null, uptimeSeconds = 120, startedAt = null, lastSeenAt = null,
+        )
+
+        override fun provisionAccess(command: ProvisionAccessSpec): ProvisionedAccessRef =
+            throw UnsupportedOperationException()
+
+        override fun resolveNasForArea(areaId: UUID): UUID? = null
+
+        override fun fetchPppSecretsFromNas(nasId: UUID) = emptyList<com.karuhun.ftth.bng.PppSecretRef>()
+
+        override fun activeSubscriberLiveness() = emptyList<com.karuhun.ftth.bng.SubscriberPppoeLiveness>()
+
+        override fun resolveNasByName(name: String) = throw UnsupportedOperationException()
+        override fun findAccessByUsername(username: String) = throw UnsupportedOperationException()
+        override fun updateAccessFromImport(accessId: UUID, planId: UUID, nasId: UUID?, secret: String?) = throw UnsupportedOperationException()
+        override fun exportAccesses(): List<com.karuhun.ftth.bng.AccessExportRef> = throw UnsupportedOperationException()
+    }
+
+    private inner class FakeBillingApi : BillingApi {
+        override fun findAccountSummary(customerId: UUID) = BillingAccountSummary(
+            customerId = customerId, outstandingAmount = BigDecimal("100000"),
+            outstandingCount = 1, unpaidCount = 1, oldestDueDate = null, lastPaidAt = null,
+        )
+
+        override fun financialReport(from: java.time.LocalDate, to: java.time.LocalDate) =
+            throw UnsupportedOperationException()
+
+        override fun monthlyRevenue(fromMonth: java.time.YearMonth, toMonth: java.time.YearMonth) =
+            throw UnsupportedOperationException()
+
+        override fun findCustomerInvoices(customerId: UUID) = throw UnsupportedOperationException()
+        override fun findCustomerPayments(customerId: UUID) = throw UnsupportedOperationException()
+        override fun findCustomerInvoiceDetail(customerId: UUID, invoiceId: UUID) = throw UnsupportedOperationException()
+        override fun paymentMethods() = throw UnsupportedOperationException()
+        override fun payCustomerInvoice(customerId: UUID, invoiceId: UUID, method: String, channel: String?) =
+            throw UnsupportedOperationException()
+        override fun findInvoiceForPublicLink(invoiceId: UUID) = throw UnsupportedOperationException()
+        override fun payInvoiceForPublicLink(invoiceId: UUID, method: String, channel: String?) =
+            throw UnsupportedOperationException()
+        override fun receivableAging(asOf: java.time.LocalDate) = throw UnsupportedOperationException()
+        override fun revenueBySubscription(from: java.time.LocalDate, to: java.time.LocalDate) = throw UnsupportedOperationException()
+        override fun manualQrisImage() = throw UnsupportedOperationException()
+    }
+
+    private inner class FakeCpeApi : CpeApi {
+        override fun findDevicesForCustomer(customerId: UUID): List<CpeDeviceStatusRef> = listOf(
+            CpeDeviceStatusRef(UuidV7.generate(), "SN-CPE", "Huawei", "HG8145", "V1", "10.0.0.1", null, true),
+        )
+    }
+
+    private inner class FakeWorkorderApi(private val forCustomer: UUID) : WorkorderApi {
+        override fun openPsbByCustomer(): Map<UUID, WorkOrderRef> = mapOf(
+            forCustomer to WorkOrderRef(UuidV7.generate(), "WO-1", forCustomer, null, null),
+        )
+
+        override fun raisePsb(command: RaisePsbCommand): WorkOrderRef = throw UnsupportedOperationException()
+
+        override fun raiseRepair(command: RaiseRepairCommand): WorkOrderRef = throw UnsupportedOperationException()
+
+        override fun fieldOpsReport(from: java.time.LocalDate, to: java.time.LocalDate) =
+            throw UnsupportedOperationException()
+    }
+
+    private companion object {
+        val ALL_FACET_PERMISSIONS = setOf(
+            "customer.customer.view", "customer.subscription.view", "customer.onu.view",
+            "bng.session.view", "billing.invoice.view", "cpe.device.view", "workorder.order.view",
+        )
+    }
+}

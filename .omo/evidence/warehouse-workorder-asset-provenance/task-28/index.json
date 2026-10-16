@@ -6,15 +6,15 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDispositionService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseDispositionService.kt",
       "sha256": "f073f07cec612f0594fae8ab0eedd0d9512972d547b156b0dd436fe6ec5bb2d1"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCompensationService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCompensationService.kt",
       "sha256": "edc30d545b6787a868e22396696ac7836116415368b43e01af6dedfa51ef2f38"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseAssetLossService.kt",
       "sha256": "63fd70ac51011e3beaf7ebf16ba5dd48006059455ba1d7f0cd3b6efeb1daeb23"
     }
   ],
@@ -65,7 +65,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+            "suite": "com.karuhun.ftth.inventory.WarehouseDispositionIT",
             "tests": 2,
             "failures": 0,
             "errors": 0,
@@ -93,17 +93,17 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDispositionService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseDispositionService.kt",
         "line": 17,
         "sha256": "f073f07cec612f0594fae8ab0eedd0d9512972d547b156b0dd436fe6ec5bb2d1"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCompensationService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCompensationService.kt",
         "line": 16,
         "sha256": "edc30d545b6787a868e22396696ac7836116415368b43e01af6dedfa51ef2f38"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseAssetLossService.kt",
         "line": 18,
         "sha256": "984bf1f35c29e3af52d754705eaf2323b8a56e6e974796daa6a34e6327663c2a"
       }
@@ -128,7 +128,7 @@
       "G(WarehouseDispositionIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDispositionIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDispositionIT.kt",
             "sha256": "e582d46502f1bce35984fe54eeaa905c3ac578aaa2794640a4e3e7c7293368a3",
             "testAnnotations": 1
           }
@@ -146,13 +146,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseDispositionIT",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "767b9494d9f6d879f508ae1817aa2d73dc4bfdf85fddd3d981c970b9cb8d8b83",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseDispositionIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseDispositionIT.xml"
             }
           ],
           "proof": {
@@ -167,13 +167,13 @@
           "tests": 2,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseDispositionIT",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "eb6e136273ae471f799e047aea41f6c253e357cc4564c95276c46f4f69d50498",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseDispositionIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseDispositionIT.xml"
             }
           ]
         },
@@ -225,7 +225,7 @@
       "G(WarehouseDispositionIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseDispositionIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseDispositionIT.kt",
             "sha256": "e582d46502f1bce35984fe54eeaa905c3ac578aaa2794640a4e3e7c7293368a3",
             "testAnnotations": 1
           }
@@ -243,13 +243,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseDispositionIT",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "767b9494d9f6d879f508ae1817aa2d73dc4bfdf85fddd3d981c970b9cb8d8b83",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseDispositionIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseDispositionIT.xml"
             }
           ],
           "proof": {
@@ -264,13 +264,13 @@
           "tests": 2,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseDispositionIT",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "eb6e136273ae471f799e047aea41f6c253e357cc4564c95276c46f4f69d50498",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseDispositionIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseDispositionIT.xml"
             }
           ]
         },
@@ -332,15 +332,15 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseDispositionService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseDispositionService.kt",
         "sha256": "f073f07cec612f0594fae8ab0eedd0d9512972d547b156b0dd436fe6ec5bb2d1"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCompensationService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCompensationService.kt",
         "sha256": "edc30d545b6787a868e22396696ac7836116415368b43e01af6dedfa51ef2f38"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseAssetLossService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseAssetLossService.kt",
         "sha256": "63fd70ac51011e3beaf7ebf16ba5dd48006059455ba1d7f0cd3b6efeb1daeb23"
       }
     ],

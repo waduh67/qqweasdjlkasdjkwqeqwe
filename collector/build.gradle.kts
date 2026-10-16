@@ -17,7 +17,7 @@ kotlin {
 }
 
 application {
-    mainClass.set("com.duluin.ftth.collector.MainKt")
+    mainClass.set("com.karuhun.ftth.collector.MainKt")
 }
 
 dependencies {

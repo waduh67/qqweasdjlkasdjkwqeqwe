@@ -38,7 +38,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseEnvironmentIT",
+            "suite": "com.karuhun.ftth.inventory.WarehouseEnvironmentIT",
             "tests": 7,
             "failures": 0,
             "errors": 0,
@@ -101,7 +101,7 @@
       "G(WarehouseEnvironmentIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseEnvironmentIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseEnvironmentIT.kt",
             "sha256": "2a4bb695d436be3393a4ec173e8029f4dddbdb0d1d3443b118892c078f7b257b",
             "testAnnotations": 7
           }
@@ -119,13 +119,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseEnvironmentIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseEnvironmentIT",
               "tests": 7,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "7145d624b2f958255269d96e5057e6efc1e339cfb0e320538148242194b90eb5",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseEnvironmentIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseEnvironmentIT.xml"
             }
           ],
           "proof": {
@@ -140,13 +140,13 @@
           "tests": 7,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseEnvironmentIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseEnvironmentIT",
               "tests": 7,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "afc0ceb40bcb6d769325dc6df1abeae48c316d3960370fd8e289308c39aa1505",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseEnvironmentIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseEnvironmentIT.xml"
             }
           ]
         },
@@ -198,7 +198,7 @@
       "G(WarehouseEnvironmentIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseEnvironmentIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseEnvironmentIT.kt",
             "sha256": "2a4bb695d436be3393a4ec173e8029f4dddbdb0d1d3443b118892c078f7b257b",
             "testAnnotations": 7
           }
@@ -216,13 +216,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseEnvironmentIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseEnvironmentIT",
               "tests": 7,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "7145d624b2f958255269d96e5057e6efc1e339cfb0e320538148242194b90eb5",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseEnvironmentIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseEnvironmentIT.xml"
             }
           ],
           "proof": {
@@ -237,13 +237,13 @@
           "tests": 7,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseEnvironmentIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseEnvironmentIT",
               "tests": 7,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "afc0ceb40bcb6d769325dc6df1abeae48c316d3960370fd8e289308c39aa1505",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseEnvironmentIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseEnvironmentIT.xml"
             }
           ]
         },

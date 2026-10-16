@@ -50,7 +50,7 @@
   "sourceHashes": {
     "scripts/warehouse/legacy-browser.sh": "713853329ae47424b83b47e55c0e51e4aa96f77509c7f0779779bcbace86510c",
     "scripts/warehouse/qa-processes.sh": "4775d5b1a660a1748813db6aaaee12cf03f33da0e184cc4c9de45af07d94a9e4",
-    "server/src/main/kotlin/com/duluin/ftth/common/infrastructure/config/WarehouseQaHealthIndicator.kt": "d185d0d67c649efd39c9d27c6779015535eaed4022b30277837b568e886b1809",
+    "server/src/main/kotlin/com/karuhun/ftth/common/infrastructure/config/WarehouseQaHealthIndicator.kt": "d185d0d67c649efd39c9d27c6779015535eaed4022b30277837b568e886b1809",
     "web/playwright.warehouse-legacy.config.ts": "6eb6e33aafed5bde548116772330dd59e43025ff214fd9d42d131c16abafc083",
     "web/e2e/warehouse-legacy/before.spec.ts": "0a377ad27bd4f528d497b398880efe81b65deb42bb03d5d62dfbd4fe6b4be661",
     "web/e2e/warehouse-legacy/cutover.spec.ts": "ad7c4f7ec1cd601951ee6dbd13a52b80bec7b4eff1b423cbfbfe0149c9246f6a",

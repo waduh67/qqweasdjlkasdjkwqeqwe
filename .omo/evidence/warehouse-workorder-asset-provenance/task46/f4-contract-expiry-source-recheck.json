@@ -7,7 +7,7 @@
   "currentHeadAtReview": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
   "exactlyFourExpectedStringChanges": true,
   "failedCiCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
-  "file": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseContractTest.kt",
+  "file": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseContractTest.kt",
   "finalF4Approval": false,
   "localExitCode": 0,
   "localParentCommit": "c122e5a9a4aa283cc4446ab492cc6b54614fbf5e",
@@ -18,7 +18,7 @@
       "failures": 0,
       "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
       "skipped": 0,
-      "suite": "com.duluin.ftth.ModularityTests",
+      "suite": "com.karuhun.ftth.ModularityTests",
       "tests": 3
     },
     {
@@ -26,7 +26,7 @@
       "failures": 0,
       "sha256": "fd8e40f769ce3e67d5f5ae7c018baf1ac23889bb6a51f7a01847380487dcbc85",
       "skipped": 0,
-      "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+      "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
       "tests": 12
     }
   ],

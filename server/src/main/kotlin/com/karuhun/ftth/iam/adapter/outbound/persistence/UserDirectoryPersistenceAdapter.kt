@@ -1,0 +1,17 @@
+package com.karuhun.ftth.iam.adapter.outbound.persistence
+
+import com.karuhun.ftth.iam.application.port.outbound.UserDirectory
+import org.springframework.stereotype.Component
+import java.util.UUID
+
+@Component
+class UserDirectoryPersistenceAdapter(
+    private val jpa: UserDirectoryJpaRepository,
+) : UserDirectory {
+
+    override fun findTenantByEmail(emailLower: String): UUID? =
+        jpa.findByEmailLower(emailLower)?.tenantId
+
+    override fun primaryEmailForTenant(tenantId: UUID): String? =
+        jpa.findFirstByTenantIdOrderByCreatedAtAsc(tenantId)?.emailLower
+}

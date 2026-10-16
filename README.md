@@ -48,7 +48,7 @@ Setiap module Spring Modulith disusun **Clean Architecture / Hexagonal
 (ports & adapters)**:
 
 ```
-com.duluin.ftth.<module>/
+com.karuhun.ftth.<module>/
 ├── <Module>Api.kt, *Ref, events     ← API publik lintas-module (base package)
 ├── domain/                          ← MURNI Kotlin: entity, value object, invariant
 │   ├── model/

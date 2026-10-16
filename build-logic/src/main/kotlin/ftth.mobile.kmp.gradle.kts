@@ -14,7 +14,7 @@ kotlin {
     iosSimulatorArm64()
     if (buildAndroid) {
         targets.withType<KotlinMultiplatformAndroidLibraryTarget>().configureEach {
-            namespace = "com.duluin.ftth." + project.path.removePrefix(":").replace(":", ".")
+            namespace = "com.karuhun.ftth." + project.path.removePrefix(":").replace(":", ".")
             compileSdk = 36
             minSdk = 26
             androidResources { enable = true }

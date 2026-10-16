@@ -6,19 +6,19 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReturnService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReturnService.kt",
       "sha256": "131f4825b89f54d5422db8ce84d0b682c9fdc196d6c562a0453214c2f9914f37"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCustomerRmaService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCustomerRmaService.kt",
       "sha256": "33dcdadbef014568c8235754858b8fa0d2e0b91fa216b9337b8755d7ab79f1bd"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseRepairService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseRepairService.kt",
       "sha256": "347adb1d3d42128ed68b972fac3632e4eab244a2b940381e93bb71c17d63fd39"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialResidualService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/MaterialResidualService.kt",
       "sha256": "47791f883a4b93c06b18ff34531c2481af2f477ec7949a101c3bf3be48a8c1d7"
     }
   ],
@@ -45,35 +45,35 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReturnIT",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReturnIT",
             "tests": 4,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReturnITAccess",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAccess",
             "tests": 1,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAssets",
             "tests": 2,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReturnITIntegrity",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReturnITIntegrity",
             "tests": 3,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseReturnITReuse",
+            "suite": "com.karuhun.ftth.inventory.WarehouseReturnITReuse",
             "tests": 1,
             "failures": 0,
             "errors": 0,
@@ -101,22 +101,22 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReturnService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReturnService.kt",
         "line": 19,
         "sha256": "131f4825b89f54d5422db8ce84d0b682c9fdc196d6c562a0453214c2f9914f37"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCustomerRmaService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCustomerRmaService.kt",
         "line": 19,
         "sha256": "33dcdadbef014568c8235754858b8fa0d2e0b91fa216b9337b8755d7ab79f1bd"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseRepairService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseRepairService.kt",
         "line": 18,
         "sha256": "347adb1d3d42128ed68b972fac3632e4eab244a2b940381e93bb71c17d63fd39"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialResidualService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/MaterialResidualService.kt",
         "line": 1,
         "sha256": "47791f883a4b93c06b18ff34531c2481af2f477ec7949a101c3bf3be48a8c1d7"
       }
@@ -141,27 +141,27 @@
       "G(WarehouseReturnIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITReuse.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnITReuse.kt",
             "sha256": "f6352fe204ad488d16299a82f8253e0b7f27ff4558ad34e85832cc9b9de9cdea",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITIntegrity.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnITIntegrity.kt",
             "sha256": "b4b4d08277b0ae3996c66364c71875004cd196edd21abe834eb720b6d83ffc27",
             "testAnnotations": 2
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITAssets.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnITAssets.kt",
             "sha256": "e2bd93bcb4976882450c742f6aae35f0ea68542248f42d03c924fa5bb2c7dc32",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITAccess.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnITAccess.kt",
             "sha256": "4ffbacb06d9f26d5a964b1dc06a55f1bfd24640c6b51db27f765b186f875a5b8",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnIT.kt",
             "sha256": "2337ba86a04c689c8009de9d132cfa263355b2cb9992c0b2756061d6f3e94fd7",
             "testAnnotations": 4
           }
@@ -179,49 +179,49 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "15772aeab87c7cb67410bc3057829a1f8ef862e3aadc4339783bcd73a334faa7",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITAccess",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAccess",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "49b06fe4318ae426334e5282fb787ccfe8bac974669ad26541423b3317db2d21",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITAccess.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITAccess.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAssets",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "d31399f1e29b6906c72d875331a747fb3957c3ca6d5c75efd6fa86f4532253b8",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITAssets.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITAssets.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITIntegrity",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITIntegrity",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1aedab500e10c8c038ef0ee5712a1bdbe6f63b3c74bbbc7e1902666d2a9585c0",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITIntegrity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITIntegrity.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITReuse",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITReuse",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "98b57827f481543787c8e943be041cf46a9f6a1d0c53ea150aead09b55e16f5a",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITReuse.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITReuse.xml"
             }
           ],
           "proof": {
@@ -236,49 +236,49 @@
           "tests": 11,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "56e6ca7ef4d90ac29a889ef2a0bb73d29857a0f31543ca5b59e9d2c274bc0bdd",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITAccess",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAccess",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "45e41d547b0617fdd85b7a97b8ce1470dae2d3078559f517aaa72a4d5a3a0c9c",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITAccess.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITAccess.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAssets",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "d69521bc05f14cbc56c97d67e47e292cd46910b1b15b71726fc89cdd3b27eab9",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITAssets.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITAssets.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITIntegrity",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITIntegrity",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "a87ac11e800a95e5061018fde442f60eb9d12362cdd05320fd0df18654d0ba7a",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITIntegrity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITIntegrity.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITReuse",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITReuse",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "85c63431429b2ab90197bd519127abaedfd465895b65609178688bff7d91cd4c",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITReuse.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITReuse.xml"
             }
           ]
         },
@@ -330,27 +330,27 @@
       "G(WarehouseReturnIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITReuse.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnITReuse.kt",
             "sha256": "f6352fe204ad488d16299a82f8253e0b7f27ff4558ad34e85832cc9b9de9cdea",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITIntegrity.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnITIntegrity.kt",
             "sha256": "b4b4d08277b0ae3996c66364c71875004cd196edd21abe834eb720b6d83ffc27",
             "testAnnotations": 2
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITAssets.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnITAssets.kt",
             "sha256": "e2bd93bcb4976882450c742f6aae35f0ea68542248f42d03c924fa5bb2c7dc32",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnITAccess.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnITAccess.kt",
             "sha256": "4ffbacb06d9f26d5a964b1dc06a55f1bfd24640c6b51db27f765b186f875a5b8",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnIT.kt",
             "sha256": "2337ba86a04c689c8009de9d132cfa263355b2cb9992c0b2756061d6f3e94fd7",
             "testAnnotations": 4
           }
@@ -368,49 +368,49 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "15772aeab87c7cb67410bc3057829a1f8ef862e3aadc4339783bcd73a334faa7",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITAccess",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAccess",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "49b06fe4318ae426334e5282fb787ccfe8bac974669ad26541423b3317db2d21",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITAccess.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITAccess.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAssets",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "d31399f1e29b6906c72d875331a747fb3957c3ca6d5c75efd6fa86f4532253b8",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITAssets.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITAssets.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITIntegrity",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITIntegrity",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "1aedab500e10c8c038ef0ee5712a1bdbe6f63b3c74bbbc7e1902666d2a9585c0",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITIntegrity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITIntegrity.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITReuse",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITReuse",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "98b57827f481543787c8e943be041cf46a9f6a1d0c53ea150aead09b55e16f5a",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITReuse.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITReuse.xml"
             }
           ],
           "proof": {
@@ -425,49 +425,49 @@
           "tests": 11,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "56e6ca7ef4d90ac29a889ef2a0bb73d29857a0f31543ca5b59e9d2c274bc0bdd",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITAccess",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAccess",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "45e41d547b0617fdd85b7a97b8ce1470dae2d3078559f517aaa72a4d5a3a0c9c",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITAccess.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITAccess.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAssets",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "d69521bc05f14cbc56c97d67e47e292cd46910b1b15b71726fc89cdd3b27eab9",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITAssets.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITAssets.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITIntegrity",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITIntegrity",
               "tests": 3,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "a87ac11e800a95e5061018fde442f60eb9d12362cdd05320fd0df18654d0ba7a",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITIntegrity.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITIntegrity.xml"
             },
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseReturnITReuse",
+              "suite": "com.karuhun.ftth.inventory.WarehouseReturnITReuse",
               "tests": 1,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "85c63431429b2ab90197bd519127abaedfd465895b65609178688bff7d91cd4c",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseReturnITReuse.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseReturnITReuse.xml"
             }
           ]
         },
@@ -529,19 +529,19 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReturnService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReturnService.kt",
         "sha256": "131f4825b89f54d5422db8ce84d0b682c9fdc196d6c562a0453214c2f9914f37"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCustomerRmaService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCustomerRmaService.kt",
         "sha256": "33dcdadbef014568c8235754858b8fa0d2e0b91fa216b9337b8755d7ab79f1bd"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseRepairService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseRepairService.kt",
         "sha256": "347adb1d3d42128ed68b972fac3632e4eab244a2b940381e93bb71c17d63fd39"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MaterialResidualService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/MaterialResidualService.kt",
         "sha256": "47791f883a4b93c06b18ff34531c2481af2f477ec7949a101c3bf3be48a8c1d7"
       }
     ],

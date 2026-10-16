@@ -1,0 +1,99 @@
+package com.karuhun.ftth.customer.application.service
+
+import com.karuhun.ftth.customer.application.port.inbound.CustomerView
+import com.karuhun.ftth.customer.application.port.inbound.OnuView
+import com.karuhun.ftth.customer.application.port.inbound.SubscriptionView
+import com.karuhun.ftth.customer.domain.model.Customer
+import com.karuhun.ftth.customer.domain.model.Onu
+import com.karuhun.ftth.customer.domain.model.Subscription
+import com.karuhun.ftth.customer.adapter.outbound.persistence.CustomerOnuProvenanceStore
+import com.karuhun.ftth.customer.adapter.outbound.persistence.OnuProvenanceProjection
+import com.karuhun.ftth.network.NetworkApi
+import org.springframework.stereotype.Component
+import java.util.UUID
+
+/**
+ * Merakit [CustomerView] dari tiga agregat plus label ODP milik module network.
+ *
+ * Dipisahkan dari service karena dipakai bersama oleh service pelanggan,
+ * langganan, dan ONU — dan karena di sinilah pengambilan data dibuat berbasis
+ * batch: satu halaman berisi 20 pelanggan tetap hanya menghasilkan sejumlah
+ * tetap query, bukan 20 kali lipat.
+ */
+@Component
+class CustomerAssembler(
+    private val networkApi: NetworkApi,
+    private val provenance: CustomerOnuProvenanceStore,
+) {
+    fun toViews(
+        customers: List<Customer>,
+        subscriptions: List<Subscription>,
+        onus: List<Onu>,
+    ): List<CustomerView> {
+        val onuViews = toOnuViews(onus).groupBy { it.customerId }
+        // Satu langganan per pelanggan (V107) — associateBy, bukan groupBy.
+        val subByCustomer = subscriptions.associateBy { it.customerId }
+        return customers.map { customer ->
+            customer.toView(
+                subscription = subByCustomer[customer.id]?.toView(),
+                onus = onuViews[customer.id].orEmpty(),
+            )
+        }
+    }
+
+    fun toOnuViews(onus: List<Onu>): List<OnuView> {
+        val odpCodes = odpCodesOf(onus)
+        val origins = provenance.forOnus(onus.mapTo(HashSet()) { it.id })
+        return onus.map { it.toView(odpCodes[it.odpId], checkNotNull(origins[it.id])) }
+    }
+
+    private fun odpCodesOf(onus: List<Onu>): Map<UUID, String> =
+        networkApi.findOdpsByIds(onus.mapNotNullTo(HashSet()) { it.odpId }).associate { it.id to it.code }
+}
+
+internal fun Customer.toView(subscription: SubscriptionView?, onus: List<OnuView>) = CustomerView(
+    id = id,
+    code = code,
+    name = name,
+    phone = phone,
+    email = email,
+    address = address,
+    location = location,
+    locationStatus = locationStatus,
+    areaId = areaId,
+    idCardNumber = idCardNumber,
+    status = status,
+    subscription = subscription,
+    onus = onus,
+)
+
+internal fun Subscription.toView() = SubscriptionView(
+    id = id,
+    customerId = customerId,
+    planId = planId,
+    packageName = packageName,
+    bandwidthMbps = bandwidthMbps,
+    monthlyFee = monthlyFee,
+    status = status,
+    activatedAt = activatedAt,
+    terminatedAt = terminatedAt,
+    billingManaged = billingManaged, billingStartsOn = billingStartsOn, billingDayOfMonth = billingDayOfMonth,
+)
+
+internal fun Onu.toView(odpCode: String?, origin: OnuProvenanceProjection) = OnuView(
+    id = id,
+    customerId = customerId,
+    serialNumber = serialNumber,
+    model = model,
+    odpId = odpId,
+    odpCode = odpCode,
+    odpPortNumber = odpPortNumber,
+    installRxPowerDbm = installRxPowerDbm,
+    opticalHealth = opticalHealth(),
+    status = status,
+    installedAt = installedAt,
+    assetId = origin.assetId,
+    assignmentId = origin.assignmentId,
+    provenance = origin.provenance,
+    retiredAt = origin.retiredAt,
+)

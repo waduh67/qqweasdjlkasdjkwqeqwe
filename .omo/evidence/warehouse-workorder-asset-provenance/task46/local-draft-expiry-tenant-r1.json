@@ -9,7 +9,7 @@
   },
   "suites": [
     {
-      "suite": "com.duluin.ftth.ModularityTests",
+      "suite": "com.karuhun.ftth.ModularityTests",
       "sha256": "dee699969c4350f9eb5113f39bb0fc62d1326c46c5de458e1e0f7da67f138202",
       "tests": 3,
       "failures": 0,
@@ -17,7 +17,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+      "suite": "com.karuhun.ftth.tenancy.DeleteTenantIT",
       "sha256": "5a2b7a4ded9203c02ff1087952ece14a4c926fced0abaa003cecda728fa5a8d5",
       "tests": 4,
       "failures": 0,

@@ -1,6 +1,6 @@
 name: FTTHTechnician
 options:
-  bundleIdPrefix: com.duluin.ftth
+  bundleIdPrefix: com.karuhun.ftth
   deploymentTarget:
     iOS: "16.0"
 settings:
@@ -18,7 +18,7 @@ targets:
       - TechnicianApp.swift
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.duluin.ftth.technician
+        PRODUCT_BUNDLE_IDENTIFIER: com.karuhun.ftth.technician
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"

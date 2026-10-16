@@ -4,9 +4,9 @@
 projection_upgrade() {
     local historical_head=c164c4eb4224fb51ebffd669c87caf4fde2af1df
     local historical_base="$RUNTIME/warehouse-v175-fixture"
-    local test_path=server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITProjectionUpgrade.kt
-    local helper_path=server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt
-    local source_path="$ROOT/server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialUsageITProjectionUpgrade.kt"
+    local test_path=server/src/test/kotlin/com/karuhun/ftth/fulfillment/WorkOrderMaterialUsageITProjectionUpgrade.kt
+    local helper_path=server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSchemaDatabase.kt
+    local source_path="$ROOT/server/src/historicalTest/kotlin/com/karuhun/ftth/fulfillment/WorkOrderMaterialUsageITProjectionUpgrade.kt"
     local report_dir
     report_dir="$RUNTIME/projection-upgrade-$(date -u +%Y%m%dT%H%M%SZ)-$(openssl rand -hex 4)"
     if [[ ! -e "$historical_base" ]]; then
@@ -17,19 +17,23 @@ projection_upgrade() {
 from pathlib import Path
 import subprocess, sys
 old, current, test, source, helper = sys.argv[1:]
+sys.path.insert(0, str(Path(current) / 'scripts/warehouse'))
+from historical_namespace import HistoricalNamespace
+namespace = HistoricalNamespace(Path(current), Path(old))
+old_test, old_helper = namespace.path(test), namespace.path(helper)
 status = subprocess.check_output(['git', '-C', old, 'status', '--porcelain'], text=True)
-assert all(line[3:] in (test, helper) and line[:2] == ' M' for line in status.splitlines()), 'Unexpected historical source modifications'
+assert all(line[3:] in (old_test, old_helper) and line[:2] == ' M' for line in status.splitlines()), 'Unexpected historical source modifications'
 old_migrations = Path(old) / 'server/src/main/resources/db/migration'
 current_migrations = Path(current) / 'server/src/main/resources/db/migration'
 for path in old_migrations.glob('*.sql'):
     assert path.read_bytes() == (current_migrations / path.name).read_bytes(), f'Historical migration changed: {path.name}'
 # Overlay the regression and current database-isolation adapter. Historical business fixtures and product code stay pinned.
-(Path(old) / test).write_bytes(Path(source).read_bytes())
-(Path(old) / helper).write_bytes((Path(current) / helper).read_bytes())
+(Path(old) / old_test).write_bytes(namespace.content(Path(source).read_bytes()))
+(Path(old) / old_helper).write_bytes(namespace.content((Path(current) / helper).read_bytes()))
 PY
     mkdir -m 700 "$report_dir"
     printf '%s\n' "$report_dir" > "$RUNTIME/projection-upgrade-latest.txt"
-    rm -f -- "$historical_base/server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjectionUpgrade.xml"
+    rm -f -- "$historical_base"/server/build/test-results/test/TEST-*.WorkOrderMaterialUsageITProjectionUpgrade.xml
     local result=0
     (cd "$historical_base" && timeout --kill-after=30s 1800s ./gradlew :server:test \
         --tests '*WorkOrderMaterialUsageITProjectionUpgrade' --no-daemon --no-parallel \

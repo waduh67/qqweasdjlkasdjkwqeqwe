@@ -3,7 +3,7 @@
   "tests": 4,
   "suites": [
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseQueryITBalances",
+      "suite": "com.karuhun.ftth.inventory.WarehouseQueryITBalances",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -11,7 +11,7 @@
       "xmlSha256": "44efd32d6f8e4432a02f5b9ac54173cf504a100ede966d19f444511b0f6f1928"
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseQueryITPrivacy",
+      "suite": "com.karuhun.ftth.inventory.WarehouseQueryITPrivacy",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -19,7 +19,7 @@
       "xmlSha256": "789b123c83dd3fcab76a887570ca1bfa8363358346db6a83e6b9b2e3fa5d5d5d"
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseShortagesIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseShortagesIT",
       "tests": 2,
       "failures": 0,
       "errors": 0,

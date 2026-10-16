@@ -1,0 +1,105 @@
+package com.karuhun.ftth.notification.adapter.outbound.persistence
+
+import com.karuhun.ftth.common.domain.Page
+import com.karuhun.ftth.common.domain.PageRequest
+import com.karuhun.ftth.common.infrastructure.persistence.toDomainPage
+import com.karuhun.ftth.common.infrastructure.persistence.toPageable
+import com.karuhun.ftth.common.tenant.TenantContext
+import com.karuhun.ftth.notification.application.port.outbound.BroadcastDigest
+import com.karuhun.ftth.notification.application.port.outbound.BroadcastRepository
+import com.karuhun.ftth.notification.domain.model.Broadcast
+import com.karuhun.ftth.notification.domain.model.BroadcastRecipient
+import org.springframework.stereotype.Component
+import java.util.UUID
+
+@Component
+class BroadcastPersistenceAdapter(
+    private val jpa: BroadcastJpaRepository,
+    private val recipientJpa: BroadcastRecipientJpaRepository,
+) : BroadcastRepository {
+
+    override fun save(broadcast: Broadcast): Broadcast {
+        // Broadcast bersifat append-only; sekali tersimpan tak pernah diperbarui,
+        // jadi selalu insert baris baru (broadcast + tiap penerimanya).
+        jpa.save(
+            BroadcastJpaEntity(
+                id = broadcast.id,
+                incidentId = broadcast.incidentId,
+                channel = broadcast.channel,
+                message = broadcast.message,
+                createdBy = broadcast.createdBy,
+                trigger = broadcast.trigger,
+                recipientCount = broadcast.recipientCount,
+                sentCount = broadcast.sentCount,
+                skippedCount = broadcast.skippedCount,
+                failedCount = broadcast.failedCount,
+                sentAt = broadcast.createdAt,
+            ),
+        )
+        broadcast.recipients.forEach { r ->
+            recipientJpa.save(
+                BroadcastRecipientJpaEntity(
+                    id = r.id,
+                    broadcastId = r.broadcastId,
+                    customerId = r.customerId,
+                    customerName = r.customerName,
+                    destination = r.destination,
+                    status = r.status,
+                    detail = r.detail,
+                    at = r.at,
+                ),
+            )
+        }
+        return broadcast
+    }
+
+    override fun findById(id: UUID): Broadcast? {
+        val entity = jpa.findById(id).orElse(null) ?: return null
+        val recipients = recipientJpa.findByBroadcastIdOrderByAt(id).map { it.toDomain() }
+        return entity.toDomain(recipients)
+    }
+
+    override fun recent(request: PageRequest): Page<BroadcastDigest> =
+        // Riwayat selalu terbaru dulu, apa pun sort yang diminta pemanggil.
+        jpa.findAll(request.copy(sort = "sentAt", descending = true).toPageable())
+            .toDomainPage()
+            .map { it.toDigest() }
+}
+
+private fun BroadcastJpaEntity.toDigest() = BroadcastDigest(
+    id = id,
+    incidentId = incidentId,
+    channel = channel,
+    message = message,
+    createdBy = createdBy,
+    trigger = trigger,
+    createdAt = sentAt,
+    recipientCount = recipientCount,
+    sentCount = sentCount,
+    skippedCount = skippedCount,
+    failedCount = failedCount,
+)
+
+private fun BroadcastJpaEntity.toDomain(recipients: List<BroadcastRecipient>) = Broadcast.rehydrate(
+    id = id,
+    tenantId = tenantId ?: TenantContext.tenantId(),
+    incidentId = incidentId,
+    channel = channel,
+    message = message,
+    createdBy = createdBy,
+    trigger = trigger,
+    createdAt = sentAt,
+    recipients = recipients,
+)
+
+private fun BroadcastRecipientJpaEntity.toDomain() = BroadcastRecipient.rehydrate(
+    id = id,
+    tenantId = tenantId ?: TenantContext.tenantId(),
+    broadcastId = broadcastId,
+    customerId = customerId,
+    customerName = customerName,
+    destination = destination,
+    status = status,
+    detail = detail,
+    at = at,
+)

@@ -6,19 +6,19 @@
     "result": "BUILD SUCCESSFUL in 2m 51s",
     "suites": [
       {
-        "suite": "com.duluin.ftth.ModularityTests",
+        "suite": "com.karuhun.ftth.ModularityTests",
         "tests": 3,
         "failures": 0,
         "sha256": "93f5cba023e1765d2113e340503cabd0f33ca9dcfc6232a40817de52c86efda6"
       },
       {
-        "suite": "com.duluin.ftth.customer.PortalCustomerAssetsIT",
+        "suite": "com.karuhun.ftth.customer.PortalCustomerAssetsIT",
         "tests": 1,
         "failures": 0,
         "sha256": "608d076d7fdf98326f57aebc345b4598bdd4d7760ef8a92b5face4ee68287425"
       },
       {
-        "suite": "com.duluin.ftth.portal.PortalSelfServiceTest",
+        "suite": "com.karuhun.ftth.portal.PortalSelfServiceTest",
         "tests": 12,
         "failures": 0,
         "sha256": "64dccecdf96e048ca78caec4a638ad032890bbaad4ff662c97da1c6540fddcad"

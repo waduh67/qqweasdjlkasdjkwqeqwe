@@ -5,7 +5,7 @@
   "tests": 13,
   "suites": [
     {
-      "name": "com.duluin.ftth.ModularityTests",
+      "name": "com.karuhun.ftth.ModularityTests",
       "tests": 3,
       "failures": 0,
       "errors": 0,
@@ -13,7 +13,7 @@
       "sha256": "26e514937ebd2dabe0120327e07ce2c8de9710a3382a95789eae52b0cef94152"
     },
     {
-      "name": "com.duluin.ftth.fulfillment.WorkOrderMaterialIssueListIT",
+      "name": "com.karuhun.ftth.fulfillment.WorkOrderMaterialIssueListIT",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -21,7 +21,7 @@
       "sha256": "7c4c6892eb799e5d2e9914146adbd24239a02654cb3f72f9b96eda700ee5773d"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseIssueITListing",
+      "name": "com.karuhun.ftth.inventory.WarehouseIssueITListing",
       "tests": 2,
       "failures": 0,
       "errors": 0,
@@ -29,7 +29,7 @@
       "sha256": "cb1db684fe6fba52bc4c2997d73bd9beee18f45323394c494896912bfee076dd"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseIssueITReplayGuards",
+      "name": "com.karuhun.ftth.inventory.WarehouseIssueITReplayGuards",
       "tests": 4,
       "failures": 0,
       "errors": 0,
@@ -37,7 +37,7 @@
       "sha256": "4e680afbb74c411b486550b9a48826a02476ab6d1914fc0b4acfefeb11d8ee4b"
     },
     {
-      "name": "com.duluin.ftth.inventory.WarehouseIssueITSerial",
+      "name": "com.karuhun.ftth.inventory.WarehouseIssueITSerial",
       "tests": 3,
       "failures": 0,
       "errors": 0,

@@ -1,0 +1,107 @@
+package com.karuhun.ftth.fulfillment
+
+import com.karuhun.ftth.common.tenant.TenantContext
+import com.karuhun.ftth.onboarding.MigrationImportApproved
+import com.karuhun.ftth.workorder.FulfillmentApproved
+import com.karuhun.ftth.tenancy.TenantApi
+import java.util.UUID
+import org.springframework.stereotype.Component
+import org.springframework.transaction.event.TransactionPhase
+import org.springframework.transaction.event.TransactionalEventListener
+import org.springframework.transaction.annotation.Propagation
+import org.springframework.transaction.annotation.Transactional
+
+@Component
+class WorkOrderFulfillmentListener(
+    private val coordinator: FulfillmentCoordinator,
+    private val worker: FulfillmentOutboxWorker,
+    private val approvals: FulfillmentApprovalService,
+) {
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    @Transactional
+    fun on(event: FulfillmentApproved) {
+        TenantContext.runAs(event.tenantId) {
+            val request = if (event.verifiedMaterialRequired) {
+                try { approvals.freeze(event) } catch (failure: FulfillmentExecutionFailure) {
+                    throw com.karuhun.ftth.common.domain.error.ConflictException(failure.message ?: "FULFILLMENT_SOURCE_CONFLICT")
+                }
+            } else FulfillmentCoordinator.forWorkOrder(event)
+            coordinator.accept(request)
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    fun afterCommit(event: FulfillmentApproved) {
+        TenantContext.runAs(event.tenantId) { worker.processNext(event.tenantId, "after-commit-${event.workOrderId}") }
+    }
+}
+
+@Component
+class ReferenceWorkOrderFulfillmentListener(private val coordinator: FulfillmentCoordinator,
+    private val worker: FulfillmentOutboxWorker, private val approvals: FulfillmentApprovalService) {
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @Transactional
+    fun on(event: com.karuhun.ftth.workorder.ReferenceWorkOrderCompleted) {
+        TenantContext.runAs(event.tenantId) {
+            val request = try { approvals.freezeReference(event.workOrderId) } catch (failure: FulfillmentExecutionFailure) {
+                throw com.karuhun.ftth.common.domain.error.ConflictException(failure.message ?: "FULFILLMENT_SOURCE_CONFLICT")
+            }
+            coordinator.accept(request)
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    fun afterCommit(event: com.karuhun.ftth.workorder.ReferenceWorkOrderCompleted) {
+        TenantContext.runAs(event.tenantId) { worker.processNext(event.tenantId, "reference-${event.workOrderId}") }
+    }
+}
+
+@Component
+class MigrationFulfillmentListener(
+    private val coordinator: FulfillmentCoordinator,
+    private val worker: FulfillmentOutboxWorker,
+) {
+    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT, fallbackExecution = true)
+    @Transactional
+    fun on(event: MigrationImportApproved) {
+        TenantContext.runAs(event.tenantId) { coordinator.accept(FulfillmentCoordinator.forMigration(event)) }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    fun afterCommit(event: MigrationImportApproved) {
+        TenantContext.runAs(event.tenantId) { worker.processNext(event.tenantId, "after-commit-${event.operationKey}") }
+    }
+}
+
+@Component
+class FulfillmentOutboxWorker(
+    private val coordinator: FulfillmentCoordinator,
+    private val outbox: FulfillmentOutboxRepository,
+    private val tenants: TenantApi? = null,
+) {
+    fun process(request: FulfillmentRequest): FulfillmentOutcome =
+        TenantContext.runAs(request.tenantId) { coordinator.process(request) }
+
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelayString = "\${ftth.fulfillment.worker-delay:PT5S}")
+    fun drain() {
+        val workerId = "fulfillment-${UUID.randomUUID()}"
+        tenants?.findActiveTenantIds()?.forEach { tenantId ->
+            processNext(tenantId, workerId)
+        }
+    }
+
+    fun processNext(tenantId: java.util.UUID, workerId: String, now: java.time.Instant = java.time.Instant.now()): FulfillmentOutcome? =
+        TenantContext.runAs(tenantId) {
+            val delivery = outbox.claimPending(tenantId, workerId, now, now.plusSeconds(60)) ?: return@runAs null
+            if (delivery.eventType != "FULFILLMENT_APPLY") return@runAs outbox.reconcile(delivery, "FULFILLMENT_EVENT_UNSUPPORTED")
+            val request = try { delivery.payload.decodeFulfillmentRequest(tenantId, delivery.payloadHash) }
+                catch (failure: IllegalArgumentException) { return@runAs outbox.reconcile(delivery, "FULFILLMENT_PAYLOAD_INVALID") }
+            if (request.tenantId != tenantId || request.canonicalHash != delivery.payloadHash)
+                return@runAs outbox.reconcile(delivery, "FULFILLMENT_ENVELOPE_MISMATCH")
+            val outcome = coordinator.process(request)
+            if (outcome.state == FulfillmentState.APPLIED || outcome.state == FulfillmentState.MANUAL_RESOLVED) {
+                outbox.markOutboxConsumed(delivery.id, workerId)
+            }
+            outcome
+        }
+}

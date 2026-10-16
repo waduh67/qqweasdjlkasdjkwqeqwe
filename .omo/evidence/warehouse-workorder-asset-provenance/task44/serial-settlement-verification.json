@@ -10,42 +10,42 @@
     "skipped": 0,
     "suites": [
       {
-        "suite": "com.duluin.ftth.ModularityTests",
+        "suite": "com.karuhun.ftth.ModularityTests",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MaterialWorkbenchReviewIT",
+        "suite": "com.karuhun.ftth.fulfillment.MaterialWorkbenchReviewIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseSerialSettlementIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseSerialSettlementIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseUsageOrderIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseUsageOrderIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -115,7 +115,7 @@
     ],
     "suites": [
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseSerialSettlementIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseSerialSettlementIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -135,7 +135,7 @@
     "reportedTests": 44,
     "suites": [
       {
-        "report": "mobile/app/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.app.DiTest.xml",
+        "report": "mobile/app/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.app.DiTest.xml",
         "suite": "DiTest[jvm]",
         "tests": 1,
         "failures": 0,
@@ -143,7 +143,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/data/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.data.MaterialRepositoryTest.xml",
+        "report": "mobile/data/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.data.MaterialRepositoryTest.xml",
         "suite": "MaterialRepositoryTest[jvm]",
         "tests": 9,
         "failures": 0,
@@ -151,7 +151,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/data/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.data.WorkOrderRepositoryTest.xml",
+        "report": "mobile/data/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.data.WorkOrderRepositoryTest.xml",
         "suite": "WorkOrderRepositoryTest[jvm]",
         "tests": 1,
         "failures": 0,
@@ -159,7 +159,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.NavigationTest.xml",
+        "report": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.NavigationTest.xml",
         "suite": "NavigationTest[jvm]",
         "tests": 1,
         "failures": 0,
@@ -167,7 +167,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.OutboxTest.xml",
+        "report": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.OutboxTest.xml",
         "suite": "OutboxTest[jvm]",
         "tests": 1,
         "failures": 0,
@@ -175,7 +175,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.WorkOrderReducerTest.xml",
+        "report": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.WorkOrderReducerTest.xml",
         "suite": "WorkOrderReducerTest[jvm]",
         "tests": 2,
         "failures": 0,
@@ -183,7 +183,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/domain/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.domain.MaterialQuantityTest.xml",
+        "report": "mobile/domain/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.domain.MaterialQuantityTest.xml",
         "suite": "MaterialQuantityTest[jvm]",
         "tests": 1,
         "failures": 0,
@@ -191,7 +191,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.workorders.WorkOrderScreenUiTest.xml",
+        "report": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.workorders.WorkOrderScreenUiTest.xml",
         "suite": "WorkOrderScreenUiTest[jvm]",
         "tests": 3,
         "failures": 0,
@@ -199,7 +199,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.workorders.WorkOrderReducerTest.xml",
+        "report": "mobile/feature/workorders/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.workorders.WorkOrderReducerTest.xml",
         "suite": "WorkOrderReducerTest[jvm]",
         "tests": 4,
         "failures": 0,
@@ -207,7 +207,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.materials.MaterialFeatureTest.xml",
+        "report": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.materials.MaterialFeatureTest.xml",
         "suite": "MaterialFeatureTest[jvm]",
         "tests": 5,
         "failures": 0,
@@ -215,7 +215,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.materials.MaterialScreenUiTest.xml",
+        "report": "mobile/feature/materials/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.materials.MaterialScreenUiTest.xml",
         "suite": "MaterialScreenUiTest[jvm]",
         "tests": 3,
         "failures": 0,
@@ -223,7 +223,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.mvi.MviViewModelTest.xml",
+        "report": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.mvi.MviViewModelTest.xml",
         "suite": "MviViewModelTest[jvm]",
         "tests": 1,
         "failures": 0,
@@ -231,7 +231,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.mvi.MviStoreTest.xml",
+        "report": "mobile/core/mvi/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.mvi.MviStoreTest.xml",
         "suite": "MviStoreTest[jvm]",
         "tests": 5,
         "failures": 0,
@@ -239,7 +239,7 @@
         "skipped": 0
       },
       {
-        "report": "mobile/core/storage/build/test-results/jvmTest/TEST-com.duluin.ftth.mobile.storage.EncryptedOutboxTest.xml",
+        "report": "mobile/core/storage/build/test-results/jvmTest/TEST-com.karuhun.ftth.mobile.storage.EncryptedOutboxTest.xml",
         "suite": "EncryptedOutboxTest[jvm]",
         "tests": 7,
         "failures": 0,
@@ -270,22 +270,22 @@
     "Remaining cross-module races; known historical175.21 projection-upgrade fixture/schema mismatch; tasks45–48 and F1–F4."
   ],
   "files": {
-    "mobile/data/src/commonMain/kotlin/com/duluin/ftth/mobile/data/MaterialCommands.kt": "35e9ad1f6eba54cfcff9bcd18438c59385fd2fafdfa5fda1c38ab8a7385a19fb",
-    "mobile/data/src/commonMain/kotlin/com/duluin/ftth/mobile/data/MaterialJson.kt": "8734020e6bfe5c5a66e908425221d99a2763d0fcea3ce4fa087a9db2c2e4edc2",
-    "mobile/data/src/commonTest/kotlin/com/duluin/ftth/mobile/data/MaterialRepositoryTest.kt": "5baa20c1639b703049b2f92dca431405f52ee910633af8eed94b0ed233fd4af1",
-    "mobile/domain/src/commonMain/kotlin/com/duluin/ftth/mobile/domain/MaterialContracts.kt": "55d05911a2871b07257e5f016ff4b7c90f33e7dcd13eb870b634998c7d0103a8",
-    "mobile/feature/materials/src/commonMain/kotlin/com/duluin/ftth/mobile/materials/MaterialScreen.kt": "f8ff4b5d0b3d86b8106f375adfa7feebeb55cb4f1669dd725d3b14849394ec5e",
-    "mobile/feature/materials/src/jvmTest/kotlin/com/duluin/ftth/mobile/materials/MaterialScreenUiTest.kt": "cd74ffb4469b5ed5428ef0417993ebcd4b0c960316acea043e761da4e82519f8",
-    "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentApprovalStore.kt": "c945dca660c75d80a118c46275c425ef1b2d00ddc2836cdd8ef2df44a8854495",
-    "server/src/main/kotlin/com/duluin/ftth/fulfillment/MaterialWorkbenchController.kt": "2bfa46c621a15c4e562c76db530b1b6ba1c9edce23c3b4d24fbb3d91d2e9ad96",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/InventoryMaterialWorkbenchApi.kt": "cb1f0d827c58044738e7fd1d4fbd0a85fa6c80ff0d7da57ec534561752fd1ec7",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/InventorySettlementApi.kt": "978be5445ba9cf740fcac7b32ded725a098133db3af7ed275deda83e18777a94",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialSettlementStore.kt": "42c8771e1b62e18d87dce99517e4783ddc232e40f577951a667d1cdf87123525",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialWorkbenchService.kt": "ba78520b4b34ec1cfa292888918bc969013252415ed5a709bf44bb0cde411d99",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventorySettlementService.kt": "26fbd33c0d1088944ed3f1456197234c32e7e2e626d65ccbe1742bb6dcdc0782",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt": "4b5639da4550fc4d1473fb31bca1383a71894fe7c4b281b0607401b2ca7ddbc0",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseLifecycleFailurePort.kt": "57a9212de1d97279b037eb66e64d734f5590cbd20ba60c937978a018347032ed",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseNumericLifecycleFixture.kt": "d3feccff3aabcbd52c6294dbcbbb276db4a46509b5dedb89b58c9f69906216b5",
+    "mobile/data/src/commonMain/kotlin/com/karuhun/ftth/mobile/data/MaterialCommands.kt": "35e9ad1f6eba54cfcff9bcd18438c59385fd2fafdfa5fda1c38ab8a7385a19fb",
+    "mobile/data/src/commonMain/kotlin/com/karuhun/ftth/mobile/data/MaterialJson.kt": "8734020e6bfe5c5a66e908425221d99a2763d0fcea3ce4fa087a9db2c2e4edc2",
+    "mobile/data/src/commonTest/kotlin/com/karuhun/ftth/mobile/data/MaterialRepositoryTest.kt": "5baa20c1639b703049b2f92dca431405f52ee910633af8eed94b0ed233fd4af1",
+    "mobile/domain/src/commonMain/kotlin/com/karuhun/ftth/mobile/domain/MaterialContracts.kt": "55d05911a2871b07257e5f016ff4b7c90f33e7dcd13eb870b634998c7d0103a8",
+    "mobile/feature/materials/src/commonMain/kotlin/com/karuhun/ftth/mobile/materials/MaterialScreen.kt": "f8ff4b5d0b3d86b8106f375adfa7feebeb55cb4f1669dd725d3b14849394ec5e",
+    "mobile/feature/materials/src/jvmTest/kotlin/com/karuhun/ftth/mobile/materials/MaterialScreenUiTest.kt": "cd74ffb4469b5ed5428ef0417993ebcd4b0c960316acea043e761da4e82519f8",
+    "server/src/main/kotlin/com/karuhun/ftth/fulfillment/FulfillmentApprovalStore.kt": "c945dca660c75d80a118c46275c425ef1b2d00ddc2836cdd8ef2df44a8854495",
+    "server/src/main/kotlin/com/karuhun/ftth/fulfillment/MaterialWorkbenchController.kt": "2bfa46c621a15c4e562c76db530b1b6ba1c9edce23c3b4d24fbb3d91d2e9ad96",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/InventoryMaterialWorkbenchApi.kt": "cb1f0d827c58044738e7fd1d4fbd0a85fa6c80ff0d7da57ec534561752fd1ec7",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/InventorySettlementApi.kt": "978be5445ba9cf740fcac7b32ded725a098133db3af7ed275deda83e18777a94",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/MaterialSettlementStore.kt": "42c8771e1b62e18d87dce99517e4783ddc232e40f577951a667d1cdf87123525",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryMaterialWorkbenchService.kt": "ba78520b4b34ec1cfa292888918bc969013252415ed5a709bf44bb0cde411d99",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventorySettlementService.kt": "26fbd33c0d1088944ed3f1456197234c32e7e2e626d65ccbe1742bb6dcdc0782",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt": "4b5639da4550fc4d1473fb31bca1383a71894fe7c4b281b0607401b2ca7ddbc0",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseLifecycleFailurePort.kt": "57a9212de1d97279b037eb66e64d734f5590cbd20ba60c937978a018347032ed",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseNumericLifecycleFixture.kt": "d3feccff3aabcbd52c6294dbcbbb276db4a46509b5dedb89b58c9f69906216b5",
     "web/src/api/warehouse/materialExecution.ts": "0ec53e9b9a749ed59c9813a9d49f6b321ada471a9076fcd07af1514a07294741",
     "web/src/api/warehouse/materialReview.test.ts": "10ee2bbfbff3e60a111ba2d18733cf98479d976763040b3a3dbe6960a9d254a9",
     "web/src/api/warehouse/materialReview.ts": "c758d7444f866a1efef3cd3b9a716631eba1a6f5c72956a67a2ec2726f989a11",
@@ -297,8 +297,8 @@
     "web/src/pages/MyMaterialsPage.test.tsx": "3543295d9a1934939993286df0515ad213392e7cbe4714cd8569a13a274b1c94",
     "web/src/pages/MyMaterialsPage.tsx": "8d6d23f3b54b09a7c275d025141869cbc60e8fc28618452f6b823a6f25f03ce3",
     "web/src/test/warehouseExecutionFixture.ts": "13e18c379bcae074668effdd5b0aa106384b5a8e323772eb501b0e6fb5a40436",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MaterialDeploymentReadStore.kt": "7740d636acbf1e53ba0f2960ef8a19b397eff663ecc80b63eee8d8ac657546c1",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/MaterialDeploymentReadStore.kt": "7740d636acbf1e53ba0f2960ef8a19b397eff663ecc80b63eee8d8ac657546c1",
     "server/src/main/resources/db/migration/V178_4__warehouse_deployment_only_settlement.sql": "b00cf665eaebae1959e5d75113674e98efba3f6c6838fda57604c1cda0545003",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseSerialSettlementIT.kt": "181cb4948ebac54632b7ec8ca5e8d801132e5f9774726346f5751ff2eaf30b1a"
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseSerialSettlementIT.kt": "181cb4948ebac54632b7ec8ca5e8d801132e5f9774726346f5751ff2eaf30b1a"
   }
 }

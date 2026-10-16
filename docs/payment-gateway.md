@@ -122,7 +122,7 @@ Semua field manual **non-rahasia** → **plaintext, tak dienkripsi, semantik "se
 multipart terpisah.
 
 **Object storage QRIS.** Port `ObjectStorage`/`StoredObject` di
-`com.duluin.ftth.common.storage` (adapter S3/MinIO). Key QRIS satu per tenant:
+`com.karuhun.ftth.common.storage` (adapter S3/MinIO). Key QRIS satu per tenant:
 **`"$tenantId/billing/gateway/qris"`** (unggah ulang menimpa). Validasi: `contentType` harus
 `image/*`, maksimal **5 MB**. Pola "taruh byte dulu, baru simpan metadata".
 

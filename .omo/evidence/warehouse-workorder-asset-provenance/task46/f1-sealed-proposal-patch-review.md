@@ -4,7 +4,7 @@ Reviewed validation worktree HEAD `d6baf827ce9bcdae6222acc7c63b8fe64b89fa87` plu
 
 **Result: no blocking defect found in the inspected patch.** The receipt editability and title-correction rework changes implement the previously agreed operational-draft versus sealed-proposal distinction without weakening the immutable source contract. Backend execution is still required; broader asset-exception creation UI, expiry and final validation obligations are not closed by this result.
 
-Paths below are repository-relative; `S` = `server/src/main/kotlin/com/duluin/ftth`, `T` = `server/src/test/kotlin/com/duluin/ftth`.
+Paths below are repository-relative; `S` = `server/src/main/kotlin/com/karuhun/ftth`, `T` = `server/src/test/kotlin/com/karuhun/ftth`.
 
 | Review concern | Source and conclusion |
 | --- | --- |

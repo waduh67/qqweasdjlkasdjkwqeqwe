@@ -6,23 +6,23 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountService.kt",
       "sha256": "ee2ac7ffd168ab292a0f4db87a30a289515465c2be24b59563858a72c9b7c022"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountApprovalOwner.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountApprovalOwner.kt",
       "sha256": "54020e00f658b03315d9ffabce54ba1b668ca70b8121d9853e0ec1d0be2c6d3d"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountQueryService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountQueryService.kt",
       "sha256": "bad4ee414e7ff8160e785a3147c5d66a977260f6874d17d7e18e558c9b90999e"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseCountController.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/inbound/web/WarehouseCountController.kt",
       "sha256": "f967ae6c90df54701bd5b118d993d35006c3fa141d58039ffa989a0066379d63"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCountStore.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseCountStore.kt",
       "sha256": "1627a10ae977bf51d5ffdcad5f0a5e1eabb31a4c00fbe91aa37ce9bef7a91aea"
     }
   ],
@@ -42,7 +42,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+            "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
             "tests": 15,
             "failures": 0,
             "errors": 0,
@@ -70,17 +70,17 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountService.kt",
         "line": 16,
         "sha256": "424d1d520f75dca21444d5980c7ca7fd1d89c159fc5db9dbd89730fb2915c6a5"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountApprovalOwner.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountApprovalOwner.kt",
         "line": 13,
         "sha256": "54020e00f658b03315d9ffabce54ba1b668ca70b8121d9853e0ec1d0be2c6d3d"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountQueryService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountQueryService.kt",
         "line": 19,
         "sha256": "c70bd771373dbaa4fe50041b19e36cd19160b18a16b11a3a30a41e35b9838a3f"
       }
@@ -105,7 +105,7 @@
       "G(WarehouseCountIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseCountIT.kt",
             "sha256": "0cb0d7e4f3cedd2ae3f3d5145388ac469110320326950c1a7db2266134badd32",
             "testAnnotations": 15
           }
@@ -123,13 +123,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
               "tests": 15,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "04b9d0d1523eba80cc79267fae8d72ac4da0e15152745e62d26ab315053b698b",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseCountIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseCountIT.xml"
             }
           ],
           "proof": {
@@ -144,13 +144,13 @@
           "tests": 15,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
               "tests": 15,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "796936f1b85f5a5b605a4da43898c56983542b1bfe28ac6f282609dd98c2d960",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseCountIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseCountIT.xml"
             }
           ]
         },
@@ -166,13 +166,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
               "tests": 15,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "94e45c90ef0f4555be36b25dc982566e18e854edbf79f3b29a89993061ef907a",
-              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.duluin.ftth.inventory.WarehouseCountIT.xml"
+              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.karuhun.ftth.inventory.WarehouseCountIT.xml"
             }
           ],
           "proof": {
@@ -212,7 +212,7 @@
       "G(WarehouseCountIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseCountIT.kt",
             "sha256": "0cb0d7e4f3cedd2ae3f3d5145388ac469110320326950c1a7db2266134badd32",
             "testAnnotations": 15
           }
@@ -230,13 +230,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
               "tests": 15,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "04b9d0d1523eba80cc79267fae8d72ac4da0e15152745e62d26ab315053b698b",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseCountIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseCountIT.xml"
             }
           ],
           "proof": {
@@ -251,13 +251,13 @@
           "tests": 15,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
               "tests": 15,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "796936f1b85f5a5b605a4da43898c56983542b1bfe28ac6f282609dd98c2d960",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseCountIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseCountIT.xml"
             }
           ]
         },
@@ -273,13 +273,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
               "tests": 15,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "94e45c90ef0f4555be36b25dc982566e18e854edbf79f3b29a89993061ef907a",
-              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.duluin.ftth.inventory.WarehouseCountIT.xml"
+              "rawReference": ".omo/runtime/ci/compatibility-results/TEST-com.karuhun.ftth.inventory.WarehouseCountIT.xml"
             }
           ],
           "proof": {
@@ -330,23 +330,23 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountService.kt",
         "sha256": "ee2ac7ffd168ab292a0f4db87a30a289515465c2be24b59563858a72c9b7c022"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountApprovalOwner.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountApprovalOwner.kt",
         "sha256": "54020e00f658b03315d9ffabce54ba1b668ca70b8121d9853e0ec1d0be2c6d3d"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCountQueryService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCountQueryService.kt",
         "sha256": "bad4ee414e7ff8160e785a3147c5d66a977260f6874d17d7e18e558c9b90999e"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseCountController.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/inbound/web/WarehouseCountController.kt",
         "sha256": "f967ae6c90df54701bd5b118d993d35006c3fa141d58039ffa989a0066379d63"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseCountStore.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseCountStore.kt",
         "sha256": "1627a10ae977bf51d5ffdcad5f0a5e1eabb31a4c00fbe91aa37ce9bef7a91aea"
       }
     ],

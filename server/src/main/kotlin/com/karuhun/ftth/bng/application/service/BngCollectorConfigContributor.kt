@@ -1,0 +1,85 @@
+package com.karuhun.ftth.bng.application.service
+
+import com.karuhun.ftth.bng.application.port.outbound.NasRepository
+import com.karuhun.ftth.bng.application.port.outbound.SubscriberAccessRepository
+import com.karuhun.ftth.bng.domain.model.AccessStatus
+import com.karuhun.ftth.bng.domain.model.Nas
+import com.karuhun.ftth.bng.domain.model.NasReachability
+import com.karuhun.ftth.common.integration.BngActionDispatch
+import com.karuhun.ftth.common.integration.CollectorConfigContributor
+import com.karuhun.ftth.common.integration.NasPollTarget
+import org.springframework.stereotype.Component
+import java.util.UUID
+
+/**
+ * Menyumbang BRAS milik tenant ke konfigurasi polling collector, lewat seam shared
+ * kernel [CollectorConfigContributor] sehingga monitoring tak perlu mengimpor bng.
+ *
+ * Sebuah BRAS ikut di-polling collector ini bila ditugaskan padanya secara eksplisit
+ * ([Nas.collectorId] == collector) ATAU belum ditugaskan ke collector mana pun
+ * ([Nas.collectorId] == null) — bawaan yang benar untuk ISP satu collector, cermin
+ * kebijakan "penugasan kosong = semua OLT" di monitoring. BRAS nonaktif dilewati.
+ *
+ * [NasPollTarget.expectedUsernames] diisi akun PPPoE berstatus aktif pada BRAS itu;
+ * hanya adapter simulator yang memakainya (memerankan sesi yang cocok pelanggan
+ * nyata), adapter sungguhan mengabaikannya.
+ */
+@Component
+class BngCollectorConfigContributor(
+    private val nasRepository: NasRepository,
+    private val subscriberAccessRepository: SubscriberAccessRepository,
+    private val bngActions: BngActionService,
+) : CollectorConfigContributor {
+
+    override fun nasTargetsFor(collectorId: UUID, tenantId: UUID): List<NasPollTarget> =
+        nasForCollector(collectorId).map { nas -> nas.toPollTarget() }
+
+    /**
+     * Perintah BRAS yang menunggu untuk BRAS yang dijangkau collector ini. Ditandai
+     * DISPATCHED saat diserahkan (di dalam transaksi denyut), lalu dikirim ulang tiap
+     * denyut sampai di-ACK — eksekusi harus idempoten (at-least-once).
+     */
+    override fun pendingBngActionsFor(collectorId: UUID, tenantId: UUID): List<BngActionDispatch> {
+        val nasIds = nasForCollector(collectorId).map { it.id }
+        if (nasIds.isEmpty()) return emptyList()
+        return bngActions.claimDispatch(nasIds)
+    }
+
+    /**
+     * BRAS yang di-polling & dikontrol collector ini: ditugaskan padanya secara eksplisit
+     * ([Nas.collectorId] == collector) ATAU belum ditugaskan ke mana pun (null) — bawaan benar
+     * untuk ISP satu collector. BRAS nonaktif dilewati.
+     *
+     * Hanya BRAS ber-reachability [NasReachability.COLLECTOR] yang diikutkan: sejak
+     * RADIUS-as-a-service, BRAS yang server jangkau sendiri (DIRECT/VPN) dibaca & dikontrol
+     * server langsung (baca `radacct` + DAE), sedangkan NONE tak terjangkau siapa pun —
+     * ketiganya sengaja LEPAS dari collector agar tak dobel-dilayani. Bawaan COLLECTOR menjaga
+     * perilaku warisan: BRAS lama tetap milik agent on-prem.
+     */
+    private fun nasForCollector(collectorId: UUID): List<Nas> =
+        nasRepository.findAll().filter {
+            it.enabled &&
+                it.reachability == NasReachability.COLLECTOR &&
+                (it.collectorId == collectorId || it.collectorId == null)
+        }
+
+    private fun Nas.toPollTarget(): NasPollTarget {
+        val activeUsernames = subscriberAccessRepository.findByNasId(id)
+            .filter { it.status == AccessStatus.ACTIVE }
+            .map { it.username }
+        return NasPollTarget(
+            nasId = id,
+            name = name,
+            vendor = vendor.name,
+            host = address,
+            adapterType = vendor.name,
+            expectedUsernames = activeUsernames,
+            // Kredensial kontrol untuk adapter nyata (7d) — sudah terdekripsi di domain.
+            apiUsername = apiUsername,
+            apiSecret = apiSecret,
+            apiPort = apiPort,
+            apiUseTls = apiUseTls,
+            coaSecret = coaSecret,
+        )
+    }
+}

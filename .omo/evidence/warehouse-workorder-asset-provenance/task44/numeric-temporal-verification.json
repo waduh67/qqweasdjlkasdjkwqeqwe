@@ -2,21 +2,21 @@
   "phase": "Task44 complete: actual numeric recovery, concurrent decisions, same-asset temporal reuse and canonical return serial",
   "baseCommit": "5a2601efe59895122059994b431ae3ba9a5f12ce",
   "sourceSha256": {
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCustomerRmaService.kt": "33dcdadbef014568c8235754858b8fa0d2e0b91fa216b9337b8755d7ab79f1bd",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseRepairService.kt": "347adb1d3d42128ed68b972fac3632e4eab244a2b940381e93bb71c17d63fd39",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReturnModels.kt": "c6d035155ccc0dc6886b662030c113abf0c10300c946470560e6e8a866b8dad7",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReturnService.kt": "131f4825b89f54d5422db8ce84d0b682c9fdc196d6c562a0453214c2f9914f37",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCustomerRmaService.kt": "33dcdadbef014568c8235754858b8fa0d2e0b91fa216b9337b8755d7ab79f1bd",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseRepairService.kt": "347adb1d3d42128ed68b972fac3632e4eab244a2b940381e93bb71c17d63fd39",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReturnModels.kt": "c6d035155ccc0dc6886b662030c113abf0c10300c946470560e6e8a866b8dad7",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReturnService.kt": "131f4825b89f54d5422db8ce84d0b682c9fdc196d6c562a0453214c2f9914f37",
     "server/src/main/resources/db/migration/V178_6__warehouse_return_canonical_serial.sql": "a1090f524423ed8623f561c6c26b18cade0aa440ec439634317754cf55659f7b",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt": "7d25ec740bf8652b2ac25918d863dd59d2f1b5d263825f76d781c8d166a6f43d",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseNumericCountIT.kt": "e753f6e967bc0f4b69d0576b4e7bb6e762a745ac4680a6ffff34e94ee3c708ff",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseNumericLifecycleFixture.kt": "ef9f745c1e74ebaf9591fe53b322bb8360b41370830181b106d3f2de8d016e1a",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseNumericReuseFixture.kt": "9d8a0748ce82bc804c9e9d14ff100892df11172d535ef7fb711c8aaa1edb02bb",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseTemporalNumericIT.kt": "e5a47e824cde64b74aab55547e35fb9fb24507729c865367a3fbf7faa70c3da0",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCustomerRmaFixture.kt": "8ccd8e313410c428ea43c7e1d5ad75d4995582dba0d03acbeb094cdcb83d9247",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRepairFixture.kt": "acb052c7512c224f3541616b33eb1e648dfc48e72b8a3c086d4a81a78d381f55",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnAssetFixture.kt": "40231f88ffe1941635273f1fba1b32dd7cdd78af3801b564b574b2d8aac9ba4d",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseReturnCanonicalSerialIT.kt": "db62444f91ec228c0f1d54ac943160e81121bb582b83d645e3075352400dc533",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSupplierRepairIT.kt": "b9c989ae838a195ee788e4c5873921ff810622748b86d437d0d7cdbbfbe86160"
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt": "7d25ec740bf8652b2ac25918d863dd59d2f1b5d263825f76d781c8d166a6f43d",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseNumericCountIT.kt": "e753f6e967bc0f4b69d0576b4e7bb6e762a745ac4680a6ffff34e94ee3c708ff",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseNumericLifecycleFixture.kt": "ef9f745c1e74ebaf9591fe53b322bb8360b41370830181b106d3f2de8d016e1a",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseNumericReuseFixture.kt": "9d8a0748ce82bc804c9e9d14ff100892df11172d535ef7fb711c8aaa1edb02bb",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseTemporalNumericIT.kt": "e5a47e824cde64b74aab55547e35fb9fb24507729c865367a3fbf7faa70c3da0",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseCustomerRmaFixture.kt": "8ccd8e313410c428ea43c7e1d5ad75d4995582dba0d03acbeb094cdcb83d9247",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseRepairFixture.kt": "acb052c7512c224f3541616b33eb1e648dfc48e72b8a3c086d4a81a78d381f55",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnAssetFixture.kt": "40231f88ffe1941635273f1fba1b32dd7cdd78af3801b564b574b2d8aac9ba4d",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseReturnCanonicalSerialIT.kt": "db62444f91ec228c0f1d54ac943160e81121bb582b83d645e3075352400dc533",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSupplierRepairIT.kt": "b9c989ae838a195ee788e4c5873921ff810622748b86d437d0d7cdbbfbe86160"
   },
   "migration": {
     "version": "178.6",
@@ -32,154 +32,154 @@
       "elapsed": "7m20s",
       "suites": [
         {
-          "suite": "com.duluin.ftth.ModularityTests",
+          "suite": "com.karuhun.ftth.ModularityTests",
           "tests": 3,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
           "tests": 4,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseNumericCountIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseNumericCountIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseReassignmentSettlementIT",
           "tests": 2,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseSerialSettlementIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseSerialSettlementIT",
           "tests": 2,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseTemporalNumericIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseTemporalNumericIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
           "tests": 15,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
           "tests": 3,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaGuardsIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaGuardsIT",
           "tests": 6,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaHandoverIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaHandoverIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaReacquisitionIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaReacquisitionIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseRecoveryIT",
           "tests": 2,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseReturnCanonicalSerialIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseReturnCanonicalSerialIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseReturnIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseReturnIT",
           "tests": 4,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseReturnITAccess",
+          "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAccess",
           "tests": 1,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+          "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAssets",
           "tests": 2,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseReturnITIntegrity",
+          "suite": "com.karuhun.ftth.inventory.WarehouseReturnITIntegrity",
           "tests": 3,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseReturnITReuse",
+          "suite": "com.karuhun.ftth.inventory.WarehouseReturnITReuse",
           "tests": 1,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairAccessIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseSupplierRepairAccessIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseSupplierRepairIT",
           "tests": 2,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairIntegrityIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseSupplierRepairIntegrityIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
@@ -191,21 +191,21 @@
       "tests": 4,
       "suites": [
         {
-          "suite": "com.duluin.ftth.fulfillment.WarehouseTemporalNumericIT",
+          "suite": "com.karuhun.ftth.fulfillment.WarehouseTemporalNumericIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseReturnCanonicalSerialIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseReturnCanonicalSerialIT",
           "tests": 1,
           "failures": 0,
           "errors": 0,
           "skipped": 0
         },
         {
-          "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairIT",
+          "suite": "com.karuhun.ftth.inventory.WarehouseSupplierRepairIT",
           "tests": 2,
           "failures": 0,
           "errors": 0,

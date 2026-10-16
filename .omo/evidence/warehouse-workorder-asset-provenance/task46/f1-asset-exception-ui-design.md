@@ -1,6 +1,6 @@
 # F1 targeted asset exception UI review — preliminary, read only
 
-Source inspected: validation worktree HEAD `6c6195aecbb785dc5094d382845665e35b8e73ef`, with concurrent count/CI/documentation changes. The customer asset, title/loss, receipt and replacement sources cited below were not listed as modified when checked. `f1-asset-exception-ui-source.json` pins 27 inspected source files by SHA-256. This is a source/design review, not executed QA or final F1 approval. Source paths below are relative to that validation worktree. `S` means `server/src/main/kotlin/com/duluin/ftth`; `M` means `server/src/main/resources/db/migration`.
+Source inspected: validation worktree HEAD `6c6195aecbb785dc5094d382845665e35b8e73ef`, with concurrent count/CI/documentation changes. The customer asset, title/loss, receipt and replacement sources cited below were not listed as modified when checked. `f1-asset-exception-ui-source.json` pins 27 inspected source files by SHA-256. This is a source/design review, not executed QA or final F1 approval. Source paths below are relative to that validation worktree. `S` means `server/src/main/kotlin/com/karuhun/ftth`; `M` means `server/src/main/resources/db/migration`.
 
 ## Contract applicability and minimum delivery
 

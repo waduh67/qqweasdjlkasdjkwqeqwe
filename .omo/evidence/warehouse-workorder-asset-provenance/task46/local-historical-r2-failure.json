@@ -5,7 +5,7 @@
   "executedTests": 4,
   "suites": [
     {
-      "suite": "com.duluin.ftth.customer.CustomerAssetTitleUpgradeIT",
+      "suite": "com.karuhun.ftth.customer.CustomerAssetTitleUpgradeIT",
       "tests": 1,
       "failures": 1,
       "errors": 0,
@@ -13,7 +13,7 @@
       "reportSha256": "f59ab33b1a4f1626b802c7779c8209c9bbda84aeca5c5be14bd695d3f113ef4a"
     },
     {
-      "suite": "com.duluin.ftth.customer.CustomerDeploymentUpgradeIT",
+      "suite": "com.karuhun.ftth.customer.CustomerDeploymentUpgradeIT",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -21,7 +21,7 @@
       "reportSha256": "cf08b3311dd8d83c9342c22ef204d90405065040bf78c4136f801793079dcc4a"
     },
     {
-      "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade",
+      "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -29,7 +29,7 @@
       "reportSha256": "f5cab32b830cee28f8107027030a05e180da0784a387151f595ea0092f9348d2"
     },
     {
-      "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
+      "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
       "tests": 1,
       "failures": 0,
       "errors": 0,

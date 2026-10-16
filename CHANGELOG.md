@@ -642,7 +642,7 @@ Bagian dari rework bertahap payment gateway ([`docs/payment-gateway.md`](docs/pa
   sebagai panel "Cara bayar" pada tagihan MANUAL yang belum lunas.
 - **Object storage untuk gambar QRIS** — byte di MinIO/S3 dengan key `"$tenantId/billing/gateway/qris"`
   (DB hanya simpan `qris_storage_key` + `qris_content_type`). Port `ObjectStorage` dipromosikan dari
-  modul `workorder` ke `com.duluin.ftth.common.storage` agar dipakai bersama.
+  modul `workorder` ke `com.karuhun.ftth.common.storage` agar dipakai bersama.
 - Endpoint baru: `POST/DELETE/GET /api/billing/gateway-settings/qris` (unggah/hapus/sajikan gambar,
   validasi `image/*` maks 5 MB) dan `GET /api/billing/manual-payment-instructions`.
 - Migrasi **V54** — kolom manual di `tenant_payment_gateway` (plaintext, non-rahasia, semantik

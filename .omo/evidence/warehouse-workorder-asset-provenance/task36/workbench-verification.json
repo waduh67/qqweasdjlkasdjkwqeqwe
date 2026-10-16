@@ -5,17 +5,17 @@
     "tests": 7,
     "suites": [
       {
-        "name": "com.duluin.ftth.inventory.WarehouseTransferContractTest",
+        "name": "com.karuhun.ftth.inventory.WarehouseTransferContractTest",
         "tests": 1,
         "sha256": "974767fc32a3210ede24aff5280e0d8ae3bd04defd60a0a5b80edc35c0c210e4"
       },
       {
-        "name": "com.duluin.ftth.inventory.WarehouseTransferIT",
+        "name": "com.karuhun.ftth.inventory.WarehouseTransferIT",
         "tests": 3,
         "sha256": "2a81a9a6be89e6910d8b9b79b4cd0b0331a095c50d6bf320b66b9255985759d5"
       },
       {
-        "name": "com.duluin.ftth.inventory.WarehouseTransferListIT",
+        "name": "com.karuhun.ftth.inventory.WarehouseTransferListIT",
         "tests": 3,
         "sha256": "046940feab60b42d3a9c15afc79437fb23211d50311b9591f277ec46798f1c76"
       }

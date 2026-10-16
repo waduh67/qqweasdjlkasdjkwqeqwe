@@ -13,7 +13,7 @@
   },
   "suites": [
     {
-      "suite": "com.duluin.ftth.AlarmRuleIT",
+      "suite": "com.karuhun.ftth.AlarmRuleIT",
       "tests": 4,
       "failures": 0,
       "errors": 0,
@@ -22,7 +22,7 @@
       "failedCases": []
     },
     {
-      "suite": "com.duluin.ftth.GisCutBlastRadiusIT",
+      "suite": "com.karuhun.ftth.GisCutBlastRadiusIT",
       "tests": 2,
       "failures": 0,
       "errors": 0,
@@ -31,7 +31,7 @@
       "failedCases": []
     },
     {
-      "suite": "com.duluin.ftth.GisImpactedIT",
+      "suite": "com.karuhun.ftth.GisImpactedIT",
       "tests": 2,
       "failures": 0,
       "errors": 0,
@@ -40,7 +40,7 @@
       "failedCases": []
     },
     {
-      "suite": "com.duluin.ftth.GisUtilizationIT",
+      "suite": "com.karuhun.ftth.GisUtilizationIT",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -49,7 +49,7 @@
       "failedCases": []
     },
     {
-      "suite": "com.duluin.ftth.IncidentIT",
+      "suite": "com.karuhun.ftth.IncidentIT",
       "tests": 6,
       "failures": 5,
       "errors": 0,
@@ -64,7 +64,7 @@
       ]
     },
     {
-      "suite": "com.duluin.ftth.NetworkEndToEndIT",
+      "suite": "com.karuhun.ftth.NetworkEndToEndIT",
       "tests": 15,
       "failures": 2,
       "errors": 0,
@@ -76,7 +76,7 @@
       ]
     },
     {
-      "suite": "com.duluin.ftth.NotificationIT",
+      "suite": "com.karuhun.ftth.NotificationIT",
       "tests": 3,
       "failures": 2,
       "errors": 0,
@@ -88,7 +88,7 @@
       ]
     },
     {
-      "suite": "com.duluin.ftth.OdpPortBoardIT",
+      "suite": "com.karuhun.ftth.OdpPortBoardIT",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -97,7 +97,7 @@
       "failedCases": []
     },
     {
-      "suite": "com.duluin.ftth.PredictiveMaintenanceIT",
+      "suite": "com.karuhun.ftth.PredictiveMaintenanceIT",
       "tests": 1,
       "failures": 1,
       "errors": 0,
@@ -108,7 +108,7 @@
       ]
     },
     {
-      "suite": "com.duluin.ftth.SurveyCapacityIT",
+      "suite": "com.karuhun.ftth.SurveyCapacityIT",
       "tests": 3,
       "failures": 0,
       "errors": 0,
@@ -117,7 +117,7 @@
       "failedCases": []
     },
     {
-      "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes",
+      "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationITPurposes",
       "tests": 26,
       "failures": 0,
       "errors": 0,
@@ -126,7 +126,7 @@
       "failedCases": []
     },
     {
-      "suite": "com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT",
+      "suite": "com.karuhun.ftth.customer.CustomerAssetHandoverEndpointIT",
       "tests": 11,
       "failures": 0,
       "errors": 0,
@@ -135,7 +135,7 @@
       "failedCases": []
     },
     {
-      "suite": "com.duluin.ftth.customer.CustomerDeploymentFinalStateIT",
+      "suite": "com.karuhun.ftth.customer.CustomerDeploymentFinalStateIT",
       "tests": 58,
       "failures": 0,
       "errors": 0,
@@ -144,7 +144,7 @@
       "failedCases": []
     },
     {
-      "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
+      "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
       "tests": 1,
       "failures": 0,
       "errors": 0,
@@ -153,7 +153,7 @@
       "failedCases": []
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+      "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
       "tests": 12,
       "failures": 0,
       "errors": 0,
@@ -162,7 +162,7 @@
       "failedCases": []
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
       "tests": 3,
       "failures": 0,
       "errors": 0,
@@ -187,17 +187,17 @@
     "Stage explicit legacy ONU history three days earlier; use seven six-hour samples preserving a -1 dB/day trend and seven flat control samples. No current device or stock origin is fabricated."
   ],
   "originalTestMethodsPreserved": {
-    "server/src/test/kotlin/com/duluin/ftth/IncidentIT.kt": 6,
-    "server/src/test/kotlin/com/duluin/ftth/NotificationIT.kt": 3,
-    "server/src/test/kotlin/com/duluin/ftth/NetworkEndToEndIT.kt": 15,
-    "server/src/test/kotlin/com/duluin/ftth/PredictiveMaintenanceIT.kt": 1
+    "server/src/test/kotlin/com/karuhun/ftth/IncidentIT.kt": 6,
+    "server/src/test/kotlin/com/karuhun/ftth/NotificationIT.kt": 3,
+    "server/src/test/kotlin/com/karuhun/ftth/NetworkEndToEndIT.kt": 15,
+    "server/src/test/kotlin/com/karuhun/ftth/PredictiveMaintenanceIT.kt": 1
   },
   "sourceSha256": {
-    "server/src/test/kotlin/com/duluin/ftth/IncidentIT.kt": "2e42b22caac1667bcb76b42898530afff5cf44b59d990acfddcf671805e0be9a",
-    "server/src/test/kotlin/com/duluin/ftth/NotificationIT.kt": "27521e5decb71df24b4c587bae959934492433bd20775822bf59a453d78cbe96",
-    "server/src/test/kotlin/com/duluin/ftth/NetworkEndToEndIT.kt": "7ac39bfa5a5077506a5526e54e004f7a095dc98702de184e80bd98b6fe02b015",
-    "server/src/test/kotlin/com/duluin/ftth/PredictiveMaintenanceIT.kt": "4f84c034509790f6317fce410dd7c66dec772bbbc44a8f0e1fc94da41755d15b",
-    "server/src/test/kotlin/com/duluin/ftth/customer/LegacyOnuTestFixture.kt": "ef11ba08fef4f4cdf170c6e9d4661005098de86b4624f5a2b6586c24c64903da"
+    "server/src/test/kotlin/com/karuhun/ftth/IncidentIT.kt": "2e42b22caac1667bcb76b42898530afff5cf44b59d990acfddcf671805e0be9a",
+    "server/src/test/kotlin/com/karuhun/ftth/NotificationIT.kt": "27521e5decb71df24b4c587bae959934492433bd20775822bf59a453d78cbe96",
+    "server/src/test/kotlin/com/karuhun/ftth/NetworkEndToEndIT.kt": "7ac39bfa5a5077506a5526e54e004f7a095dc98702de184e80bd98b6fe02b015",
+    "server/src/test/kotlin/com/karuhun/ftth/PredictiveMaintenanceIT.kt": "4f84c034509790f6317fce410dd7c66dec772bbbc44a8f0e1fc94da41755d15b",
+    "server/src/test/kotlin/com/karuhun/ftth/customer/LegacyOnuTestFixture.kt": "ef11ba08fef4f4cdf170c6e9d4661005098de86b4624f5a2b6586c24c64903da"
   },
   "validation": "diff check passes; corrected Kotlin compilation and runtime are pending",
   "limits": [

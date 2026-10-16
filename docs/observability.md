@@ -205,7 +205,7 @@ alert yang menyalin angka-angka itu satu per satu pasti akan ketinggalan zaman.
 > sendiri; label aplikasi yang bentrok diganti diam-diam jadi `exported_job` saat diserap.
 > Aturan alert yang ditulis dengan `job="…"` akan cocok dengan hal yang sama sekali berbeda —
 > kesalahan yang tak menimbulkan galat apa pun, cuma peringatan yang tak pernah menyala.
-> Label kedua: `module` (segmen paket setelah `com.duluin.ftth.`).
+> Label kedua: `module` (segmen paket setelah `com.karuhun.ftth.`).
 
 Pengukur memegang **registry** lalu menengok job lewat namanya tiap kali diambil sampel.
 Micrometer menyimpan objek sumber secara lemah — menahan `JobHealth` langsung akan membuat

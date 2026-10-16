@@ -3,12 +3,12 @@
   "sourceHead": "d6baf827ce9bcdae6222acc7c63b8fe64b89fa87",
   "worktree": "warehouse-regression-validation",
   "changedPaths": [
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalQueryService.kt",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
-    "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipIT.kt",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSupplierReplacementGuardsIT.kt",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/DurableApprovalService.kt",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseApprovalQueryService.kt",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReceiptService.kt",
+    "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerAssetOwnershipIT.kt",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSupplierReplacementGuardsIT.kt",
     "web/src/api/warehouse/receipts.ts",
     "web/src/pages/warehouse/WarehouseReceiptEditor.tsx",
     "web/src/pages/warehouse/WarehouseReceiptsPage.test.tsx",
@@ -32,32 +32,32 @@
   },
   "files": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/port/inbound/WarehouseReceiptModels.kt",
       "sha256": "32f5690f22de9cf03a7f7f7c918009a9714fb50fafa1e4bc2ca03684aa6a52ba",
       "changed": true
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/DurableApprovalService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/DurableApprovalService.kt",
       "sha256": "d0520181714ecd845cc3e1accfaedda4f6a452e08d541185170be08557328d5c",
       "changed": true
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseApprovalQueryService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseApprovalQueryService.kt",
       "sha256": "79159c7601325504d99ebcd54a79ea85304b2b18b7ea96ce50fedd786c18e9de",
       "changed": true
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseReceiptService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseReceiptService.kt",
       "sha256": "bf9fdc23d4c6f12685adfa5923f04fd39d7b742d2fe855b6a6193ceed1d1ac52",
       "changed": true
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/customer/CustomerAssetOwnershipIT.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerAssetOwnershipIT.kt",
       "sha256": "c57d575fd8d4732190e1c67ccf6c2e487eaf567133300df466141692fdfc2af2",
       "changed": true
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSupplierReplacementGuardsIT.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSupplierReplacementGuardsIT.kt",
       "sha256": "7c7d5775be5873544e1c0d711b7cffa440f2f8a569089a3b5199da53626d7f9c",
       "changed": true
     },
@@ -97,32 +97,32 @@
       "changed": true
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/SupplierReplacementStore.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/SupplierReplacementStore.kt",
       "sha256": "78b7ba1474d60b710f69f37b6f62173e2d4795917883856dcdcfc98199e39dd2",
       "changed": false
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/WarehouseReceiptPersistence.kt",
       "sha256": "e4e89a7d7b1932eec36e223094ba3b2450d6005c3fee2fa103e43a6b65f408ae",
       "changed": false
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/SupplierReplacementService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/SupplierReplacementService.kt",
       "sha256": "0e0ce488549edf4f8891fd732333f3f64337f7e6f5de0b6ccf6125b6aaf87e11",
       "changed": false
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/AssetTitleCorrectionOwner.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/AssetTitleCorrectionOwner.kt",
       "sha256": "c3876128c17c5295b574f7034813f7b9b83c9fd343cf519dad7ab79ec07a44c7",
       "changed": false
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseCommandService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseCommandService.kt",
       "sha256": "701ad5e69fdc0b8846741e71924fbf1b607770b596a9fe3a9e7cffce6342b2e0",
       "changed": false
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/inbound/web/WarehouseReceiptController.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/inbound/web/WarehouseReceiptController.kt",
       "sha256": "41ca444f1a8b4dbe67677fa73ea3b09edf8863670b271d74074a3910013a9986",
       "changed": false
     },

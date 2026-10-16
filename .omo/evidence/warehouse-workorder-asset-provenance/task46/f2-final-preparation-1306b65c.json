@@ -6,7 +6,7 @@
   "priorSourceReviewCommit": "6bfb13374db245e0f4d192c94ade42fdb07cd613",
   "worktreeAtCapture": "M .omo/notepads/warehouse-workorder-asset-provenance/handoff.md",
   "nonEvidenceDelta": {
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseContractTest.kt": "e9d1177f32385d9a457e1b411b894ae1381d083146c94f051103f49483d912da",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseContractTest.kt": "e9d1177f32385d9a457e1b411b894ae1381d083146c94f051103f49483d912da",
     "web/src/components/organisms/warehouse/WarehouseStatus.tsx": "cd9672029475e959cda42d7ddf9e7606aabccb7420eeb46803cf6b7a3cc88755",
     "web/src/pages/MyMaterialsPage.tsx": "2c54f6ccd89007068bf12c74a9cad28dc4af982532ea2cff5eb4c71a21b34610"
   },
@@ -65,7 +65,7 @@
   "focusedContractAuthentication": {
     "actualSuites": [
       {
-        "suite": "com.duluin.ftth.ModularityTests",
+        "suite": "com.karuhun.ftth.ModularityTests",
         "sha256": "db7973a4ce3b1e44fd8db644f3e55d9e0a2d3c2c6fbd9a205eca94729eef0c0f",
         "tests": 3,
         "failures": 0,
@@ -73,7 +73,7 @@
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
         "sha256": "fd8e40f769ce3e67d5f5ae7c018baf1ac23889bb6a51f7a01847380487dcbc85",
         "tests": 12,
         "failures": 0,

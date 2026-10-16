@@ -4,35 +4,35 @@
   "tests": 16,
   "suites": [
     {
-      "suite": "com.duluin.ftth.ModularityTests",
+      "suite": "com.karuhun.ftth.ModularityTests",
       "tests": 3,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.fulfillment.FulfillmentCoordinatorTest",
+      "suite": "com.karuhun.ftth.fulfillment.FulfillmentCoordinatorTest",
       "tests": 5,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.fulfillment.WarehouseMigrationFulfillmentIT",
+      "suite": "com.karuhun.ftth.fulfillment.WarehouseMigrationFulfillmentIT",
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseMigrationCaptureIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseMigrationCaptureIT",
       "tests": 2,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseMigrationResolutionIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseMigrationResolutionIT",
       "tests": 4,
       "failures": 0,
       "errors": 0,
@@ -41,12 +41,12 @@
   ],
   "files": {
     "server/src/main/resources/db/migration/V177_5__warehouse_legacy_fulfillment_sources.sql": "4b560d0aab1f34aea4ecf3649e936373f330b19140f888854c1ffa97e65ec15d",
-    "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentMigrationAdapter.kt": "35b8857bc6cdb1b5f9f4d1f8fd9ff1ba335ed239a147b73c05c40d68d97f4370",
-    "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentPersistence.kt": "7b054b05951ebe7cb67a90b08e9654893edac3ded7b023061532781561d6f87e",
-    "server/src/main/kotlin/com/duluin/ftth/fulfillment/FulfillmentCoordinator.kt": "87a9489b1e4f341837ed8e09ee024fad4c8235279aa058712493725de834a3c2",
-    "server/src/main/kotlin/com/duluin/ftth/workorder/adapter/outbound/persistence/ProvenanceWorkOrderAdapter.kt": "730ecd3a4171bbd4deb58e2ec8f3fa1be45def575cb1103ae59faa3a833959b6",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt": "4e5400f1cc6ea3bdf9bf4b9497d197da515ca37583f8d02634fadd6ca4102017",
-    "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseMigrationFulfillmentIT.kt": "aef63b114526f8d0223fddfbce794929f47cbb4f75de2a5aac92bef038c49cb7"
+    "server/src/main/kotlin/com/karuhun/ftth/fulfillment/FulfillmentMigrationAdapter.kt": "35b8857bc6cdb1b5f9f4d1f8fd9ff1ba335ed239a147b73c05c40d68d97f4370",
+    "server/src/main/kotlin/com/karuhun/ftth/fulfillment/FulfillmentPersistence.kt": "7b054b05951ebe7cb67a90b08e9654893edac3ded7b023061532781561d6f87e",
+    "server/src/main/kotlin/com/karuhun/ftth/fulfillment/FulfillmentCoordinator.kt": "87a9489b1e4f341837ed8e09ee024fad4c8235279aa058712493725de834a3c2",
+    "server/src/main/kotlin/com/karuhun/ftth/workorder/adapter/outbound/persistence/ProvenanceWorkOrderAdapter.kt": "730ecd3a4171bbd4deb58e2ec8f3fa1be45def575cb1103ae59faa3a833959b6",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseProvenanceMigrationService.kt": "4e5400f1cc6ea3bdf9bf4b9497d197da515ca37583f8d02634fadd6ca4102017",
+    "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseMigrationFulfillmentIT.kt": "aef63b114526f8d0223fddfbce794929f47cbb4f75de2a5aac92bef038c49cb7"
   },
   "checks": [
     "full packaged boot from V172 with legacy WORK_ORDER checkpoint/outbox/effect progress",

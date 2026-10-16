@@ -83,4284 +83,4284 @@
     "tests": 3792,
     "suites": [
       {
-        "suite": "com.duluin.ftth.AlarmRuleIT",
+        "suite": "com.karuhun.ftth.AlarmRuleIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.AutoProvisioningIT",
+        "suite": "com.karuhun.ftth.AutoProvisioningIT",
         "tests": 16,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.BngFupUsageIT",
+        "suite": "com.karuhun.ftth.BngFupUsageIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.BngIT",
+        "suite": "com.karuhun.ftth.BngIT",
         "tests": 13,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.BngProvisionOnActivateIT",
+        "suite": "com.karuhun.ftth.BngProvisionOnActivateIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.BngProvisioningClaimSplitIT",
+        "suite": "com.karuhun.ftth.BngProvisioningClaimSplitIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.BngProvisioningOrderGuardIT",
+        "suite": "com.karuhun.ftth.BngProvisioningOrderGuardIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.BngRadiusPushIT",
+        "suite": "com.karuhun.ftth.BngRadiusPushIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.BngTrafficIT",
+        "suite": "com.karuhun.ftth.BngTrafficIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.CableAttachmentIT",
+        "suite": "com.karuhun.ftth.CableAttachmentIT",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.CableBackboneIT",
+        "suite": "com.karuhun.ftth.CableBackboneIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.CableChainCheckIT",
+        "suite": "com.karuhun.ftth.CableChainCheckIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.CableCodeIT",
+        "suite": "com.karuhun.ftth.CableCodeIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.CableCoreIT",
+        "suite": "com.karuhun.ftth.CableCoreIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.CablePhysicalAttributesIT",
+        "suite": "com.karuhun.ftth.CablePhysicalAttributesIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.CablePortEndpointsIT",
+        "suite": "com.karuhun.ftth.CablePortEndpointsIT",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.CatalogIT",
+        "suite": "com.karuhun.ftth.CatalogIT",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.CpeBulkRefreshCapIT",
+        "suite": "com.karuhun.ftth.CpeBulkRefreshCapIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.CpeIT",
+        "suite": "com.karuhun.ftth.CpeIT",
         "tests": 32,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.DropReleaseIT",
+        "suite": "com.karuhun.ftth.DropReleaseIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.EmailBrandingIT",
+        "suite": "com.karuhun.ftth.EmailBrandingIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.FiberConnectionIT",
+        "suite": "com.karuhun.ftth.FiberConnectionIT",
         "tests": 16,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.FiberTraceIT",
+        "suite": "com.karuhun.ftth.FiberTraceIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.GisCutBlastRadiusIT",
+        "suite": "com.karuhun.ftth.GisCutBlastRadiusIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.GisImpactedIT",
+        "suite": "com.karuhun.ftth.GisImpactedIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.GisOltOnusIT",
+        "suite": "com.karuhun.ftth.GisOltOnusIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.GisUtilizationIT",
+        "suite": "com.karuhun.ftth.GisUtilizationIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.HelpdeskIT",
+        "suite": "com.karuhun.ftth.HelpdeskIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.IamEndToEndIT",
+        "suite": "com.karuhun.ftth.IamEndToEndIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.IncidentIT",
+        "suite": "com.karuhun.ftth.IncidentIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.JointBoxIT",
+        "suite": "com.karuhun.ftth.JointBoxIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.LoginByEmailIT",
+        "suite": "com.karuhun.ftth.LoginByEmailIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.ModularityTests",
+        "suite": "com.karuhun.ftth.ModularityTests",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.MonitoringEndToEndIT",
+        "suite": "com.karuhun.ftth.MonitoringEndToEndIT",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.NetworkEndToEndIT",
+        "suite": "com.karuhun.ftth.NetworkEndToEndIT",
         "tests": 15,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.NotificationIT",
+        "suite": "com.karuhun.ftth.NotificationIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.ObservabilityIT",
+        "suite": "com.karuhun.ftth.ObservabilityIT",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.OdpPortBoardIT",
+        "suite": "com.karuhun.ftth.OdpPortBoardIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.OnboardingExpressPsbIT",
+        "suite": "com.karuhun.ftth.OnboardingExpressPsbIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.OtdrTestIT",
+        "suite": "com.karuhun.ftth.OtdrTestIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.PermissionCatalogSeederIT",
+        "suite": "com.karuhun.ftth.PermissionCatalogSeederIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.PppoeImpactedIT",
+        "suite": "com.karuhun.ftth.PppoeImpactedIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.PredictiveMaintenanceIT",
+        "suite": "com.karuhun.ftth.PredictiveMaintenanceIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.SchedulingSpringContextIT",
+        "suite": "com.karuhun.ftth.SchedulingSpringContextIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.SchedulingTestConfigurationTest",
+        "suite": "com.karuhun.ftth.SchedulingTestConfigurationTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.SelfSignupIT",
+        "suite": "com.karuhun.ftth.SelfSignupIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.SpliceCoreMoveIT",
+        "suite": "com.karuhun.ftth.SpliceCoreMoveIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.SpliceWorkOrderIT",
+        "suite": "com.karuhun.ftth.SpliceWorkOrderIT",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.SplitterIT",
+        "suite": "com.karuhun.ftth.SplitterIT",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.SubscriptionReadOnlyLockIT",
+        "suite": "com.karuhun.ftth.SubscriptionReadOnlyLockIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.SurveyCapacityIT",
+        "suite": "com.karuhun.ftth.SurveyCapacityIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.TwoFactorLoginIT",
+        "suite": "com.karuhun.ftth.TwoFactorLoginIT",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.VpnIT",
+        "suite": "com.karuhun.ftth.VpnIT",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.WorkOrderEvidenceIT",
+        "suite": "com.karuhun.ftth.WorkOrderEvidenceIT",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.WorkOrderEvidenceStorageTest",
+        "suite": "com.karuhun.ftth.WorkOrderEvidenceStorageTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.WorkOrderIT",
+        "suite": "com.karuhun.ftth.WorkOrderIT",
         "tests": 21,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.BillingApiServiceTest",
+        "suite": "com.karuhun.ftth.billing.BillingApiServiceTest",
         "tests": 15,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.BillingCycleTest",
+        "suite": "com.karuhun.ftth.billing.BillingCycleTest",
         "tests": 15,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.BillingTaxSettingsTest",
+        "suite": "com.karuhun.ftth.billing.BillingTaxSettingsTest",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.InvoiceTest",
+        "suite": "com.karuhun.ftth.billing.InvoiceTest",
         "tests": 27,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.PaymentGatewaySettingsServiceTest",
+        "suite": "com.karuhun.ftth.billing.PaymentGatewaySettingsServiceTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.PaymentSettlementFlowTest",
+        "suite": "com.karuhun.ftth.billing.PaymentSettlementFlowTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.PivotInquiryPolicyTest",
+        "suite": "com.karuhun.ftth.billing.PivotInquiryPolicyTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.PivotPaymentGatewayTest",
+        "suite": "com.karuhun.ftth.billing.PivotPaymentGatewayTest",
         "tests": 21,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.PivotPayoutGatewayTest",
+        "suite": "com.karuhun.ftth.billing.PivotPayoutGatewayTest",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.PivotSubMerchantGatewayTest",
+        "suite": "com.karuhun.ftth.billing.PivotSubMerchantGatewayTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.RefundTest",
+        "suite": "com.karuhun.ftth.billing.RefundTest",
         "tests": 26,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.TaxServiceTest",
+        "suite": "com.karuhun.ftth.billing.TaxServiceTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.TenantPaymentGatewayResolverTest",
+        "suite": "com.karuhun.ftth.billing.TenantPaymentGatewayResolverTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.TenantPaymentGatewayTest",
+        "suite": "com.karuhun.ftth.billing.TenantPaymentGatewayTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.TenantPayoutBalanceTest",
+        "suite": "com.karuhun.ftth.billing.TenantPayoutBalanceTest",
         "tests": 14,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.TenantPayoutInquiryReuseTest",
+        "suite": "com.karuhun.ftth.billing.TenantPayoutInquiryReuseTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.TenantPayoutTest",
+        "suite": "com.karuhun.ftth.billing.TenantPayoutTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.TripayPaymentConfigTest",
+        "suite": "com.karuhun.ftth.billing.TripayPaymentConfigTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.TripayPaymentGatewayTest",
+        "suite": "com.karuhun.ftth.billing.TripayPaymentGatewayTest",
         "tests": 20,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.billing.adapter.outbound.persistence.TenantPaymentGatewayPersistenceAdapterTest",
+        "suite": "com.karuhun.ftth.billing.adapter.outbound.persistence.TenantPaymentGatewayPersistenceAdapterTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.BngMonitoringQueryServiceTest",
+        "suite": "com.karuhun.ftth.bng.BngMonitoringQueryServiceTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.BngProvisioningBoundaryTest",
+        "suite": "com.karuhun.ftth.bng.BngProvisioningBoundaryTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.BngVoucherCredentialServiceTest",
+        "suite": "com.karuhun.ftth.bng.BngVoucherCredentialServiceTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.FreeRadiusJdbcAdapterTest",
+        "suite": "com.karuhun.ftth.bng.FreeRadiusJdbcAdapterTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.FupCycleRunnerTest",
+        "suite": "com.karuhun.ftth.bng.FupCycleRunnerTest",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.IsolirReconcileRunnerTest",
+        "suite": "com.karuhun.ftth.bng.IsolirReconcileRunnerTest",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.NasServiceRadiusClientTest",
+        "suite": "com.karuhun.ftth.bng.NasServiceRadiusClientTest",
         "tests": 14,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.RadacctJdbcAdapterTest",
+        "suite": "com.karuhun.ftth.bng.RadacctJdbcAdapterTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.RadiusAccountingPollRunnerTest",
+        "suite": "com.karuhun.ftth.bng.RadiusAccountingPollRunnerTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.RadiusProvisioningRunnerTest",
+        "suite": "com.karuhun.ftth.bng.RadiusProvisioningRunnerTest",
         "tests": 11,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.RadiusSessionControlRunnerTest",
+        "suite": "com.karuhun.ftth.bng.RadiusSessionControlRunnerTest",
         "tests": 13,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.ServerRadiusDaeAdapterTest",
+        "suite": "com.karuhun.ftth.bng.ServerRadiusDaeAdapterTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.SubscriberAccessPlanChangeTest",
+        "suite": "com.karuhun.ftth.bng.SubscriberAccessPlanChangeTest",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.SubscriberAccessProvisionPlanTest",
+        "suite": "com.karuhun.ftth.bng.SubscriberAccessProvisionPlanTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.SubscriberAccessTest",
+        "suite": "com.karuhun.ftth.bng.SubscriberAccessTest",
         "tests": 13,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.bng.SubscriberSessionDisconnectConfirmerTest",
+        "suite": "com.karuhun.ftth.bng.SubscriberSessionDisconnectConfirmerTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.catalog.CatalogApiServiceTest",
+        "suite": "com.karuhun.ftth.catalog.CatalogApiServiceTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.catalog.PlanTest",
+        "suite": "com.karuhun.ftth.catalog.PlanTest",
         "tests": 15,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.common.AccessCheckerTest",
+        "suite": "com.karuhun.ftth.common.AccessCheckerTest",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.common.AttemptThrottleTest",
+        "suite": "com.karuhun.ftth.common.AttemptThrottleTest",
         "tests": 13,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.common.JobHealthRegistryTest",
+        "suite": "com.karuhun.ftth.common.JobHealthRegistryTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.common.JobStallWatchdogTest",
+        "suite": "com.karuhun.ftth.common.JobStallWatchdogTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.common.infrastructure.config.SecurityPropertiesTest",
+        "suite": "com.karuhun.ftth.common.infrastructure.config.SecurityPropertiesTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.common.infrastructure.web.StrictCommandJsonTest",
+        "suite": "com.karuhun.ftth.common.infrastructure.web.StrictCommandJsonTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.cpe.CpeApiServiceTest",
+        "suite": "com.karuhun.ftth.cpe.CpeApiServiceTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.cpe.adapter.outbound.acs.GenieAcsGatewayTest",
+        "suite": "com.karuhun.ftth.cpe.adapter.outbound.acs.GenieAcsGatewayTest",
         "tests": 17,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationITPurposes",
         "tests": 26,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITRaces",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationITRaces",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITTimestampIntegrity",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationITTimestampIntegrity",
         "tests": 43,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITTimestampSchema",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationITTimestampSchema",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITTimezone",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationITTimezone",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITTimezoneMatrix",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationITTimezoneMatrix",
         "tests": 37,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITTiming",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationITTiming",
         "tests": 14,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITUpgrade",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationITUpgrade",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetEpisodeRevisionIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetEpisodeRevisionIT",
         "tests": 30,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetHandoverEndpointIT",
         "tests": 11,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetOwnershipIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetOwnershipIT",
         "tests": 72,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetRelocationRevisionTest",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetRelocationRevisionTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetReplacementIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetReplacementIT",
         "tests": 48,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetSchemaIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaIT",
         "tests": 19,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetSchemaITIntegrity",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetSchemaITIntegrity",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetTitleApprovalMatrixIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetTitleApprovalMatrixIT",
         "tests": 38,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetWorkbenchIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetWorkbenchIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerDeploymentFinalStateIT",
+        "suite": "com.karuhun.ftth.customer.CustomerDeploymentFinalStateIT",
         "tests": 58,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerDeploymentForwardFixIT",
+        "suite": "com.karuhun.ftth.customer.CustomerDeploymentForwardFixIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerDeploymentRootInputIT",
+        "suite": "com.karuhun.ftth.customer.CustomerDeploymentRootInputIT",
         "tests": 30,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerDeploymentStrictInputIT",
+        "suite": "com.karuhun.ftth.customer.CustomerDeploymentStrictInputIT",
         "tests": 58,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerDeploymentTwoCustomerIT",
+        "suite": "com.karuhun.ftth.customer.CustomerDeploymentTwoCustomerIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerReadAccessServiceTest",
+        "suite": "com.karuhun.ftth.customer.CustomerReadAccessServiceTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerWarehouseProvenanceIT",
+        "suite": "com.karuhun.ftth.customer.CustomerWarehouseProvenanceIT",
         "tests": 31,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.OnuStatusObservationTest",
+        "suite": "com.karuhun.ftth.customer.OnuStatusObservationTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.PortalCustomerAssetsIT",
+        "suite": "com.karuhun.ftth.customer.PortalCustomerAssetsIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.SubscriptionOnePerCustomerTest",
+        "suite": "com.karuhun.ftth.customer.SubscriptionOnePerCustomerTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.WarehouseCompatibilityAreaLiveSeedIT",
+        "suite": "com.karuhun.ftth.customer.WarehouseCompatibilityAreaLiveSeedIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.WarehouseCompatibilityIT",
+        "suite": "com.karuhun.ftth.customer.WarehouseCompatibilityIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITAreaScope",
+        "suite": "com.karuhun.ftth.customer.WarehouseCompatibilityITAreaScope",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITCsv",
+        "suite": "com.karuhun.ftth.customer.WarehouseCompatibilityITCsv",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITMaterials",
+        "suite": "com.karuhun.ftth.customer.WarehouseCompatibilityITMaterials",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITProjection",
+        "suite": "com.karuhun.ftth.customer.WarehouseCompatibilityITProjection",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITSourceGate",
+        "suite": "com.karuhun.ftth.customer.WarehouseCompatibilityITSourceGate",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.WarehouseCompatibilityITSubscriber",
+        "suite": "com.karuhun.ftth.customer.WarehouseCompatibilityITSubscriber",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.WarehouseCompatibilityLiveSeedIT",
+        "suite": "com.karuhun.ftth.customer.WarehouseCompatibilityLiveSeedIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fieldservice.FieldServiceDomainTest",
+        "suite": "com.karuhun.ftth.fieldservice.FieldServiceDomainTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fieldservice.GpsDomainTest",
+        "suite": "com.karuhun.ftth.fieldservice.GpsDomainTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fieldservice.OfflineSyncProtocolTest",
+        "suite": "com.karuhun.ftth.fieldservice.OfflineSyncProtocolTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.FulfillmentCoordinatorTest",
+        "suite": "com.karuhun.ftth.fulfillment.FulfillmentCoordinatorTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.FulfillmentDurabilityTest",
+        "suite": "com.karuhun.ftth.fulfillment.FulfillmentDurabilityTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MaterialHandoverPartiesIT",
+        "suite": "com.karuhun.ftth.fulfillment.MaterialHandoverPartiesIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MaterialHandoverWorkbenchIT",
+        "suite": "com.karuhun.ftth.fulfillment.MaterialHandoverWorkbenchIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MaterialSummaryQaIT",
+        "suite": "com.karuhun.ftth.fulfillment.MaterialSummaryQaIT",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MaterialWorkbenchIT",
+        "suite": "com.karuhun.ftth.fulfillment.MaterialWorkbenchIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MaterialWorkbenchReviewIT",
+        "suite": "com.karuhun.ftth.fulfillment.MaterialWorkbenchReviewIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MyMaterialsIT",
+        "suite": "com.karuhun.ftth.fulfillment.MyMaterialsIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MyMaterialsRefreshIT",
+        "suite": "com.karuhun.ftth.fulfillment.MyMaterialsRefreshIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MyMaterialsRmaIT",
+        "suite": "com.karuhun.ftth.fulfillment.MyMaterialsRmaIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.MyMaterialsSerialReturnIT",
+        "suite": "com.karuhun.ftth.fulfillment.MyMaterialsSerialReturnIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBinding",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBinding",
         "tests": 24,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngExactSet",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngExactSet",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineage",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngLineage",
         "tests": 19,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineageRace",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngLineageRace",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITConcurrency",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITConcurrency",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITFirstSnapshot",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITFirstSnapshot",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwners",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwners",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITScope",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITScope",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITUpgrade",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITUpgrade",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseMigrationFulfillmentIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseMigrationFulfillmentIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseNumericCountIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseNumericCountIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseReassignmentSettlementIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseReassignmentSettlementIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseSerialSettlementIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseSerialSettlementIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseTemporalNumericIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseTemporalNumericIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseUsageOrderIT",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseUsageOrderIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialContextIT",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialContextIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialIssueListIT",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialIssueListIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleIT",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialLifecycleIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleITClosure",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialLifecycleITClosure",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleITDelta",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialLifecycleITDelta",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleITHandover",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialLifecycleITHandover",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleITIntegrity",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialLifecycleITIntegrity",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleITRaces",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialLifecycleITRaces",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleITReturns",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialLifecycleITReturns",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialLifecycleITTiming",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialLifecycleITTiming",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptIT",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptIT",
         "tests": 29,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReworkIT",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReworkIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReworkITGuards",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReworkITGuards",
         "tests": 15,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReworkITIntegrity",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReworkITIntegrity",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReworkITRaces",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReworkITRaces",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReworkITUsage",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReworkITUsage",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageIT",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageIT",
         "tests": 38,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITConcurrency",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITConcurrency",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITIsolation",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITIsolation",
         "tests": 28,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITLifecycle",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITLifecycle",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITPostingClosure",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITPostingClosure",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjection",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITProjection",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjectionRace",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITProjectionRace",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjectionScope",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITProjectionScope",
         "tests": 18,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITSources",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITSources",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsIT",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITAction",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITAction",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITAuthority",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITAuthority",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITBinding",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITBinding",
         "tests": 15,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITConcurrency",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITConcurrency",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITDemand",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITDemand",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITDemandMapping",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITDemandMapping",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITGuards",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITGuards",
         "tests": 16,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITInvalidation",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITInvalidation",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITPersistence",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITPersistence",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITPostedFacts",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITPostedFacts",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITReplayScope",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITReplayScope",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITRestart",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITRestart",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.gis.MapServiceInspectPonPortTest",
+        "suite": "com.karuhun.ftth.gis.MapServiceInspectPonPortTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.gis.MapServiceListOnusUnderOltTest",
+        "suite": "com.karuhun.ftth.gis.MapServiceListOnusUnderOltTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.helpdesk.HelpdeskSlaSweeperTest",
+        "suite": "com.karuhun.ftth.helpdesk.HelpdeskSlaSweeperTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.helpdesk.TicketTest",
+        "suite": "com.karuhun.ftth.helpdesk.TicketTest",
         "tests": 16,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.hotspot.HotspotFoundationIT",
+        "suite": "com.karuhun.ftth.hotspot.HotspotFoundationIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.hotspot.HotspotSiteServiceTest",
+        "suite": "com.karuhun.ftth.hotspot.HotspotSiteServiceTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.hotspot.HotspotVoucherSessionControllerTest",
+        "suite": "com.karuhun.ftth.hotspot.HotspotVoucherSessionControllerTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.hotspot.PortalContextServiceTest",
+        "suite": "com.karuhun.ftth.hotspot.PortalContextServiceTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.hotspot.PublicPortalContextServiceTest",
+        "suite": "com.karuhun.ftth.hotspot.PublicPortalContextServiceTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.hotspot.VoucherBatchServiceTest",
+        "suite": "com.karuhun.ftth.hotspot.VoucherBatchServiceTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.hotspot.VoucherLifecycleTest",
+        "suite": "com.karuhun.ftth.hotspot.VoucherLifecycleTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.hotspot.VoucherServiceTest",
+        "suite": "com.karuhun.ftth.hotspot.VoucherServiceTest",
         "tests": 13,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.hris.HrisApplicationTest",
+        "suite": "com.karuhun.ftth.hris.HrisApplicationTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.hris.HrisDomainTest",
+        "suite": "com.karuhun.ftth.hris.HrisDomainTest",
         "tests": 11,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.hris.HrisOutcomePersistenceAdapterTest",
+        "suite": "com.karuhun.ftth.hris.HrisOutcomePersistenceAdapterTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.iam.PermissionCatalogTest",
+        "suite": "com.karuhun.ftth.iam.PermissionCatalogTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.iam.PermissionServiceTest",
+        "suite": "com.karuhun.ftth.iam.PermissionServiceTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.iam.Rfc6238TotpEngineTest",
+        "suite": "com.karuhun.ftth.iam.Rfc6238TotpEngineTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.iam.SelfSignupServiceTest",
+        "suite": "com.karuhun.ftth.iam.SelfSignupServiceTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.iam.UserTwoFactorTest",
+        "suite": "com.karuhun.ftth.iam.UserTwoFactorTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inbox.OperatorNotificationTest",
+        "suite": "com.karuhun.ftth.inbox.OperatorNotificationTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.ChildProcessPortTest",
+        "suite": "com.karuhun.ftth.inventory.ChildProcessPortTest",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.InventoryApprovalServiceTest",
+        "suite": "com.karuhun.ftth.inventory.InventoryApprovalServiceTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.InventoryDomainTest",
+        "suite": "com.karuhun.ftth.inventory.InventoryDomainTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.InventoryMaterialAndReconciliationTest",
+        "suite": "com.karuhun.ftth.inventory.InventoryMaterialAndReconciliationTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.InventoryMovementLedgerTest",
+        "suite": "com.karuhun.ftth.inventory.InventoryMovementLedgerTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.MaterialWarehouseContractTest",
+        "suite": "com.karuhun.ftth.inventory.MaterialWarehouseContractTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalEvidenceIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalEvidenceIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITCompatibility",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITCompatibility",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITConcurrency",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITConcurrency",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITDecisionBinding",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITDecisionBinding",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITDelegation",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITDelegation",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITExpiry",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITExpiry",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITGuards",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITGuards",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITHttpErrors",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITHttpErrors",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITLegacyBinding",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITLegacyBinding",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITLockDeadline",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITLockDeadline",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITNoDecisionReplay",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITNoDecisionReplay",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITRestart",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITRestart",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITRoleAuthority",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITRoleAuthority",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITRollback",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITRollback",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITSchema",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITSchema",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalITSource",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalITSource",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalWorkbenchIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalWorkbenchIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalWorkbenchWorkOrderIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalWorkbenchWorkOrderIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseAssetLossGuardsIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseAssetLossGuardsIT",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseAssetLossIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseAssetLossIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCompensationAssetIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCompensationAssetIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCompensationGuardsIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCompensationGuardsIT",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCompensationIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCompensationIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyIT",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITArea",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITArea",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITAuthority",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITAuthority",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITCatalog",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITCatalog",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITDelivery",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITDelivery",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITDispatcher",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITDispatcher",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITLegacy",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITLegacy",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITReferences",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITReferences",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITRevocations",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITRevocations",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITVerifierDispatcher",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITVerifierDispatcher",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITVerifierLockOrder",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITVerifierLockOrder",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITVerifierRefresh",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITVerifierRefresh",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseConcurrencyITVerifierWorkOrder",
+        "suite": "com.karuhun.ftth.inventory.WarehouseConcurrencyITVerifierWorkOrder",
         "tests": 14,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCountIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCountIT",
         "tests": 15,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCountWorkbenchIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCountWorkbenchIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaAcceptanceIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaGuardsIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaGuardsIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaHandoverIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaHandoverIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaReacquisitionIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaReacquisitionIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseDatabaseIsolationIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseDatabaseIsolationIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseDispositionAssetIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseDispositionAssetIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseDispositionGuardsIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseDispositionGuardsIT",
         "tests": 11,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseDispositionIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseDispositionIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseEnvironmentIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseEnvironmentIT",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseIdentityBaselineTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseIdentityBaselineTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseIssueIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseIssueIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseIssueITBinding",
+        "suite": "com.karuhun.ftth.inventory.WarehouseIssueITBinding",
         "tests": 13,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseIssueITConcurrency",
+        "suite": "com.karuhun.ftth.inventory.WarehouseIssueITConcurrency",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseIssueITGuards",
+        "suite": "com.karuhun.ftth.inventory.WarehouseIssueITGuards",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseIssueITListing",
+        "suite": "com.karuhun.ftth.inventory.WarehouseIssueITListing",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseIssueITReplayGuards",
+        "suite": "com.karuhun.ftth.inventory.WarehouseIssueITReplayGuards",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseIssueITReplayRestart",
+        "suite": "com.karuhun.ftth.inventory.WarehouseIssueITReplayRestart",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseIssueITRestart",
+        "suite": "com.karuhun.ftth.inventory.WarehouseIssueITRestart",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseIssueITRevocationRaces",
+        "suite": "com.karuhun.ftth.inventory.WarehouseIssueITRevocationRaces",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseIssueITSerial",
+        "suite": "com.karuhun.ftth.inventory.WarehouseIssueITSerial",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseLegacyReadScopeIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseLegacyReadScopeIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseLegacyReservationIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseLegacyReservationIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITCutover",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITCutover",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITDecoding",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITDecoding",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITIdentityAmbiguity",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITIdentityAmbiguity",
         "tests": 16,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITInheritance",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITInheritance",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITInheritanceHistory",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITInheritanceHistory",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITInheritanceRaces",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITInheritanceRaces",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITInheritanceTransactions",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITInheritanceTransactions",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITReferences",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITReferences",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITSecurity",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITSecurity",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITSite",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITSite",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITSiteRaces",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITSiteRaces",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITSiteSchema",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITSiteSchema",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMasterITSiteUpgrade",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMasterITSiteUpgrade",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMaterialSerialSettlementIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMaterialSerialSettlementIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMaterialSettlementIntegrityIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMaterialSettlementIntegrityIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMigrationCaptureIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMigrationCaptureIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMigrationEvidenceIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMigrationEvidenceIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMigrationITBoot",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITBoot",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITQuery",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMigrationInventoryTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMigrationInventoryTest",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMigrationOpeningApprovalIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMigrationOpeningIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMigrationOpeningIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMigrationResolutionIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMigrationResolutionIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePdfContentSyntaxTest",
+        "suite": "com.karuhun.ftth.inventory.WarehousePdfContentSyntaxTest",
         "tests": 14,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePdfFormStateTest",
+        "suite": "com.karuhun.ftth.inventory.WarehousePdfFormStateTest",
         "tests": 29,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePdfGraphicsSnapshotTest",
+        "suite": "com.karuhun.ftth.inventory.WarehousePdfGraphicsSnapshotTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePdfGraphicsStateTest",
+        "suite": "com.karuhun.ftth.inventory.WarehousePdfGraphicsStateTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePdfLexicalTest",
+        "suite": "com.karuhun.ftth.inventory.WarehousePdfLexicalTest",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePdfSyntaxTest",
+        "suite": "com.karuhun.ftth.inventory.WarehousePdfSyntaxTest",
         "tests": 31,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePdfTopologyTest",
+        "suite": "com.karuhun.ftth.inventory.WarehousePdfTopologyTest",
         "tests": 13,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyIT",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyITAuthority",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyITAuthority",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyITAuthorityRestart",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyITAuthorityRestart",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyITEvaluation",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyITEvaluation",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyITRestart",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyITRestart",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyITRoleAuthority",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyITRoleAuthority",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyITSchema",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyITSchema",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyITViewContract",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyITViewContract",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyITVisibility",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyITVisibility",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePolicyWorkbenchIT",
+        "suite": "com.karuhun.ftth.inventory.WarehousePolicyWorkbenchIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingIT",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingIT",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITActualLineBinding",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITActualLineBinding",
         "tests": 14,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITAdversarial",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITAdversarial",
         "tests": 14,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITConcurrency",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITConcurrency",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITDelivery",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITDelivery",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITEligibility",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITEligibility",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITExactFacts",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITExactFacts",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITFactBinding",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITFactBinding",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITLegacy",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITLegacy",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITPickedTransitions",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITPickedTransitions",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITReservations",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITReservations",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITRetainedFacts",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITRetainedFacts",
         "tests": 14,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITStatus",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITStatus",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehousePostingITTerminal",
+        "suite": "com.karuhun.ftth.inventory.WarehousePostingITTerminal",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQuantityTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTest",
         "tests": 55,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestBoundary",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestBoundary",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestConversion",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestConversion",
         "tests": 16,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQuantityTestIdentity",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQuantityTestIdentity",
         "tests": 28,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryFilterTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryFilterTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryITBalances",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryITBalances",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryITCompatibility",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryITCompatibility",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryITIdentity",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryITIdentity",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryITLotFilters",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryITLotFilters",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryITPrivacy",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryITPrivacy",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryITRestart",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryITRestart",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryITSerialFilters",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryITSerialFilters",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryITStaged",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryITStaged",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryPredicateTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryPredicateTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITAttachments",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITAttachments",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITCompletion",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITCompletion",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITDisposition",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITDisposition",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITFileValidation",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITFileValidation",
         "tests": 18,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITFormState",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITFormState",
         "tests": 28,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITGuards",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITGuards",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITInspectionGuards",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITInspectionGuards",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITIntakeEvidence",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITIntakeEvidence",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITMetadata",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITMetadata",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITMultipart",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITMultipart",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITOpening",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITOpening",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITPdfSyntax",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITPdfSyntax",
         "tests": 18,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITProvenance",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITProvenance",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITReceive",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITReceive",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITRestart",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITRestart",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReceiptITUploadFailures",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReceiptITUploadFailures",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseRecoveryIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReplenishmentIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITAtomicity",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReplenishmentITAtomicity",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITCommands",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReplenishmentITCommands",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITFormula",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReplenishmentITFormula",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITInbound",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReplenishmentITInbound",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITLiveSeed",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReplenishmentITLiveSeed",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITTimeout",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReplenishmentITTimeout",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentITUpgrade",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReplenishmentITUpgrade",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReplenishmentWorkbenchIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReplenishmentWorkbenchIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportCsvTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportCsvTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportExportIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportExportIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportJourneyIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportJourneyIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportPrivacyIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportPrivacyIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportWorkOrderScopeIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportWorkOrderScopeIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReservationIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReservationIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReservationITAuthority",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReservationITAuthority",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReservationITCandidatePlanning",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCandidatePlanning",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReservationITCompatibility",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReservationITCompatibility",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReservationITLargeSupply",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLargeSupply",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReservationITLifecycle",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReservationITLifecycle",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReservationITPlanBinding",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReservationITPlanBinding",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReservationITRestart",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReservationITRestart",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReservationITSupplyProjection",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReservationITSupplyProjection",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReservationPlanningTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReservationPlanningTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnCanonicalSerialIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnCanonicalSerialIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnHistoryIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnHistoryIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnITAccess",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAccess",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnITAssets",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnITAssets",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnITIntegrity",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnITIntegrity",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnITReuse",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnITReuse",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnListIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnListIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnReacquisitionIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnReacquisitionIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnSettlementIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnSettlementIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnTitleGuardsIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnTitleGuardsIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnTitleScopeUpgradeIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnTitleScopeUpgradeIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnWorkbenchIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnWorkbenchIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseRmaWorkOrderReadIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseRmaWorkOrderReadIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITConstraints",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITConstraints",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITDeferredScope",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITDeferredScope",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITLotCapacity",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITLotCapacity",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITPolicy",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITPolicy",
         "tests": 11,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITProvenance",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITProvenance",
         "tests": 13,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITReceiptEvidence",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITReceiptEvidence",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITRestart",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITRestart",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITSelectiveTiming",
         "tests": 62,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITUpgrade",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITUpgrade",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSettingsWorkbenchIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSettingsWorkbenchIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseShortagesIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseShortagesIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairAccessIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSupplierRepairAccessIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSupplierRepairIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSupplierRepairIntegrityIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSupplierRepairIntegrityIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSupplierReplacementGuardsIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSupplierReplacementGuardsIT",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSupplierReplacementIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSupplierReplacementIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSupplierReplacementInspectionIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSupplierReplacementInspectionIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTenantControlErasureUpgradeIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTenantControlErasureUpgradeIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferContractTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferContractTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferDiscrepancyRecoveryIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDiscrepancy",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITDiscrepancy",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITDurability",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITDurability",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITGuards",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITGuards",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITPositions",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITPositions",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferITSerial",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferITSerial",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTransferListIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTransferListIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.CollectorProvisioningExchangeTest",
+        "suite": "com.karuhun.ftth.monitoring.CollectorProvisioningExchangeTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.SnmpDiagnosticServiceTest",
+        "suite": "com.karuhun.ftth.monitoring.SnmpDiagnosticServiceTest",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryBaselineIT",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryBaselineIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryIT",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITAssignmentRevision",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITAssignmentRevision",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITAuto",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITAuto",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITBatchScope",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITBatchScope",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITClock",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITClock",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITDeferredConflict",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITDeferredConflict",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITIntegrity",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITIntegrity",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITParameterTime",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITParameterTime",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITPrivacy",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITPrivacy",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITProvisioning",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITProvisioning",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Edges",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Edges",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Generation",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Generation",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Interval",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Interval",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Isolation",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Isolation",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Legacy",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Legacy",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Preparation",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Preparation",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Receipt",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Receipt",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2ReceiptTiming",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2ReceiptTiming",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITRediscovery",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITRediscovery",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewCurrentOwner",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewCurrentOwner",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewDiagnostics",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewDiagnostics",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewEvidence",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewEvidence",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewFuture",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewFuture",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewLegacyBounds",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewLegacyBounds",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewLockOrder",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewLockOrder",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewMetrics",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewMetrics",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewOperation",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewOperation",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewParameter",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewParameter",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewPollWindow",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewPollWindow",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewRace",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewRace",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceipt",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewReceipt",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTime",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTime",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTruth",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewReceiptTruth",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewRetention",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewRetention",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewScope",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewScope",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewTopology",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewTopology",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITTemporal",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITTemporal",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITUpgrade",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITUpgrade",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITV3Ingestion",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITV3Ingestion",
         "tests": 16,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryManualConflictIT",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryManualConflictIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryManualEpisodesIT",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryManualEpisodesIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryManualSeedIT",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryManualSeedIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryManualStableIT",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryManualStableIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.application.service.PppoeAlarmSchedulerTest",
+        "suite": "com.karuhun.ftth.monitoring.application.service.PppoeAlarmSchedulerTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.EmailBrandingResolverTest",
+        "suite": "com.karuhun.ftth.notification.EmailBrandingResolverTest",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.EmailRendererTest",
+        "suite": "com.karuhun.ftth.notification.EmailRendererTest",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.EmailSubjectResolverTest",
+        "suite": "com.karuhun.ftth.notification.EmailSubjectResolverTest",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.JobHealthAlertListenerTest",
+        "suite": "com.karuhun.ftth.notification.JobHealthAlertListenerTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.MetaTemplateCatalogAdapterTest",
+        "suite": "com.karuhun.ftth.notification.MetaTemplateCatalogAdapterTest",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.NotificationMessageTemplateTest",
+        "suite": "com.karuhun.ftth.notification.NotificationMessageTemplateTest",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.NotificationSenderTest",
+        "suite": "com.karuhun.ftth.notification.NotificationSenderTest",
         "tests": 13,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.NotificationSettingsTest",
+        "suite": "com.karuhun.ftth.notification.NotificationSettingsTest",
         "tests": 24,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.NotificationTemplateServiceTest",
+        "suite": "com.karuhun.ftth.notification.NotificationTemplateServiceTest",
         "tests": 17,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.QontakChannelDirectoryAdapterTest",
+        "suite": "com.karuhun.ftth.notification.QontakChannelDirectoryAdapterTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.QontakTemplateCatalogAdapterTest",
+        "suite": "com.karuhun.ftth.notification.QontakTemplateCatalogAdapterTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.SmtpSenderFactoryTest",
+        "suite": "com.karuhun.ftth.notification.SmtpSenderFactoryTest",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.TenantWelcomeEmailListenerTest",
+        "suite": "com.karuhun.ftth.notification.TenantWelcomeEmailListenerTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.notification.WhatsAppMessageDispatcherTest",
+        "suite": "com.karuhun.ftth.notification.WhatsAppMessageDispatcherTest",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.onboarding.CustomerCsvBatchTest",
+        "suite": "com.karuhun.ftth.onboarding.CustomerCsvBatchTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.onboarding.CustomerImportCommitContractTest",
+        "suite": "com.karuhun.ftth.onboarding.CustomerImportCommitContractTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.onboarding.CustomerImportCredentialVaultTest",
+        "suite": "com.karuhun.ftth.onboarding.CustomerImportCredentialVaultTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.onboarding.CustomerImportPromotionSchedulerTest",
+        "suite": "com.karuhun.ftth.onboarding.CustomerImportPromotionSchedulerTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.onboarding.ExportCustomersServiceTest",
+        "suite": "com.karuhun.ftth.onboarding.ExportCustomersServiceTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.onboarding.ImportCustomersServiceTest",
+        "suite": "com.karuhun.ftth.onboarding.ImportCustomersServiceTest",
         "tests": 15,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.onboarding.ImportPppoeServiceTest",
+        "suite": "com.karuhun.ftth.onboarding.ImportPppoeServiceTest",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.onboarding.adapter.inbound.web.CustomerCsvTest",
+        "suite": "com.karuhun.ftth.onboarding.adapter.inbound.web.CustomerCsvTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.order.OrderApplicationServiceTest",
+        "suite": "com.karuhun.ftth.order.OrderApplicationServiceTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.order.OrderDomainTest",
+        "suite": "com.karuhun.ftth.order.OrderDomainTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.order.OrderPersistenceAdapterTest",
+        "suite": "com.karuhun.ftth.order.OrderPersistenceAdapterTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.payroll.PayrollConcurrencyAndHistoryIT",
+        "suite": "com.karuhun.ftth.payroll.PayrollConcurrencyAndHistoryIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.payroll.PayrollDomainTest",
+        "suite": "com.karuhun.ftth.payroll.PayrollDomainTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.payroll.PayrollLegacyOutcomeServiceIT",
+        "suite": "com.karuhun.ftth.payroll.PayrollLegacyOutcomeServiceIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.payroll.PayrollPersistenceIT",
+        "suite": "com.karuhun.ftth.payroll.PayrollPersistenceIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.payroll.PayrollReplaySnapshotTest",
+        "suite": "com.karuhun.ftth.payroll.PayrollReplaySnapshotTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.platformbilling.PlatformInvoiceGeneratorRenewTest",
+        "suite": "com.karuhun.ftth.platformbilling.PlatformInvoiceGeneratorRenewTest",
         "tests": 23,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.platformbilling.PublicInvoicePaymentServiceTest",
+        "suite": "com.karuhun.ftth.platformbilling.PublicInvoicePaymentServiceTest",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.platformbilling.TripayCallbackControllerTest",
+        "suite": "com.karuhun.ftth.platformbilling.TripayCallbackControllerTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.portal.PortalAuthenticationServiceTest",
+        "suite": "com.karuhun.ftth.portal.PortalAuthenticationServiceTest",
         "tests": 17,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.portal.PortalContactIdentityIT",
+        "suite": "com.karuhun.ftth.portal.PortalContactIdentityIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.portal.PortalCredentialServiceTest",
+        "suite": "com.karuhun.ftth.portal.PortalCredentialServiceTest",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.portal.PortalPasswordRecoveryServiceTest",
+        "suite": "com.karuhun.ftth.portal.PortalPasswordRecoveryServiceTest",
         "tests": 17,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.portal.PortalSelfServiceTest",
+        "suite": "com.karuhun.ftth.portal.PortalSelfServiceTest",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.AuthoritativePlanCompilationServiceTest",
+        "suite": "com.karuhun.ftth.provisioning.AuthoritativePlanCompilationServiceTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.CanonicalProvisioningPlannerTest",
+        "suite": "com.karuhun.ftth.provisioning.CanonicalProvisioningPlannerTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.CollectorBackedProvisioningDeviceGatewayTest",
+        "suite": "com.karuhun.ftth.provisioning.CollectorBackedProvisioningDeviceGatewayTest",
         "tests": 13,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.DeterministicVlanAllocationServiceTest",
+        "suite": "com.karuhun.ftth.provisioning.DeterministicVlanAllocationServiceTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.NormalizedStateJsonCodecTest",
+        "suite": "com.karuhun.ftth.provisioning.NormalizedStateJsonCodecTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningApiRedactionContractTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningApiRedactionContractTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningAuditPublisherTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningAuditPublisherTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningCertificationControllerIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningCertificationControllerIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningCertificationProvenanceIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningCertificationProvenanceIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningCertificationServiceTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningCertificationServiceTest",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningDeviceIoExecutorTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningDeviceIoExecutorTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningDeviceIoSessionExclusionIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningDeviceIoSessionExclusionIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningDomainTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningDomainTest",
         "tests": 16,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningDriftAdoptionIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningDriftAdoptionIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningDriftClassifierTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningDriftClassifierTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningDriftScannerTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningDriftScannerTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningExecutionAdmissionServiceTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningExecutionAdmissionServiceTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningExecutionEngineTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningExecutionEngineTest",
         "tests": 28,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningExecutionPersistenceIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningExecutionPersistenceIT",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningLifecycleServiceTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningLifecycleServiceTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningManagementEvidenceServiceTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningManagementEvidenceServiceTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningManagementSourceBindingIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningManagementSourceBindingIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningMetricsTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningMetricsTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningMigrationCompatibilityIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningMigrationCompatibilityIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningObservationPortSpringIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningObservationPortSpringIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningPermissionIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningPermissionIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningPersistenceIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningPersistenceIT",
         "tests": 14,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningPlanningConcurrencyIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningPlanningConcurrencyIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningPolicyEdgeTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningPolicyEdgeTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningProductionSafetyGateTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningProductionSafetyGateTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningResourceControllerIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningResourceControllerIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningRevisionHeaderTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningRevisionHeaderTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningRolloutPropertiesTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningRolloutPropertiesTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningRuntimeWiringTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningRuntimeWiringTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningSafetyAdmissionIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningSafetyAdmissionIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningSafetyEvidencePersistenceIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningSafetyEvidencePersistenceIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningSafetyGateIT",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningSafetyGateIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningSafetyPolicyTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningSafetyPolicyTest",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningStepScopedSafetyGateTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningStepScopedSafetyGateTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ProvisioningWorkflowServiceTest",
+        "suite": "com.karuhun.ftth.provisioning.ProvisioningWorkflowServiceTest",
         "tests": 11,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ServiceIntentLifecycleIntegrationTest",
+        "suite": "com.karuhun.ftth.provisioning.ServiceIntentLifecycleIntegrationTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.ServiceIntentResolverTest",
+        "suite": "com.karuhun.ftth.provisioning.ServiceIntentResolverTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.SimulatorCertificationAdmissionTest",
+        "suite": "com.karuhun.ftth.provisioning.SimulatorCertificationAdmissionTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.TransportPathResolverTest",
+        "suite": "com.karuhun.ftth.provisioning.TransportPathResolverTest",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.TransportTopologyDomainTest",
+        "suite": "com.karuhun.ftth.provisioning.TransportTopologyDomainTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.TransportTopologyPersistenceIT",
+        "suite": "com.karuhun.ftth.provisioning.TransportTopologyPersistenceIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.VlanAllocatorPersistenceIT",
+        "suite": "com.karuhun.ftth.provisioning.VlanAllocatorPersistenceIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.provisioning.adapter.outbound.persistence.ProvisioningCollectorChannelAdapterTest",
+        "suite": "com.karuhun.ftth.provisioning.adapter.outbound.persistence.ProvisioningCollectorChannelAdapterTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.reporting.ReportServiceTest",
+        "suite": "com.karuhun.ftth.reporting.ReportServiceTest",
         "tests": 7,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.subscriber360.Subscriber360AreaBoundaryTest",
+        "suite": "com.karuhun.ftth.subscriber360.Subscriber360AreaBoundaryTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.subscriber360.Subscriber360ServiceTest",
+        "suite": "com.karuhun.ftth.subscriber360.Subscriber360ServiceTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+        "suite": "com.karuhun.ftth.tenancy.DeleteTenantIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.tenancy.TenantDataExportIT",
+        "suite": "com.karuhun.ftth.tenancy.TenantDataExportIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.tenancy.TenantExportCsvTest",
+        "suite": "com.karuhun.ftth.tenancy.TenantExportCsvTest",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.BouncyCastleServerPkiIssuerTest",
+        "suite": "com.karuhun.ftth.vpn.BouncyCastleServerPkiIssuerTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.RemotePortRangeTest",
+        "suite": "com.karuhun.ftth.vpn.RemotePortRangeTest",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.RoutedSubnetTest",
+        "suite": "com.karuhun.ftth.vpn.RoutedSubnetTest",
         "tests": 9,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.TunnelSubnetTest",
+        "suite": "com.karuhun.ftth.vpn.TunnelSubnetTest",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.VpnAccountRouteTest",
+        "suite": "com.karuhun.ftth.vpn.VpnAccountRouteTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.VpnConfigRendererTest",
+        "suite": "com.karuhun.ftth.vpn.VpnConfigRendererTest",
         "tests": 14,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.VpnInstallScriptTest",
+        "suite": "com.karuhun.ftth.vpn.VpnInstallScriptTest",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.VpnNodeTokenTest",
+        "suite": "com.karuhun.ftth.vpn.VpnNodeTokenTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.VpnPeerTest",
+        "suite": "com.karuhun.ftth.vpn.VpnPeerTest",
         "tests": 22,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.VpnProvisioningLivenessTest",
+        "suite": "com.karuhun.ftth.vpn.VpnProvisioningLivenessTest",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.VpnProvisioningRouteTest",
+        "suite": "com.karuhun.ftth.vpn.VpnProvisioningRouteTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.vpn.VpnServerTest",
+        "suite": "com.karuhun.ftth.vpn.VpnServerTest",
         "tests": 8,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.workorder.EvidenceRetentionSchedulerTest",
+        "suite": "com.karuhun.ftth.workorder.EvidenceRetentionSchedulerTest",
         "tests": 5,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.workorder.EvidenceRetentionTenantIsolationIT",
+        "suite": "com.karuhun.ftth.workorder.EvidenceRetentionTenantIsolationIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.workorder.EvidenceRetentionWorkerTest",
+        "suite": "com.karuhun.ftth.workorder.EvidenceRetentionWorkerTest",
         "tests": 10,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.workorder.WorkOrderTest",
+        "suite": "com.karuhun.ftth.workorder.WorkOrderTest",
         "tests": 14,
         "failures": 0,
         "errors": 0,
@@ -4989,238 +4989,238 @@
     "tests": 266,
     "suites": [
       {
-        "suite": "com.duluin.ftth.AlarmRuleIT",
+        "suite": "com.karuhun.ftth.AlarmRuleIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.GisCutBlastRadiusIT",
+        "suite": "com.karuhun.ftth.GisCutBlastRadiusIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.GisImpactedIT",
+        "suite": "com.karuhun.ftth.GisImpactedIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.GisUtilizationIT",
+        "suite": "com.karuhun.ftth.GisUtilizationIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.IncidentIT",
+        "suite": "com.karuhun.ftth.IncidentIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.ModularityTests",
+        "suite": "com.karuhun.ftth.ModularityTests",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.NetworkEndToEndIT",
+        "suite": "com.karuhun.ftth.NetworkEndToEndIT",
         "tests": 15,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.NotificationIT",
+        "suite": "com.karuhun.ftth.NotificationIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.OdpPortBoardIT",
+        "suite": "com.karuhun.ftth.OdpPortBoardIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.PredictiveMaintenanceIT",
+        "suite": "com.karuhun.ftth.PredictiveMaintenanceIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.SurveyCapacityIT",
+        "suite": "com.karuhun.ftth.SurveyCapacityIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationITPurposes",
         "tests": 26,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetHandoverEndpointIT",
         "tests": 11,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerDeploymentFinalStateIT",
+        "suite": "com.karuhun.ftth.customer.CustomerDeploymentFinalStateIT",
         "tests": 58,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
         "tests": 12,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseLegacyReadScopeIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseLegacyReadScopeIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseLegacyReservationIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseLegacyReservationIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryITCompatibility",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryITCompatibility",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseQueryITPrivacy",
+        "suite": "com.karuhun.ftth.inventory.WarehouseQueryITPrivacy",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportCsvTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportCsvTest",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportExportIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportExportIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportJourneyIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportJourneyIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportPrivacyIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportPrivacyIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReportWorkOrderScopeIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReportWorkOrderScopeIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseReturnTitleScopeUpgradeIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseReturnTitleScopeUpgradeIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITPolicy",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITPolicy",
         "tests": 11,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITProvenance",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITProvenance",
         "tests": 13,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseSchemaITSelectiveTiming",
+        "suite": "com.karuhun.ftth.inventory.WarehouseSchemaITSelectiveTiming",
         "tests": 62,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseTenantControlErasureUpgradeIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseTenantControlErasureUpgradeIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryManualConflictIT",
+        "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryManualConflictIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
         "skipped": 0
       },
       {
-        "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+        "suite": "com.karuhun.ftth.tenancy.DeleteTenantIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -5271,13 +5271,13 @@
         "currentCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
         "historicalApplication": "3bfe12331428eb43740c8c0399b61a956c8820a7",
         "classes": [
-          "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
-          "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade"
+          "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
+          "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade"
         ],
         "status": "PASSED",
         "suites": [
           {
-            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
+            "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
             "tests": 1,
             "failures": 0,
             "errors": 0,
@@ -5285,7 +5285,7 @@
             "reportSha256": "c9a38fbf360f54853f9756094fd9017e41af24cd8d1bc958fe2a1a6182ad8766"
           },
           {
-            "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade",
+            "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade",
             "tests": 1,
             "failures": 0,
             "errors": 0,
@@ -5303,13 +5303,13 @@
         "currentCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
         "historicalApplication": "fd2cf7c58f02022525e655a8b0884ac2f5df49b0",
         "classes": [
-          "com.duluin.ftth.customer.CustomerAssetTitleUpgradeIT",
-          "com.duluin.ftth.customer.CustomerDeploymentUpgradeIT"
+          "com.karuhun.ftth.customer.CustomerAssetTitleUpgradeIT",
+          "com.karuhun.ftth.customer.CustomerDeploymentUpgradeIT"
         ],
         "status": "PASSED",
         "suites": [
           {
-            "suite": "com.duluin.ftth.customer.CustomerAssetTitleUpgradeIT",
+            "suite": "com.karuhun.ftth.customer.CustomerAssetTitleUpgradeIT",
             "tests": 1,
             "failures": 0,
             "errors": 0,
@@ -5317,7 +5317,7 @@
             "reportSha256": "9efe801fbf8d1f1c47f6ef7544958a1c8592279734b20e75f81302ab7f36e902"
           },
           {
-            "suite": "com.duluin.ftth.customer.CustomerDeploymentUpgradeIT",
+            "suite": "com.karuhun.ftth.customer.CustomerDeploymentUpgradeIT",
             "tests": 1,
             "failures": 0,
             "errors": 0,
@@ -5335,13 +5335,13 @@
         "currentCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
         "historicalApplication": "dfa25e793d186eb8a4a0c5b96cd33e4c549edbbb",
         "classes": [
-          "com.duluin.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT",
-          "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewHistorical"
+          "com.karuhun.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT",
+          "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewHistorical"
         ],
         "status": "PASSED",
         "suites": [
           {
-            "suite": "com.duluin.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT",
+            "suite": "com.karuhun.ftth.customer.CustomerAssetEpisodeRevisionUpgradeIT",
             "tests": 1,
             "failures": 0,
             "errors": 0,
@@ -5349,7 +5349,7 @@
             "reportSha256": "e7176d33799d7d74c7040d1079253bc7eeb7b0291ada39472fbc732370791404"
           },
           {
-            "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITReviewHistorical",
+            "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITReviewHistorical",
             "tests": 1,
             "failures": 0,
             "errors": 0,
@@ -5367,12 +5367,12 @@
         "currentCommit": "149ecfb23d65de96ff661444cdbfa7da473ab401",
         "historicalApplication": "1580145c27d41a63cb2485f2bfadcba7cc0fb8a3",
         "classes": [
-          "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Upgrade"
+          "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Upgrade"
         ],
         "status": "PASSED",
         "suites": [
           {
-            "suite": "com.duluin.ftth.monitoring.WarehouseDiscoveryITR2Upgrade",
+            "suite": "com.karuhun.ftth.monitoring.WarehouseDiscoveryITR2Upgrade",
             "tests": 1,
             "failures": 0,
             "errors": 0,
@@ -5753,17 +5753,17 @@
       "server/src/main/resources/db/migration/V175_138__warehouse_disposition_request.sql": "34a2b183f2a4f1395981b5efdf5e14d3033ca9f7121b767c9d3f2ab52c74ea3b",
       "server/src/main/resources/db/migration/V21__bng.sql": "75f98ead5d0e1e35174f62906d28c3f8d90efc747613d8f0f29735ff82c9b2a3",
       "server/src/main/resources/db/migration/V175_6__warehouse_approval_attempt_context.sql": "d7d95d539a9ef0e5df23b360bd40b98282209821eb918460fd24dba085ff273c",
-      "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITOwnerUpgrade.kt": "7778ff7ca2f9806a33ea892dcbe9eada05a4b161d37460704d4197cbd79aeef2",
-      "server/src/historicalTest/kotlin/com/duluin/ftth/fulfillment/WarehouseFulfillmentITBngLineageUpgrade.kt": "ad538ce6085cd89e82f191c351fb3e8ad53101fdc0cd8d5bf7aafea245bd1b4f",
-      "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
-      "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationInventory.kt": "ba09d70fd180da30bd74faafc44bbf8dc8fef5b186e0d01ceb808b59360aae1d",
+      "server/src/historicalTest/kotlin/com/karuhun/ftth/fulfillment/WarehouseFulfillmentITOwnerUpgrade.kt": "7778ff7ca2f9806a33ea892dcbe9eada05a4b161d37460704d4197cbd79aeef2",
+      "server/src/historicalTest/kotlin/com/karuhun/ftth/fulfillment/WarehouseFulfillmentITBngLineageUpgrade.kt": "ad538ce6085cd89e82f191c351fb3e8ad53101fdc0cd8d5bf7aafea245bd1b4f",
+      "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseSchemaDatabase.kt": "56e3fe055795cc93b4fc31fae455463465ed60b69db2b8c5f8069b04ca2abfba",
+      "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationInventory.kt": "ba09d70fd180da30bd74faafc44bbf8dc8fef5b186e0d01ceb808b59360aae1d",
       "server/src/test/resources/warehouse/task17-migration-inventory.txt": "2f5e25b16aad819a67e4ade46285446403f7c45ffec4f6688004b91e3a5167fa",
-      "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerAssetTitleUpgradeIT.kt": "24e1ca5cce7b97524f98ba038b0190b9b07a49c954babed9bda75fb063ddbcac",
-      "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerDeploymentUpgradeIT.kt": "b9739b5352d76ede129ea5b10fb6f9e10212fcaf34863c8d6ccdc4c633fa921e",
-      "server/src/test/kotlin/com/duluin/ftth/customer/CustomerDeploymentGraphFixture.kt": "e5a8c01a9fc83c130fac379b6053e7a223ef87e8e092d7ef01e16b08425fb5fe",
-      "server/src/historicalTest/kotlin/com/duluin/ftth/customer/CustomerAssetEpisodeRevisionUpgradeIT.kt": "fa807a09b01014a9277f1043675ee22a6f86559480aee83e6f3985c1ab0b98ef",
-      "server/src/historicalTest/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITReviewHistorical.kt": "5bed88dc2be06119e49b318f7defdaf0412b249cc2ea89d848faf0e0a20a78ec",
-      "server/src/historicalTest/kotlin/com/duluin/ftth/monitoring/WarehouseDiscoveryITR2Upgrade.kt": "36d6232af2b81ab26e9fc4999b812e178fc4d5577968dff9f630cd84e25b7639"
+      "server/src/historicalTest/kotlin/com/karuhun/ftth/customer/CustomerAssetTitleUpgradeIT.kt": "24e1ca5cce7b97524f98ba038b0190b9b07a49c954babed9bda75fb063ddbcac",
+      "server/src/historicalTest/kotlin/com/karuhun/ftth/customer/CustomerDeploymentUpgradeIT.kt": "b9739b5352d76ede129ea5b10fb6f9e10212fcaf34863c8d6ccdc4c633fa921e",
+      "server/src/test/kotlin/com/karuhun/ftth/customer/CustomerDeploymentGraphFixture.kt": "e5a8c01a9fc83c130fac379b6053e7a223ef87e8e092d7ef01e16b08425fb5fe",
+      "server/src/historicalTest/kotlin/com/karuhun/ftth/customer/CustomerAssetEpisodeRevisionUpgradeIT.kt": "fa807a09b01014a9277f1043675ee22a6f86559480aee83e6f3985c1ab0b98ef",
+      "server/src/historicalTest/kotlin/com/karuhun/ftth/monitoring/WarehouseDiscoveryITReviewHistorical.kt": "5bed88dc2be06119e49b318f7defdaf0412b249cc2ea89d848faf0e0a20a78ec",
+      "server/src/historicalTest/kotlin/com/karuhun/ftth/monitoring/WarehouseDiscoveryITR2Upgrade.kt": "36d6232af2b81ab26e9fc4999b812e178fc4d5577968dff9f630cd84e25b7639"
     }
   },
   "projection": {

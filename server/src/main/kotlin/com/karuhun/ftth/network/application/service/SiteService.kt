@@ -1,0 +1,115 @@
+package com.karuhun.ftth.network.application.service
+
+import com.karuhun.ftth.common.domain.Page
+import com.karuhun.ftth.common.domain.PageRequest
+import com.karuhun.ftth.common.domain.error.ConflictException
+import com.karuhun.ftth.common.domain.error.NotFoundException
+import com.karuhun.ftth.common.domain.geo.Coordinate
+import com.karuhun.ftth.common.infrastructure.audit.AuditRecorder
+import com.karuhun.ftth.common.security.CurrentUserProvider
+import com.karuhun.ftth.network.application.port.inbound.ManageSiteUseCase
+import com.karuhun.ftth.network.application.port.inbound.SaveSiteCommand
+import com.karuhun.ftth.network.application.port.inbound.SiteView
+import com.karuhun.ftth.network.application.port.outbound.OdfRepository
+import com.karuhun.ftth.network.application.port.outbound.OltRepository
+import com.karuhun.ftth.network.application.port.outbound.SiteRepository
+import com.karuhun.ftth.network.domain.model.NetworkNodeKind
+import com.karuhun.ftth.network.domain.model.NetworkNodeRef
+import com.karuhun.ftth.network.domain.model.Site
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
+
+@Service
+@Transactional
+class SiteService(
+    private val siteRepository: SiteRepository,
+    private val oltRepository: OltRepository,
+    private val odfRepository: OdfRepository,
+    private val cableAttachment: CableAttachmentService,
+    private val currentUser: CurrentUserProvider,
+    private val auditor: AuditRecorder,
+    private val references: com.karuhun.ftth.network.SiteReferenceApi,
+    private val usage: List<com.karuhun.ftth.network.SiteUsageProbe>,
+) : ManageSiteUseCase {
+
+    @Transactional(readOnly = true)
+    override fun search(query: String, pageRequest: PageRequest): Page<SiteView> {
+        val page = siteRepository.search(query, pageRequest)
+        val oltCounts = oltRepository.countBySiteIds(page.content.mapTo(HashSet()) { it.id })
+        return page.map { it.toView(oltCounts[it.id] ?: 0) }
+    }
+
+    @Transactional(readOnly = true)
+    override fun get(id: UUID): SiteView = requireSite(id).toView(oltRepository.countBySiteId(id))
+
+    override fun create(command: SaveSiteCommand): SiteView {
+        val code = command.code.trim().uppercase()
+        if (siteRepository.existsByCode(code)) throw ConflictException("Kode site '$code' sudah dipakai")
+        val site = siteRepository.save(
+            Site.create(
+                tenantId = currentUser.current().tenantId,
+                code = command.code,
+                name = command.name,
+                address = command.address,
+                location = command.location,
+                areaId = command.areaId,
+            ),
+        )
+        auditor.record("site.created", "Site", site.id, site.tenantId, mapOf("code" to site.code))
+        return site.toView(0)
+    }
+
+    override fun update(id: UUID, command: SaveSiteCommand): SiteView {
+        val reference = references.lockForChange(id) ?: throw NotFoundException("Site tidak ditemukan")
+        if (reference.areaId != command.areaId) usage.forEach { it.assertSiteUnreferenced(id) }
+        val site = requireSite(id)
+        val moved = site.location != command.location
+        site.update(command.name, command.address, command.location, command.areaId)
+        val saved = siteRepository.save(site)
+        if (moved) cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.SITE, id), saved.location)
+        auditor.record("site.updated", "Site", saved.id, saved.tenantId, mapOf("code" to saved.code))
+        return saved.toView(oltRepository.countBySiteId(id))
+    }
+
+    override fun relocate(id: UUID, location: Coordinate): SiteView {
+        references.lockForChange(id) ?: throw NotFoundException("Site tidak ditemukan")
+        val site = requireSite(id)
+        site.relocate(location)
+        val saved = siteRepository.save(site)
+        cableAttachment.resnapForMovedNode(NetworkNodeRef(NetworkNodeKind.SITE, id), saved.location)
+        auditor.record("site.relocated", "Site", saved.id, saved.tenantId, mapOf("code" to saved.code))
+        return saved.toView(oltRepository.countBySiteId(id))
+    }
+
+    override fun delete(id: UUID) {
+        references.lockForChange(id) ?: throw NotFoundException("Site tidak ditemukan")
+        usage.forEach { it.assertSiteUnreferenced(id) }
+        val site = requireSite(id)
+        val oltCount = oltRepository.countBySiteId(id)
+        if (oltCount > 0) {
+            throw ConflictException("Site ${site.code} masih menaungi $oltCount OLT, pindahkan atau hapus dulu")
+        }
+        // Rak ber-foreign-key ke site, jadi tanpa penjagaan ini yang muncul di
+        // layar adalah galat constraint database, bukan kalimat yang menjelaskan.
+        val odfCount = odfRepository.countBySiteId(id)
+        if (odfCount > 0) {
+            throw ConflictException("Site ${site.code} masih menaungi $odfCount ODF, pindahkan atau hapus dulu")
+        }
+        siteRepository.deleteById(id)
+        auditor.record("site.deleted", "Site", id, site.tenantId, mapOf("code" to site.code))
+    }
+
+    private fun requireSite(id: UUID): Site =
+        siteRepository.findById(id) ?: throw NotFoundException("Site $id tidak ditemukan")
+}
+
+private fun Site.toView(oltCount: Long) = SiteView(
+    id = id,
+    code = code,
+    name = name,
+    address = address,
+    location = location,
+    areaId = areaId,
+    oltCount = oltCount,
+)

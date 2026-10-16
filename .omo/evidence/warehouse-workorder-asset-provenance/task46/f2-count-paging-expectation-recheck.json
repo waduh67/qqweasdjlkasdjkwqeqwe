@@ -5,12 +5,12 @@
   "runtimeStatus": "corrected run and web results pending; no reviewer QA",
   "files": [
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCountDraftIT.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseCountDraftIT.kt",
       "sha256": "cba0511b9b5c161673aac2e63ba25dc5ba87977a9b5f1af91f1d61832f175557",
       "bytes": 20741
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseTransferDraftIT.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseTransferDraftIT.kt",
       "sha256": "5e0558a3c8907ac2754e414d02403a93a7eb63248d03bef2d923f99f5b2d0eb5",
       "bytes": 21036
     },

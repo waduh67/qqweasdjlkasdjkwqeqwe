@@ -27,7 +27,7 @@ kotlin {
 
 application {
     // File-level main() SimulatorApplication.kt → kelas sintetis ...Kt.
-    mainClass.set("com.duluin.ftth.simulator.SimulatorApplicationKt")
+    mainClass.set("com.karuhun.ftth.simulator.SimulatorApplicationKt")
 }
 
 dependencies {

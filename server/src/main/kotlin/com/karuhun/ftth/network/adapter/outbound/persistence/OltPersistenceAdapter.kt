@@ -1,0 +1,139 @@
+package com.karuhun.ftth.network.adapter.outbound.persistence
+
+import com.karuhun.ftth.common.domain.Page
+import com.karuhun.ftth.common.domain.PageRequest
+import com.karuhun.ftth.common.infrastructure.persistence.geo.Geometries
+import com.karuhun.ftth.common.infrastructure.persistence.geo.toCoordinate
+import com.karuhun.ftth.common.infrastructure.persistence.toDomainPage
+import com.karuhun.ftth.common.infrastructure.persistence.toPageable
+import com.karuhun.ftth.common.security.SecretCipher
+import com.karuhun.ftth.common.tenant.TenantContext
+import com.karuhun.ftth.network.application.port.outbound.OltRepository
+import com.karuhun.ftth.network.domain.model.Olt
+import com.karuhun.ftth.network.domain.model.vo.ManagementIp
+import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
+import java.util.UUID
+
+/**
+ * Adapter OLT sekaligus batas enkripsi kredensial: domain memegang community
+ * string apa adanya, database hanya pernah melihat ciphertext.
+ */
+@Component
+class OltPersistenceAdapter(
+    private val jpa: OltJpaRepository,
+    private val cipher: SecretCipher,
+) : OltRepository {
+
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    override fun save(olt: Olt): Olt {
+        val encryptedCommunity = olt.snmpCommunity?.let(cipher::encrypt)
+        val encryptedWebPassword = olt.webPassword?.let(cipher::encrypt)
+        val entity = jpa.findById(olt.id).orElse(null)?.apply {
+            siteId = olt.siteId
+            name = olt.name
+            vendor = olt.vendor
+            model = olt.model
+            managementIp = olt.managementIp?.value
+            snmpCommunity = encryptedCommunity
+            snmpPort = olt.snmpPort
+            status = olt.status
+            location = Geometries.point(olt.location)
+            areaId = olt.areaId
+            description = olt.description
+            snmpEnabled = olt.snmpEnabled
+            snmpVersion = olt.snmpVersion
+            webEnabled = olt.webEnabled
+            webProtocol = olt.webProtocol
+            webPort = olt.webPort
+            webUsername = olt.webUsername
+            webPassword = encryptedWebPassword
+        } ?: OltJpaEntity(
+            id = olt.id,
+            code = olt.code,
+            siteId = olt.siteId,
+            name = olt.name,
+            vendor = olt.vendor,
+            model = olt.model,
+            managementIp = olt.managementIp?.value,
+            snmpCommunity = encryptedCommunity,
+            snmpPort = olt.snmpPort,
+            status = olt.status,
+            location = Geometries.point(olt.location),
+            areaId = olt.areaId,
+            description = olt.description,
+            snmpEnabled = olt.snmpEnabled,
+            snmpVersion = olt.snmpVersion,
+            webEnabled = olt.webEnabled,
+            webProtocol = olt.webProtocol,
+            webPort = olt.webPort,
+            webUsername = olt.webUsername,
+            webPassword = encryptedWebPassword,
+        )
+        return jpa.save(entity).toDomain()
+    }
+
+    override fun findById(id: UUID): Olt? = jpa.findById(id).orElse(null)?.toDomain()
+
+    override fun findAllByIds(ids: Set<UUID>): List<Olt> = jpa.findAllById(ids).map { it.toDomain() }
+
+    override fun findBySiteId(siteId: UUID): List<Olt> = jpa.findBySiteIdOrderByCode(siteId).map { it.toDomain() }
+
+    override fun search(query: String, siteId: UUID?, pageRequest: PageRequest): Page<Olt> {
+        val spec = NetworkSpecifications.textMatches<OltJpaEntity>(query)
+            .and(NetworkSpecifications.equals("siteId", siteId))
+        return jpa.findAll(spec, pageRequest.toPageable()).toDomainPage().map { it.toDomain() }
+    }
+
+    override fun findByCode(code: String): Olt? = jpa.findByCode(code)?.toDomain()
+
+    override fun findAllIds(): Set<UUID> = jpa.findAllIds()
+
+    override fun existsByCode(code: String): Boolean = jpa.existsByCode(code)
+
+    override fun countBySiteId(siteId: UUID): Long = jpa.countBySiteId(siteId)
+
+    override fun countBySiteIds(siteIds: Set<UUID>): Map<UUID, Long> =
+        if (siteIds.isEmpty()) emptyMap()
+        else jpa.countGroupedBySite(siteIds).associate { it.parentId to it.total }
+
+    override fun deleteById(id: UUID) = jpa.deleteById(id)
+
+    private fun OltJpaEntity.toDomain(): Olt = Olt.rehydrate(
+        id = id,
+        tenantId = tenantId ?: TenantContext.tenantId(),
+        siteId = siteId,
+        code = code,
+        name = name,
+        vendor = vendor,
+        model = model,
+        managementIp = ManagementIp.ofNullable(managementIp),
+        snmpCommunity = decryptQuietly(snmpCommunity, code),
+        snmpPort = snmpPort,
+        status = status,
+        location = location.toCoordinate(),
+        areaId = areaId,
+        description = description,
+        snmpEnabled = snmpEnabled,
+        snmpVersion = snmpVersion,
+        webEnabled = webEnabled,
+        webProtocol = webProtocol,
+        webPort = webPort,
+        webUsername = webUsername,
+        webPassword = decryptQuietly(webPassword, code),
+    )
+
+    /**
+     * Kredensial yang tidak bisa didekripsi (mis. kunci enkripsi dirotasi tanpa
+     * migrasi data) tidak boleh membuat seluruh daftar OLT gagal dimuat. OLT-nya
+     * tetap tampil, hanya kehilangan kredensial sehingga ditandai "belum
+     * termonitor" dan bisa diisi ulang operator.
+     */
+    private fun decryptQuietly(ciphertext: String?, oltCode: String): String? {
+        if (ciphertext == null) return null
+        return runCatching { cipher.decrypt(ciphertext) }
+            .onFailure { log.warn("Kredensial OLT {} tidak bisa didekripsi; perlu diisi ulang", oltCode) }
+            .getOrNull()
+    }
+}

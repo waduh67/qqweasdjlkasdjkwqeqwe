@@ -9,7 +9,7 @@
   },
   "suites": [
     {
-      "suite": "com.duluin.ftth.ModularityTests",
+      "suite": "com.karuhun.ftth.ModularityTests",
       "sha256": "a961810d94f567f600162d5b61e7d7ff1fa8e63195483e6ee010469eb70e8718",
       "tests": 3,
       "failures": 0,
@@ -17,7 +17,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseCountDraftUpgradeIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseCountDraftUpgradeIT",
       "sha256": "273ad7f093666daf5aaf8c7e40b9b2800fb4676d8641fca8ac95b3be44929179",
       "tests": 1,
       "failures": 0,
@@ -25,7 +25,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryScopeIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryScopeIT",
       "sha256": "cd0563192c2118efa13ebea8c4e2ea0b53dfa7c0e9864c00538d50dcc1ca3ec8",
       "tests": 1,
       "failures": 0,
@@ -33,7 +33,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseDraftExpiryUpgradeIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseDraftExpiryUpgradeIT",
       "sha256": "993c99e2ab4b0cfe7fffa5d189d2944819c662c6794c302b21b403efcb3a6119",
       "tests": 1,
       "failures": 0,
@@ -41,7 +41,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseDraftSchemaStartupIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseDraftSchemaStartupIT",
       "sha256": "e7d60e623012366a3439b5235195a24cab5f0569bc4a7601d1bc40f2e38f07e9",
       "tests": 2,
       "failures": 0,
@@ -49,7 +49,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseTransferDraftUpgradeIT",
+      "suite": "com.karuhun.ftth.inventory.WarehouseTransferDraftUpgradeIT",
       "sha256": "435c3e4527fb8baefa9c6d58bf9963cb16c06142604e04ea7ebcddd48c2eb65d",
       "tests": 1,
       "failures": 0,
@@ -57,7 +57,7 @@
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.tenancy.DeleteTenantIT",
+      "suite": "com.karuhun.ftth.tenancy.DeleteTenantIT",
       "sha256": "dfc7aa352147157fe77c8151188f6493c7d686e762194aa02573731879c0ea1d",
       "tests": 4,
       "failures": 1,

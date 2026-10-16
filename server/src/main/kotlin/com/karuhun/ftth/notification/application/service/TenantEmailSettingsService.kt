@@ -1,0 +1,179 @@
+package com.karuhun.ftth.notification.application.service
+
+import com.karuhun.ftth.common.domain.error.ValidationException
+import com.karuhun.ftth.common.infrastructure.audit.AuditRecorder
+import com.karuhun.ftth.common.storage.ObjectStorage
+import com.karuhun.ftth.common.storage.StoredObject
+import com.karuhun.ftth.common.tenant.TenantContext
+import com.karuhun.ftth.notification.application.port.inbound.EmailSubjectView
+import com.karuhun.ftth.notification.application.port.inbound.EmailTestResultView
+import com.karuhun.ftth.notification.application.port.inbound.ManageTenantEmailSettingsUseCase
+import com.karuhun.ftth.notification.application.port.inbound.TenantEmailSettingsView
+import com.karuhun.ftth.notification.application.port.inbound.UpdateTenantEmailSettingsCommand
+import com.karuhun.ftth.notification.application.port.outbound.EmailDispatcher
+import com.karuhun.ftth.notification.application.port.outbound.EmailSubjectRepository
+import com.karuhun.ftth.notification.application.port.outbound.TenantEmailSettingsRepository
+import com.karuhun.ftth.notification.domain.model.DeliveryStatus
+import com.karuhun.ftth.notification.domain.model.EmailBranding
+import com.karuhun.ftth.notification.domain.model.PlatformEmailSettings
+import com.karuhun.ftth.notification.domain.model.TenantEmailSettings
+import com.karuhun.ftth.tenancy.TenantApi
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
+
+/**
+ * Sisi tenant setelan email: timpaan identitas & tampilan di atas bawaan platform.
+ *
+ * Bentuknya cermin [PlatformEmailSettingsService] dengan dua perbedaan yang disengaja.
+ * Pertama, TAK ADA setelan SMTP maupun alamat pengirim di sini — relay itu milik platform
+ * dan hanya menerima pengirim terverifikasi (alasannya di KDoc `EmailDispatcher`); yang
+ * tersisa untuk tenant adalah alamat BALASAN. Kedua, tiap view membawa serta nilai WARISANNYA,
+ * karena di sisi tenant kolom kosong bukan berarti "tak ada" melainkan "ikut platform", dan
+ * layar yang tak menunjukkan apa yang diwarisi memaksa operator menebak isi email yang
+ * akan terkirim.
+ */
+@Service
+@Transactional(readOnly = true)
+@Suppress("LongParameterList")
+class TenantEmailSettingsService(
+    private val repository: TenantEmailSettingsRepository,
+    private val subjectRepo: EmailSubjectRepository,
+    private val brandingResolver: EmailBrandingResolver,
+    private val renderer: EmailRenderer,
+    private val dispatcher: EmailDispatcher,
+    private val storage: ObjectStorage,
+    private val auditor: AuditRecorder,
+    private val tenants: TenantApi,
+) : ManageTenantEmailSettingsUseCase {
+
+    override fun get(): TenantEmailSettingsView = settings().toView()
+
+    @Transactional
+    override fun update(command: UpdateTenantEmailSettingsCommand): TenantEmailSettingsView {
+        val settings = settings()
+        settings.update(
+            replyToAddress = command.replyToAddress,
+            fromName = command.fromName,
+            branding = EmailBranding.of(command.accentColor, command.footerText, command.signatureText),
+        )
+        val saved = repository.save(settings)
+        // Pemicu khusus platform dibuang di sini, bukan ditolak dengan galat: layar tenant memang
+        // tak menawarkannya, jadi satu-satunya cara ia sampai ke sini adalah klien yang mengarang
+        // permintaan sendiri — dan yang perlu dijamin cuma timpaan itu tak pernah tersimpan.
+        val subjects = PlatformEmailSettingsService.sanitizeSubjects(command.subjects)
+            .filterKeys { it !in EmailSubjectResolver.PLATFORM_ONLY }
+        subjectRepo.replaceTenant(subjects)
+        // Alamat balasan ikut dicatat: ia yang menentukan ke kotak masuk siapa pertanyaan
+        // pelanggan mendarat — perubahan diam-diam di situ bisa membuat balasan hilang berminggu.
+        audit("notification.email.settings.updated", saved, mapOf("replyToAddress" to saved.replyToAddress))
+        return saved.toView()
+    }
+
+    @Transactional
+    override fun uploadLogo(contentType: String, bytes: ByteArray): TenantEmailSettingsView {
+        PlatformEmailSettingsService.validateLogo(contentType, bytes)
+        val settings = settings()
+        val key = logoStorageKey(settings.tenantId)
+        storage.put(key, contentType, bytes)
+        settings.attachLogo(key, contentType)
+        val saved = repository.save(settings)
+        audit("notification.email.logo.uploaded", saved)
+        return saved.toView()
+    }
+
+    @Transactional
+    override fun deleteLogo(): TenantEmailSettingsView {
+        val settings = settings()
+        settings.branding.logoStorageKey?.let { storage.delete(it) }
+        settings.clearLogo()
+        val saved = repository.save(settings)
+        audit("notification.email.logo.deleted", saved)
+        return saved.toView()
+    }
+
+    /**
+     * Hanya logo MILIK tenant. Null saat tenant tak menimpa — bukan diam-diam dialihkan ke logo
+     * platform, karena penyaji publiknya perlu tahu bedanya untuk memilih 404 atau meneruskan.
+     */
+    override fun getLogo(): StoredObject? {
+        val key = repository.find()?.branding?.logoStorageKey?.takeIf { it.isNotBlank() } ?: return null
+        return storage.get(key)
+    }
+
+    override fun sendTest(to: String): EmailTestResultView {
+        val recipient = PlatformEmailSettings.validateEmail(to, "Alamat tujuan uji")
+            ?: throw ValidationException("Alamat tujuan uji wajib diisi")
+        val outcome = dispatcher.send(
+            renderer.render(
+                to = recipient,
+                subject = EmailPreviewSample.TEST_SUBJECT,
+                body = EmailPreviewSample.TEST_BODY,
+                identity = brandingResolver.forCurrentTenant(),
+            ),
+        )
+        return EmailTestResultView(
+            delivered = outcome.status == DeliveryStatus.SENT,
+            detail = outcome.detail ?: outcome.status.name,
+        )
+    }
+
+    override fun preview(): String = renderer.renderHtml(
+        EmailPreviewSample.SUBJECT,
+        EmailPreviewSample.BODY,
+        brandingResolver.forCurrentTenant(),
+    )
+
+    private fun settings(): TenantEmailSettings =
+        repository.find() ?: TenantEmailSettings.defaultFor(TenantContext.tenantId())
+
+    private fun audit(action: String, saved: TenantEmailSettings, detail: Map<String, Any?> = emptyMap()) {
+        auditor.record(
+            action = action,
+            entityType = "TenantEmailSettings",
+            entityId = saved.id,
+            tenantId = saved.tenantId,
+            detail = detail,
+        )
+    }
+
+    private fun TenantEmailSettings.toView(): TenantEmailSettingsView {
+        val platform = brandingResolver.platformSettings()
+        val platformSubjects = subjectRepo.platformSubjects()
+        val tenantSubjects = subjectRepo.tenantSubjects()
+        return TenantEmailSettingsView(
+            replyToAddress = replyToAddress,
+            fromName = fromName,
+            logoSet = branding.logoSet,
+            accentColor = branding.accentColor,
+            footerText = branding.footerText,
+            signatureText = branding.signatureText,
+            // Bukan placeholder melainkan nilai terkunci: dikirim supaya layar bisa
+            // menunjukkan alamat apa yang dilihat pelanggan, tanpa menawarkan mengubahnya.
+            platformFromAddress = platform.fromAddress,
+            // Rantai yang sama dengan EmailBrandingResolver, dikurangi timpaan tenant: yang
+            // ingin ditunjukkan di sini justru "apa yang muncul kalau kolom ini dikosongkan".
+            inheritedFromName = tenants.findById(tenantId)?.name ?: platform.fromName,
+            effectiveLogoUrl = brandingResolver.logoUrl(platform, tenantId, branding.logoSet),
+            inheritedAccentColor = platform.branding.accentColor,
+            inheritedFooterText = platform.branding.footerText,
+            inheritedSignatureText = platform.branding.signatureText,
+            // Pemicu khusus platform tak ditawarkan sama sekali — menampilkan kolom yang isinya
+            // diabaikan saat kirim lebih menyesatkan daripada tak menampilkannya.
+            subjects = EmailSubjectResolver.DEFAULT_SUBJECTS
+                .filterKeys { it !in EmailSubjectResolver.PLATFORM_ONLY }
+                .map { (trigger, fallback) ->
+                    EmailSubjectView(
+                        trigger = trigger,
+                        subject = tenantSubjects[trigger],
+                        inheritedSubject = platformSubjects[trigger] ?: fallback,
+                    )
+                },
+        )
+    }
+
+    private companion object {
+        /** Satu key per tenant; unggah ulang menimpa. Terprefiks tenant (pola bukti work-order). */
+        fun logoStorageKey(tenantId: UUID) = "$tenantId/email/logo"
+    }
+}

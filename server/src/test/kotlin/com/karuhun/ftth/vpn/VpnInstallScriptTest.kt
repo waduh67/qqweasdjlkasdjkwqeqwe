@@ -1,0 +1,102 @@
+package com.karuhun.ftth.vpn
+
+import com.karuhun.ftth.common.domain.error.ConflictException
+import com.karuhun.ftth.vpn.application.service.VpnConfigRenderer
+import com.karuhun.ftth.vpn.domain.model.VpnProtocol
+import com.karuhun.ftth.vpn.domain.model.VpnServer
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Test
+
+/** Menguji perakitan installer satu-perintah dari template classpath — murni, tanpa I/O jaringan. */
+class VpnInstallScriptTest {
+
+    private val renderer = VpnConfigRenderer()
+
+    private fun readyServer(): VpnServer = VpnServer.create(
+        name = "Hub Utama",
+        host = "vpn.example.com",
+        port = 1194,
+        protocol = VpnProtocol.UDP,
+        tunnelCidr = "10.8.0.0/24",
+    ).apply {
+        attachPki(
+            caCertPem = "-----BEGIN CERTIFICATE-----\nCA-CONTENT\n-----END CERTIFICATE-----",
+            caKeyPem = "-----BEGIN PRIVATE KEY-----\nCA-KEY\n-----END PRIVATE KEY-----",
+            serverCertPem = "-----BEGIN CERTIFICATE-----\nSERVER-CONTENT\n-----END CERTIFICATE-----",
+            serverKeyPem = "-----BEGIN PRIVATE KEY-----\nSERVER-KEY\n-----END PRIVATE KEY-----",
+        )
+    }
+
+    @Test
+    fun `installer menanam token url sertifikat dan config callback`() {
+        val script = renderer.renderInstallScript(readyServer(), "https://app.example.com/", "ftthv_TOKEN123")
+
+        // Semua placeholder tergantikan.
+        assertThat(script).doesNotContain("{{").doesNotContain("}}")
+        // Token & URL (trailing slash dipangkas) ter-embed untuk callback.
+        assertThat(script).contains("NODE_TOKEN=\"ftthv_TOKEN123\"")
+        assertThat(script).contains("APP_URL=\"https://app.example.com\"")
+        assertThat(script).contains("/api/vpn/provision/authenticate")
+        assertThat(script).contains("/api/vpn/provision/client-connect")
+        // Sertifikat/kunci server ditulis dari PKI aplikasi.
+        assertThat(script).contains("CA-CONTENT")
+        assertThat(script).contains("SERVER-CONTENT")
+        assertThat(script).contains("SERVER-KEY")
+        // server.conf model callback-langsung.
+        assertThat(script).contains("server 10.8.0.0 255.255.255.0")
+        assertThat(script).contains("verify-client-cert none")
+        assertThat(script).contains("username-as-common-name")
+        assertThat(script).contains("auth-user-pass-verify /etc/openvpn/server/ftth-verify.sh via-file")
+        assertThat(script).contains("client-connect /etc/openvpn/server/ftth-connect.sh")
+        assertThat(script).contains("client-disconnect /etc/openvpn/server/ftth-disconnect.sh")
+        // Telemetri liveness: connect/disconnect script melapor balik status peer ke aplikasi.
+        assertThat(script).contains("/api/vpn/provision/client-connected")
+        assertThat(script).contains("/api/vpn/provision/client-disconnected")
+        assertThat(script).contains("dh none")
+        // NCP: satu hub melayani v7 (GCM) & v6 (CBC fallback).
+        assertThat(script).contains("data-ciphers AES-256-GCM:AES-256-CBC")
+        assertThat(script).contains("data-ciphers-fallback AES-256-CBC")
+        // Rute-balik trafik remote: MASQUERADE + FORWARD subnet tunnel.
+        assertThat(script).contains("TUN_CIDR=\"10.8.0.0/24\"")
+        assertThat(script).contains("-j MASQUERADE")
+        assertThat(script).contains("ftth-disconnect.sh")
+        // Penerusan port ditarik berkala dari aplikasi, TAK ADA port perangkat yang dipaku di skrip.
+        assertThat(script).contains("/api/vpn/provision/forwards")
+        assertThat(script).contains("ftth-vpn-sync.timer")
+        assertThat(script).contains("OnUnitActiveSec=1min")
+        assertThat(script).doesNotContain(":8291")
+        // Penanda balasan: aplikasi mati / balasan error => VPS berhenti tanpa menyapu iptables.
+        assertThat(script).contains("#ftth-forwards")
+        // Hanya aturan bertanda milik kami yang boleh dicabut penyelaras.
+        assertThat(script).contains("--comment \"ftth-vpn\"")
+        // Blok pelanggan di belakang peer: ditarik berkala, dipasang sebagai rute kernel + NAT.
+        assertThat(script).contains("/api/vpn/provision/routes")
+        assertThat(script).contains("#ftth-routes")
+        assertThat(script).contains("ip route replace")
+        assertThat(script).contains("--comment \"ftth-blok\"")
+        // Rute buatan operator tak boleh ikut tersapu — punya kami bertanda proto sendiri.
+        assertThat(script).contains("ROUTE_PROTO=")
+        // Baris iroute dari aplikasi disaring ketat sebelum masuk berkas config OpenVPN.
+        assertThat(script).contains("'^iroute ")
+        // Dijalankan ulang = config baru HARUS terpakai. `enable --now` melewati service yang
+        // sudah jalan, jadi daemonnya diam-diam memegang config lama (pernah kejadian: berkas
+        // sudah `proto tcp`, `ss` masih menunjukkan udp).
+        assertThat(script).contains("systemctl restart openvpn-server@server")
+        assertThat(script).doesNotContain("systemctl enable --now")
+    }
+
+    @Test
+    fun `installer menolak hub yang PKI-nya belum siap`() {
+        val notReady = VpnServer.create(
+            name = "Hub Baru",
+            host = "vpn2.example.com",
+            port = 1194,
+            protocol = VpnProtocol.UDP,
+            tunnelCidr = "10.9.0.0/24",
+        )
+
+        assertThatThrownBy { renderer.renderInstallScript(notReady, "https://app.example.com", "ftthv_X") }
+            .isInstanceOf(ConflictException::class.java)
+    }
+}

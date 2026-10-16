@@ -6,11 +6,11 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/application/service/MaterialReceiptService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/application/service/MaterialReceiptService.kt",
       "sha256": "d2d17b89b6ac1ff06187f13a51430da8dbe91fe327bb3bb34adbb2ec7a8e2552"
     },
     {
-      "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialReceiptService.kt",
+      "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryMaterialReceiptService.kt",
       "sha256": "028423ffa4e33b69a955457e4d77e3725a4541aa209f162a4b2553aa8f6e4f5d"
     }
   ],
@@ -30,28 +30,28 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptIT",
+            "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptIT",
             "tests": 29,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
+            "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
             "tests": 4,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
+            "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
             "tests": 5,
             "failures": 0,
             "errors": 0,
             "skipped": 0
           },
           {
-            "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
+            "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
             "tests": 2,
             "failures": 0,
             "errors": 0,
@@ -79,12 +79,12 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/application/service/MaterialReceiptService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/application/service/MaterialReceiptService.kt",
         "line": 21,
         "sha256": "d2d17b89b6ac1ff06187f13a51430da8dbe91fe327bb3bb34adbb2ec7a8e2552"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialReceiptService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryMaterialReceiptService.kt",
         "line": 22,
         "sha256": "028423ffa4e33b69a955457e4d77e3725a4541aa209f162a4b2553aa8f6e4f5d"
       }
@@ -109,22 +109,22 @@
       "G(WorkOrderMaterialReceiptIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptITReplayLifecycle.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WorkOrderMaterialReceiptITReplayLifecycle.kt",
             "sha256": "5fff1b5e9f4811724a110afe06f9bbc3c3b9920cc2e73acf94e2fd017f10300d",
             "testAnnotations": 2
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptITIsolation.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WorkOrderMaterialReceiptITIsolation.kt",
             "sha256": "d601533422c00498e0c1022c6a6d10cbdd6401ee9e0e2694e6eb5b18557e3813",
             "testAnnotations": 4
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptITConcurrency.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WorkOrderMaterialReceiptITConcurrency.kt",
             "sha256": "4dd491ee08b72dcb1217a7a251b473c0eddb07cd0c739600a3cb9bd86a2e86eb",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WorkOrderMaterialReceiptIT.kt",
             "sha256": "1c400f21cf1cf5facdab0016c89d20fadd3da404d20bc00be1b0b3282884aa1f",
             "testAnnotations": 15
           }
@@ -142,40 +142,40 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptIT",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptIT",
               "tests": 29,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "9e5f197ed34f222374c8cd592d95a58bdc7d44f29934c8bdf1ef30872ca37ce1",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "6e9eb378f270c8f1c3c62ae9016ef1e28d783a229cf2992e971a25df6111b671",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
               "tests": 5,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "e5b933f05f6e853d4f85bd45602514b7a7f2bd9d5d09745e89632c032cb97ba8",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "636626bf167e801e3934668b23a2d326b5e9d50c51885a580588ad9a1dda707e",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle.xml"
             }
           ],
           "proof": {
@@ -190,40 +190,40 @@
           "tests": 40,
           "suites": [
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptIT",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptIT",
               "tests": 29,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "b45ad913b30e1307d7954ac865d28c0248a400108651fae55a9f12cfdb15bc0a",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "4b8dafd6c89ce90d16c996fe603709e74dbc4c87e26975052f85e4c5508b2755",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
               "tests": 5,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "3c40ceda2c4f02493c37c5ecc283edce7b440fd3aaf7bdbd42cf49f5f00c1539",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "39e8e5096fd2dbfa2bd1df088709a23517e20e822314f4fe7b415d461f681524",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle.xml"
             }
           ]
         },
@@ -275,22 +275,22 @@
       "G(WorkOrderMaterialReceiptIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptITReplayLifecycle.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WorkOrderMaterialReceiptITReplayLifecycle.kt",
             "sha256": "5fff1b5e9f4811724a110afe06f9bbc3c3b9920cc2e73acf94e2fd017f10300d",
             "testAnnotations": 2
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptITIsolation.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WorkOrderMaterialReceiptITIsolation.kt",
             "sha256": "d601533422c00498e0c1022c6a6d10cbdd6401ee9e0e2694e6eb5b18557e3813",
             "testAnnotations": 4
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptITConcurrency.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WorkOrderMaterialReceiptITConcurrency.kt",
             "sha256": "4dd491ee08b72dcb1217a7a251b473c0eddb07cd0c739600a3cb9bd86a2e86eb",
             "testAnnotations": 1
           },
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WorkOrderMaterialReceiptIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WorkOrderMaterialReceiptIT.kt",
             "sha256": "1c400f21cf1cf5facdab0016c89d20fadd3da404d20bc00be1b0b3282884aa1f",
             "testAnnotations": 15
           }
@@ -308,40 +308,40 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptIT",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptIT",
               "tests": 29,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "9e5f197ed34f222374c8cd592d95a58bdc7d44f29934c8bdf1ef30872ca37ce1",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "6e9eb378f270c8f1c3c62ae9016ef1e28d783a229cf2992e971a25df6111b671",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
               "tests": 5,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "e5b933f05f6e853d4f85bd45602514b7a7f2bd9d5d09745e89632c032cb97ba8",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "636626bf167e801e3934668b23a2d326b5e9d50c51885a580588ad9a1dda707e",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle.xml"
             }
           ],
           "proof": {
@@ -356,40 +356,40 @@
           "tests": 40,
           "suites": [
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptIT",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptIT",
               "tests": 29,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "b45ad913b30e1307d7954ac865d28c0248a400108651fae55a9f12cfdb15bc0a",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptIT.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "4b8dafd6c89ce90d16c996fe603709e74dbc4c87e26975052f85e4c5508b2755",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITConcurrency.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation",
               "tests": 5,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "3c40ceda2c4f02493c37c5ecc283edce7b440fd3aaf7bdbd42cf49f5f00c1539",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITIsolation.xml"
             },
             {
-              "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
+              "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "39e8e5096fd2dbfa2bd1df088709a23517e20e822314f4fe7b415d461f681524",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WorkOrderMaterialReceiptITReplayLifecycle.xml"
             }
           ]
         },
@@ -449,11 +449,11 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/fulfillment/application/service/MaterialReceiptService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/fulfillment/application/service/MaterialReceiptService.kt",
         "sha256": "d2d17b89b6ac1ff06187f13a51430da8dbe91fe327bb3bb34adbb2ec7a8e2552"
       },
       {
-        "path": "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/InventoryMaterialReceiptService.kt",
+        "path": "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/InventoryMaterialReceiptService.kt",
         "sha256": "028423ffa4e33b69a955457e4d77e3725a4541aa209f162a4b2553aa8f6e4f5d"
       }
     ],

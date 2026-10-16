@@ -4,7 +4,7 @@
     "build": "SUCCESSFUL in 1m",
     "suites": [
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseMigrationResolutionIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseMigrationResolutionIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
@@ -14,14 +14,14 @@
   },
   "supportingSuites": [
     {
-      "suite": "com.duluin.ftth.ModularityTests",
+      "suite": "com.karuhun.ftth.ModularityTests",
       "tests": 3,
       "failures": 0,
       "errors": 0,
       "skipped": 0
     },
     {
-      "suite": "com.duluin.ftth.inventory.WarehouseMigrationITQuery",
+      "suite": "com.karuhun.ftth.inventory.WarehouseMigrationITQuery",
       "tests": 2,
       "failures": 0,
       "errors": 0,
@@ -32,10 +32,10 @@
   "tests": 9,
   "files": {
     "server/src/main/resources/db/migration/V177_3__warehouse_migration_resolutions.sql": "aa08b50aae8356e9c7b4f56e37a23abdb430c9d7fa02f6da5785d12b2617a2b5",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/MigrationResolutionService.kt": "b02d4dfe42f469ae1aae138852806fa74f1d1d44a510e7f3d0ca8a06595a7525",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/adapter/outbound/persistence/MigrationResolutionStore.kt": "fa9219757fcadfd58f6453a5fb9d5b7c5dc203b9fa98d3eae137ee20f9a8238f",
-    "server/src/main/kotlin/com/duluin/ftth/inventory/application/service/WarehouseProvenanceAccess.kt": "d3a9cb324a80e6be3c02f82c116e4063dff980f55cbad7616bf84a125b4810a9",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseMigrationResolutionIT.kt": "0cf937f5451ff6c64ccbb3cdcd0e9e029817d91ac998ba5f1749715d2aa1e5fd"
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/MigrationResolutionService.kt": "b02d4dfe42f469ae1aae138852806fa74f1d1d44a510e7f3d0ca8a06595a7525",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/adapter/outbound/persistence/MigrationResolutionStore.kt": "fa9219757fcadfd58f6453a5fb9d5b7c5dc203b9fa98d3eae137ee20f9a8238f",
+    "server/src/main/kotlin/com/karuhun/ftth/inventory/application/service/WarehouseProvenanceAccess.kt": "d3a9cb324a80e6be3c02f82c116e4063dff980f55cbad7616bf84a125b4810a9",
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseMigrationResolutionIT.kt": "0cf937f5451ff6c64ccbb3cdcd0e9e029817d91ac998ba5f1749715d2aa1e5fd"
   },
   "checks": [
     "real HTTP proposals with real MinIO case evidence",

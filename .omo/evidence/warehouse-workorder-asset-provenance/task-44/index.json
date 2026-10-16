@@ -6,11 +6,11 @@
   "implementationSourceCommit": "1306b65c34167b2d48f4817ce72990fed3b85aa3",
   "implementationSource": [
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
       "sha256": "7d25ec740bf8652b2ac25918d863dd59d2f1b5d263825f76d781c8d166a6f43d"
     },
     {
-      "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRecoveryIT.kt",
+      "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseRecoveryIT.kt",
       "sha256": "bc2b1c0451d3517f1fe5a38a46a3d9f3a3d7c452350a83f3981264c5b917d311"
     }
   ],
@@ -68,7 +68,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+            "suite": "com.karuhun.ftth.inventory.WarehouseRecoveryIT",
             "tests": 2,
             "failures": 0,
             "errors": 0,
@@ -82,7 +82,7 @@
         "status": "MATCHED_COMPLETED_XML",
         "suites": [
           {
-            "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+            "suite": "com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
             "tests": 4,
             "failures": 0,
             "errors": 0,
@@ -110,12 +110,12 @@
     "implementationSourceCommit": "e17827188175d51a9281cc56c50b950f4fe9e38f",
     "implementationSource": [
       {
-        "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
+        "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
         "line": 16,
         "sha256": "7d25ec740bf8652b2ac25918d863dd59d2f1b5d263825f76d781c8d166a6f43d"
       },
       {
-        "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRecoveryIT.kt",
+        "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseRecoveryIT.kt",
         "line": 1,
         "sha256": "bc2b1c0451d3517f1fe5a38a46a3d9f3a3d7c452350a83f3981264c5b917d311"
       }
@@ -140,7 +140,7 @@
       "G(WarehouseRecoveryIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRecoveryIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseRecoveryIT.kt",
             "sha256": "bc2b1c0451d3517f1fe5a38a46a3d9f3a3d7c452350a83f3981264c5b917d311",
             "testAnnotations": 2
           }
@@ -158,13 +158,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseRecoveryIT",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "71c354802e6469cef7e46d79ce89ca5d4ca7654dd46eccd27d6a18ab54f224b3",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseRecoveryIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseRecoveryIT.xml"
             }
           ],
           "proof": {
@@ -179,13 +179,13 @@
           "tests": 2,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseRecoveryIT",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "9cc3ad6d79dfcd7a824ea3f1c0486327cd31ffc510f5acc31291dabbc2ed5421",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseRecoveryIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseRecoveryIT.xml"
             }
           ]
         },
@@ -210,7 +210,7 @@
       "G(WarehouseConcurrentLifecycleIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
             "sha256": "7d25ec740bf8652b2ac25918d863dd59d2f1b5d263825f76d781c8d166a6f43d",
             "testAnnotations": 4
           }
@@ -228,13 +228,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+              "suite": "com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "21787cd546d0f1db51163d0ff49112405c4f38776fab8b81fcb58dec5aa497ef",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT.xml"
             }
           ],
           "proof": {
@@ -249,13 +249,13 @@
           "tests": 4,
           "suites": [
             {
-              "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+              "suite": "com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "2eda4e3052d5c89747195c1c53c8f270fffbfdc4b7d5d22d05233f5631c0b05c",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT.xml"
             }
           ]
         },
@@ -307,7 +307,7 @@
       "G(WarehouseRecoveryIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRecoveryIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseRecoveryIT.kt",
             "sha256": "bc2b1c0451d3517f1fe5a38a46a3d9f3a3d7c452350a83f3981264c5b917d311",
             "testAnnotations": 2
           }
@@ -325,13 +325,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseRecoveryIT",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "71c354802e6469cef7e46d79ce89ca5d4ca7654dd46eccd27d6a18ab54f224b3",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseRecoveryIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseRecoveryIT.xml"
             }
           ],
           "proof": {
@@ -346,13 +346,13 @@
           "tests": 2,
           "suites": [
             {
-              "suite": "com.duluin.ftth.inventory.WarehouseRecoveryIT",
+              "suite": "com.karuhun.ftth.inventory.WarehouseRecoveryIT",
               "tests": 2,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "9cc3ad6d79dfcd7a824ea3f1c0486327cd31ffc510f5acc31291dabbc2ed5421",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.inventory.WarehouseRecoveryIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.inventory.WarehouseRecoveryIT.xml"
             }
           ]
         },
@@ -377,7 +377,7 @@
       "G(WarehouseConcurrentLifecycleIT)": {
         "matchingCurrentSource": [
           {
-            "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
+            "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
             "sha256": "7d25ec740bf8652b2ac25918d863dd59d2f1b5d263825f76d781c8d166a6f43d",
             "testAnnotations": 4
           }
@@ -395,13 +395,13 @@
           },
           "suites": [
             {
-              "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+              "suite": "com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "21787cd546d0f1db51163d0ff49112405c4f38776fab8b81fcb58dec5aa497ef",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT.xml"
             }
           ],
           "proof": {
@@ -416,13 +416,13 @@
           "tests": 4,
           "suites": [
             {
-              "suite": "com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
+              "suite": "com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT",
               "tests": 4,
               "failures": 0,
               "errors": 0,
               "skipped": 0,
               "sha256": "2eda4e3052d5c89747195c1c53c8f270fffbfdc4b7d5d22d05233f5631c0b05c",
-              "rawReference": "server/build/test-results/test/TEST-com.duluin.ftth.fulfillment.WarehouseConcurrentLifecycleIT.xml"
+              "rawReference": "server/build/test-results/test/TEST-com.karuhun.ftth.fulfillment.WarehouseConcurrentLifecycleIT.xml"
             }
           ]
         },
@@ -483,11 +483,11 @@
     "implementationSourceCommit": "c90250d2c0839eede36e4c6a6a080c8b5e51c084",
     "implementationSource": [
       {
-        "path": "server/src/test/kotlin/com/duluin/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
+        "path": "server/src/test/kotlin/com/karuhun/ftth/fulfillment/WarehouseConcurrentLifecycleIT.kt",
         "sha256": "7d25ec740bf8652b2ac25918d863dd59d2f1b5d263825f76d781c8d166a6f43d"
       },
       {
-        "path": "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseRecoveryIT.kt",
+        "path": "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseRecoveryIT.kt",
         "sha256": "bc2b1c0451d3517f1fe5a38a46a3d9f3a3d7c452350a83f3981264c5b917d311"
       }
     ],

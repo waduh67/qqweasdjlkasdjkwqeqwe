@@ -1,0 +1,285 @@
+package com.karuhun.ftth.customer.adapter.inbound.web
+
+import com.karuhun.ftth.common.domain.PageRequest
+import com.karuhun.ftth.common.domain.geo.Coordinate
+import com.karuhun.ftth.common.infrastructure.web.PageResponse
+import com.karuhun.ftth.customer.application.port.inbound.AttachOnuCommand
+import com.karuhun.ftth.customer.application.port.inbound.CustomerView
+import com.karuhun.ftth.customer.application.port.inbound.ManageCustomerUseCase
+import com.karuhun.ftth.customer.application.port.inbound.ManageOnuUseCase
+import com.karuhun.ftth.customer.application.port.inbound.ManageSubscriptionUseCase
+import com.karuhun.ftth.customer.application.port.inbound.OnuView
+import com.karuhun.ftth.customer.application.port.inbound.RegisterOnuCommand
+import com.karuhun.ftth.customer.application.port.inbound.SaveCustomerCommand
+import com.karuhun.ftth.customer.application.port.inbound.SaveSubscriptionCommand
+import com.karuhun.ftth.customer.application.port.inbound.SubscriptionView
+import com.karuhun.ftth.customer.application.port.inbound.UnmappedCustomerView
+import com.karuhun.ftth.customer.domain.model.CustomerStatus
+import com.karuhun.ftth.customer.domain.model.OnuStatus
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
+import jakarta.validation.constraints.DecimalMin
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Size
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
+import java.math.BigDecimal
+import java.util.UUID
+
+/**
+ * Langganan dan ONU dikelola sebagai sub-resource pelanggan: keduanya tidak
+ * punya makna sendiri tanpa pemiliknya, dan setiap operasinya selalu bermula
+ * dari halaman pelanggan.
+ */
+@RestController
+@RequestMapping("/api/customers")
+@Tag(name = "Customers")
+@SecurityRequirement(name = "bearer-jwt")
+class CustomerController(
+    private val manageCustomer: ManageCustomerUseCase,
+    private val manageSubscription: ManageSubscriptionUseCase,
+    private val manageOnu: ManageOnuUseCase,
+    private val validator: jakarta.validation.Validator,
+) {
+    @GetMapping
+    @PreAuthorize("@authz.can('customer.customer.view')")
+    fun list(
+        @RequestParam(required = false) query: String?,
+        @RequestParam(required = false) status: CustomerStatus?,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ): PageResponse<CustomerView> = PageResponse.from(
+        manageCustomer.search(query.orEmpty(), status, PageRequest(page, size, sort = "code")),
+    )
+
+    /**
+     * Pelanggan yang belum punya titik di peta — impor massal menaruhnya di koordinat
+     * penampung (0,0). Peta memakainya untuk memilih siapa yang ditaruh di titik klik,
+     * lalu menyimpannya lewat `PUT /{id}/location`.
+     */
+    @GetMapping("/unmapped")
+    @PreAuthorize("@authz.can('customer.customer.view')")
+    fun unmapped(
+        @RequestParam(required = false) query: String?,
+        @RequestParam(defaultValue = "20") limit: Int,
+    ): List<UnmappedCustomerView> = manageCustomer.findUnmapped(query.orEmpty(), limit)
+
+    @GetMapping("/{id}")
+    @PreAuthorize("@authz.can('customer.customer.view')")
+    fun get(@PathVariable id: UUID): CustomerView = manageCustomer.get(id)
+
+    /** Mendaftarkan pelanggan beserta paketnya — sekali jalan, satu transaksi. */
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@authz.can('customer.customer.create')")
+    fun create(@Valid @RequestBody request: RegisterCustomerRequest): CustomerView =
+        manageCustomer.create(request.toCustomerCommand(), request.toPlanCommand())
+
+    @PutMapping("/{id}")
+    @PreAuthorize("@authz.can('customer.customer.update')")
+    fun update(@PathVariable id: UUID, @Valid @RequestBody request: CustomerRequest): CustomerView =
+        manageCustomer.update(id, request.toCommand())
+
+    /** Memindah titik rumah pelanggan di peta (drag); kabel drop-nya ikut menempel ulang. */
+    @PutMapping("/{id}/location")
+    @PreAuthorize("@authz.can('customer.customer.update')")
+    fun relocate(@PathVariable id: UUID, @Valid @RequestBody request: CustomerLocationRequest): CustomerView =
+        manageCustomer.relocate(id, Coordinate(request.longitude, request.latitude))
+
+    @PutMapping("/{id}/status")
+    @PreAuthorize("@authz.can('customer.customer.update')")
+    fun changeStatus(@PathVariable id: UUID, @RequestBody request: CustomerStatusRequest): CustomerView =
+        manageCustomer.changeStatus(id, request.status)
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@authz.can('customer.customer.delete')")
+    fun delete(@PathVariable id: UUID) = manageCustomer.delete(id)
+
+    // ---- Langganan ----
+
+    /**
+     * Langganan pelanggan — tunggal, jadi sub-resource-nya pun tunggal. 204 bila pelanggan
+     * warisan yang belum pernah dipasangi paket (bukan galat: dia memang ada, paketnya belum).
+     */
+    @GetMapping("/{id}/subscription")
+    @PreAuthorize("@authz.can('customer.subscription.view')")
+    fun getSubscription(@PathVariable id: UUID): ResponseEntity<SubscriptionView> =
+        manageSubscription.findForCustomer(id)?.let { ResponseEntity.ok(it) } ?: ResponseEntity.noContent().build()
+
+    /**
+     * Menetapkan paket pelanggan: membuka bila belum ada, menghidupkan lagi bila sudah
+     * berakhir, mengganti di tempat bila sedang berjalan. PUT (bukan POST) karena hasilnya
+     * satu keadaan yang sama berapa kali pun dikirim — dan karena tak ada langganan kedua
+     * untuk di-POST.
+     */
+    @PutMapping("/{id}/subscription")
+    @PreAuthorize("@authz.can('customer.subscription.update')")
+    fun setSubscriptionPlan(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: SubscriptionRequest,
+    ): SubscriptionView = manageSubscription.setPlan(id, request.toCommand())
+
+    @PostMapping("/subscriptions/{subscriptionId}/activate")
+    @PreAuthorize("@authz.can('customer.subscription.update')")
+    fun activateSubscription(@PathVariable subscriptionId: UUID): SubscriptionView =
+        manageSubscription.activate(subscriptionId)
+
+    @PostMapping("/subscriptions/{subscriptionId}/isolate")
+    @PreAuthorize("@authz.can('customer.subscription.update')")
+    fun isolateSubscription(@PathVariable subscriptionId: UUID): SubscriptionView =
+        manageSubscription.isolate(subscriptionId)
+
+    @PostMapping("/subscriptions/{subscriptionId}/terminate")
+    @PreAuthorize("@authz.can('customer.subscription.update')")
+    fun terminateSubscription(@PathVariable subscriptionId: UUID): SubscriptionView =
+        manageSubscription.terminate(subscriptionId)
+
+    // ---- ONU ----
+
+    @GetMapping("/{id}/onus")
+    @PreAuthorize("@authz.can('customer.onu.view')")
+    fun listOnus(@PathVariable id: UUID): List<OnuView> = manageOnu.listForCustomer(id)
+
+    @PostMapping("/{id}/onus")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("@authz.can('customer.onu.assign')")
+    fun registerOnu(@PathVariable id: UUID, @RequestBody body: String,
+        @org.springframework.web.bind.annotation.RequestHeader("Idempotency-Key", required = false) key: String?): OnuView {
+        val request = com.karuhun.ftth.common.infrastructure.web.StrictCommandJson.decode(body, OnuRequest::class.java)
+        val violations = validator.validate(request)
+        if (violations.isNotEmpty()) throw jakarta.validation.ConstraintViolationException(violations)
+        return manageOnu.register(id, RegisterOnuCommand(request.serialNumber.orEmpty(), request.model, request.deployment?.let {
+            com.karuhun.ftth.customer.AuthorizedOnuInstallation(it, key ?: throw com.karuhun.ftth.common.domain.error.ConflictException("IDEMPOTENCY_KEY_REQUIRED"))
+        }))
+    }
+
+    @PostMapping("/onus/{onuId}/attach")
+    @PreAuthorize("@authz.can('customer.onu.assign')")
+    fun attachOnu(@PathVariable onuId: UUID, @Valid @RequestBody request: AttachOnuRequest): OnuView =
+        manageOnu.attach(onuId, AttachOnuCommand(request.odpId, request.portNumber, request.installRxPowerDbm))
+
+    @PostMapping("/onus/{onuId}/detach")
+    @PreAuthorize("@authz.can('customer.onu.assign')")
+    fun detachOnu(@PathVariable onuId: UUID): OnuView = manageOnu.detach(onuId)
+
+    @PutMapping("/onus/{onuId}/status")
+    @PreAuthorize("@authz.can('customer.onu.assign')")
+    fun changeOnuStatus(@PathVariable onuId: UUID, @RequestBody request: OnuStatusRequest): OnuView =
+        manageOnu.changeStatus(onuId, request.status)
+
+    @DeleteMapping("/onus/{onuId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("@authz.can('customer.onu.assign')")
+    fun deleteOnu(@PathVariable onuId: UUID) = manageOnu.delete(onuId)
+}
+
+data class CustomerLocationRequest(
+    @field:Min(-180) @field:Max(180) val longitude: Double,
+    @field:Min(-90) @field:Max(90) val latitude: Double,
+)
+
+data class CustomerRequest(
+    /** Kosong = server membuat kode berurut otomatis (`CUST-000001`). */
+    @field:Size(max = 40) val code: String? = null,
+    @field:NotBlank @field:Size(max = 150) val name: String,
+    @field:Size(max = 30) val phone: String? = null,
+    @field:Size(max = 255) val email: String? = null,
+    @field:NotBlank @field:Size(max = 500) val address: String,
+    @field:Valid val location: CustomerLocationRequest? = null,
+    val areaId: UUID? = null,
+    @field:Size(max = 32) val idCardNumber: String? = null,
+)
+
+/**
+ * Badan pendaftaran: biodata + paket yang dibeli. Paketnya ikut sekali jalan, bukan lewat
+ * panggilan kedua, supaya pelanggan dan langganannya lahir bersama — tak ada lagi langkah
+ * "buka langganan" menyusul yang bisa tertinggal dan meninggalkan pelanggan tanpa paket.
+ *
+ * Sengaja bidang tersendiri, bukan menumpang [CustomerRequest]: paket BUKAN atribut biodata
+ * yang boleh ikut berubah lewat `PUT /{id}`. Perpindahannya punya pintu sendiri
+ * (`PUT /{id}/subscription`) karena berdampak ke tagihan dan profil RADIUS.
+ *
+ * [planId] boleh kosong hanya untuk jalur yang paketnya memang menyusul — survei yang baru
+ * mencatat calon pelanggan, atau impor yang belum memetakan paketnya. Layar pendaftaran
+ * operator selalu mengirimnya.
+ */
+data class RegisterCustomerRequest(
+    @field:Size(max = 40) val code: String? = null,
+    @field:NotBlank @field:Size(max = 150) val name: String,
+    @field:Size(max = 30) val phone: String? = null,
+    @field:Size(max = 255) val email: String? = null,
+    @field:NotBlank @field:Size(max = 500) val address: String,
+    @field:Valid val location: CustomerLocationRequest? = null,
+    val areaId: UUID? = null,
+    @field:Size(max = 32) val idCardNumber: String? = null,
+    val planId: UUID? = null,
+    /** Harga negosiasi opsional; kosong = pakai harga paket. */
+    @field:DecimalMin("0.0") val monthlyFeeOverride: BigDecimal? = null,
+)
+
+data class CustomerStatusRequest(val status: CustomerStatus)
+
+data class SubscriptionRequest(
+    val planId: UUID,
+    /** Harga negosiasi opsional; kosong = pakai harga paket. */
+    @field:DecimalMin("0.0") val monthlyFeeOverride: BigDecimal? = null,
+)
+
+data class OnuRequest(
+    @field:Size(max = 60) val serialNumber: String? = null,
+    @field:Size(max = 80) val model: String? = null,
+    val deployment: com.karuhun.ftth.customer.InstallCustomerAssetRequest? = null,
+)
+
+data class AttachOnuRequest(
+    val odpId: UUID,
+    @field:Min(1) val portNumber: Int,
+    @field:Min(-40) @field:Max(0) val installRxPowerDbm: Double? = null,
+)
+
+data class OnuStatusRequest(val status: OnuStatus)
+
+private fun CustomerRequest.toCommand() = SaveCustomerCommand(
+    code = code,
+    name = name,
+    phone = phone,
+    email = email,
+    address = address,
+    location = location?.let { Coordinate(it.longitude, it.latitude) },
+    areaId = areaId,
+    idCardNumber = idCardNumber,
+)
+
+private fun SubscriptionRequest.toCommand() = SaveSubscriptionCommand(
+    planId = planId,
+    monthlyFeeOverride = monthlyFeeOverride,
+)
+
+private fun RegisterCustomerRequest.toCustomerCommand() = SaveCustomerCommand(
+    code = code,
+    name = name,
+    phone = phone,
+    email = email,
+    address = address,
+    location = location?.let { Coordinate(it.longitude, it.latitude) },
+    areaId = areaId,
+    idCardNumber = idCardNumber,
+)
+
+private fun RegisterCustomerRequest.toPlanCommand(): SaveSubscriptionCommand? =
+    planId?.let { SaveSubscriptionCommand(planId = it, monthlyFeeOverride = monthlyFeeOverride) }

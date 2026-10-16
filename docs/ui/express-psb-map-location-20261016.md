@@ -15,7 +15,7 @@ The reported live customer already had valid coordinates and a pending subscript
 
 ## Verification and recovery
 
-- `scripts/warehouse/qa.sh server --tests com.duluin.ftth.OnboardingExpressPsbIT`: 8 tests pass on isolated PostgreSQL with real migrations/RLS. Covers omitted/null/valid/invalid coordinates, later placement and vector tiles without an ONU, tenant isolation, lifecycle labels, transaction rollback and pending RADIUS access.
+- `scripts/warehouse/qa.sh server --tests com.karuhun.ftth.OnboardingExpressPsbIT`: 8 tests pass on isolated PostgreSQL with real migrations/RLS. Covers omitted/null/valid/invalid coordinates, later placement and vector tiles without an ONU, tenant isolation, lifecycle labels, transaction rollback and pending RADIUS access.
 - Targeted Vitest: 18 tests pass.
 - Browser coverage: PSB with/without coordinates through all five steps, review, failed-save retry, and preserved draft at 375/1440 px in Chromium/Firefox; unlocated customer detail/edit; clickable blue markers on real dark/satellite basemaps and fresh tile requests on reopening.
 - Frontend build and lint completed (existing lint warnings remain).

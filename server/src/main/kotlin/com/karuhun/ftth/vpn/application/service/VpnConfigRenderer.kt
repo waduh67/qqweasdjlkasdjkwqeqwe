@@ -1,0 +1,315 @@
+package com.karuhun.ftth.vpn.application.service
+
+import com.karuhun.ftth.common.domain.error.ConflictException
+import com.karuhun.ftth.vpn.application.port.inbound.ServerConfigView
+import com.karuhun.ftth.vpn.domain.model.TunnelSubnet
+import com.karuhun.ftth.vpn.domain.model.VpnClientVariant
+import com.karuhun.ftth.vpn.domain.model.VpnPeer
+import com.karuhun.ftth.vpn.domain.model.VpnPeerStatus
+import com.karuhun.ftth.vpn.domain.model.VpnServer
+import org.springframework.stereotype.Component
+import java.nio.charset.StandardCharsets
+
+/**
+ * Perakit konfigurasi OpenVPN tanpa I/O. Profil RouterOS v7 dan v6 memakai AES-256-CBC
+ * agar cocok dengan fallback hub ketika klien tidak mengirim kemampuan NCP.
+ * Entitas masuk sudah memuat kredensial terdekripsi; hasilnya berisi konfigurasi klien.
+ */
+@Component
+class VpnConfigRenderer {
+
+    /**
+     * Berkas `.ovpn` klien generik yang mandiri (CA + kredensial inline). [variant] menentukan
+     * sintaks/protokol klien. Kedua varian memakai AES-256-CBC; proto varian v6 dipaksa
+     * `tcp`. Melempar [ConflictException] bila hub belum punya
+     * sertifikat CA — mustahil membangun config klien tanpanya — atau bila varian [VpnClientVariant.V6]
+     * diminta pada hub non-TCP.
+     */
+    fun renderOvpn(server: VpnServer, peer: VpnPeer, variant: VpnClientVariant = VpnClientVariant.V7): String {
+        val caCert = server.caCertPem
+            ?: throw ConflictException("Server VPN belum punya sertifikat CA")
+        requireVariantSupported(server, variant)
+        val proto = if (variant == VpnClientVariant.V6) "tcp" else server.protocol.name.lowercase()
+        return buildString {
+            appendLine("client")
+            appendLine("dev tun")
+            appendLine("proto $proto")
+            appendLine("remote ${server.host} ${server.port}")
+            appendLine("resolv-retry infinite")
+            appendLine("nobind")
+            appendLine("persist-key")
+            appendLine("persist-tun")
+            appendLine("remote-cert-tls server")
+            appendLine("auth-nocache")
+            appendLine("cipher ${variant.cipher}")
+            appendLine("verb 3")
+            appendLine("<auth-user-pass>")
+            appendLine(peer.username)
+            appendLine(peer.password)
+            appendLine("</auth-user-pass>")
+            appendLine("<ca>")
+            appendLine(caCert.trim())
+            appendLine("</ca>")
+            server.tlsAuthKey?.let { tlsAuth ->
+                appendLine("key-direction 1")
+                appendLine("<tls-auth>")
+                appendLine(tlsAuth.trim())
+                appendLine("</tls-auth>")
+            }
+        }
+    }
+
+    /**
+     * Parameter `ovpn-client` RouterOS **v7** sebagai pasangan key=value URUT — sumber tunggal
+     * untuk skrip `.rsc` [renderRouterOs] maupun perintah satu-baris [renderRouterOsCommand].
+     * Memakai cipher fallback hub karena RouterOS v7 dapat menyambung tanpa NCP.
+     * Untuk perangkat v6 lihat [routerOsV6Params].
+     * Nilai username/password dikutip; keduanya dijamin alfanumerik oleh PasswordGenerator/slug.
+     */
+    private fun routerOsParams(server: VpnServer, peer: VpnPeer): List<Pair<String, String>> = listOf(
+        "name" to "\"ovpn-${peer.username}\"",
+        "connect-to" to server.host,
+        "port" to server.port.toString(),
+        "protocol" to server.protocol.name.lowercase(),
+        "user" to "\"${peer.username}\"",
+        "password" to "\"${peer.password}\"",
+        "mode" to "ip",
+        "add-default-route" to "no",
+        "use-peer-dns" to "no",
+        "verify-server-certificate" to "no",
+        "auth" to "sha1",
+        "cipher" to VpnClientVariant.V7.routerOsCipher,
+        "disabled" to "no",
+    )
+
+    /** Skrip RouterOS v7 (multi-baris, untuk diunduh `.rsc`) yang membuat interface ovpn-client ke hub. */
+    fun renderRouterOs(server: VpnServer, peer: VpnPeer): String = buildString {
+        appendLine("# OpenVPN management client -> ${server.name} (${server.host}:${server.port})")
+        appendLine("# Overlay IP (di-push server): ${peer.overlayIp} — butuh RouterOS v7")
+        appendLine("/interface/ovpn-client/add \\")
+        val params = routerOsParams(server, peer)
+        params.forEachIndexed { i, (key, value) ->
+            appendLine("    $key=$value${if (i == params.lastIndex) "" else " \\"}")
+        }
+    }
+
+    /**
+     * Perintah RouterOS v7 **satu-baris** siap salin-tempel di terminal Mikrotik (sudah berisi
+     * password). Isinya sama dengan [renderRouterOs] tapi tanpa continuation `\`, jadi tempel
+     * sekali langsung jalan tanpa risiko baris kepotong.
+     */
+    fun renderRouterOsCommand(server: VpnServer, peer: VpnPeer): String =
+        routerOsParams(server, peer).joinToString(
+            separator = " ",
+            prefix = "/interface/ovpn-client/add ",
+        ) { (key, value) -> "$key=$value" }
+
+    /**
+     * Parameter `ovpn-client` RouterOS **v6** URUT. v6 memakai sintaks menu lama
+     * (`/interface ovpn-client add`, spasi bukan slash) dan **TCP-only** — di v6 memang tak ada
+     * properti `protocol`, sebab pilihannya cuma satu. Ciphernya `aes256-cbc` (v6 tak punya
+     * GCM/NCP; di GUI tertulis "aes 256"). `certificate=none` + `verify-server-certificate=no`
+     * berpasangan: perangkat men-dial tanpa sertifikat klien (hub memakai `verify-client-cert
+     * none`) dan tak bisa memverifikasi sertifikat hub karena tak ada CA yang diimpor ke sana.
+     *
+     * Semua properti di sini ADA di menu v6 — daftarnya sengaja dibuat cermin persis kolom yang
+     * kelihatan di GUI v6, supaya hasil tempel = hasil isi manual dan tak ada kolom yang
+     * tertinggal memakai bawaan rilis yang berbeda-beda.
+     */
+    private fun routerOsV6Params(server: VpnServer, peer: VpnPeer): List<Pair<String, String>> = listOf(
+        "name" to "\"ovpn-${peer.username}\"",
+        "connect-to" to server.host,
+        "port" to server.port.toString(),
+        "user" to "\"${peer.username}\"",
+        "password" to "\"${peer.password}\"",
+        "mode" to "ip",
+        "certificate" to "none",
+        "verify-server-certificate" to "no",
+        "auth" to "sha1",
+        "cipher" to VpnClientVariant.V6.routerOsCipher,
+        "add-default-route" to "no",
+        "use-peer-dns" to "no",
+        "disabled" to "no",
+    )
+
+    /**
+     * Skrip RouterOS **v6** (multi-baris, `.rsc`) untuk perangkat lama. Melempar
+     * [ConflictException] bila hub bukan TCP (v6 mustahil dial UDP).
+     */
+    fun renderRouterOsV6(server: VpnServer, peer: VpnPeer): String {
+        requireVariantSupported(server, VpnClientVariant.V6)
+        return buildString {
+            appendLine("# OpenVPN management client (RouterOS v6) -> ${server.name} (${server.host}:${server.port})")
+            appendLine("# v6: TCP + AES-256-CBC. Overlay IP (di-push server): ${peer.overlayIp}")
+            appendLine("# Pastikan port ${server.port}/TCP hub terbuka di firewall/NSG VPS.")
+            appendLine("/interface ovpn-client add \\")
+            val params = routerOsV6Params(server, peer)
+            params.forEachIndexed { i, (key, value) ->
+                appendLine("    $key=$value${if (i == params.lastIndex) "" else " \\"}")
+            }
+        }
+    }
+
+    /**
+     * Perintah RouterOS **v6** satu-baris siap salin-tempel. Isinya sama dengan [renderRouterOsV6]
+     * tanpa continuation `\`. Melempar [ConflictException] bila hub bukan TCP.
+     */
+    fun renderRouterOsCommandV6(server: VpnServer, peer: VpnPeer): String {
+        requireVariantSupported(server, VpnClientVariant.V6)
+        return routerOsV6Params(server, peer).joinToString(
+            separator = " ",
+            prefix = "/interface ovpn-client add ",
+        ) { (key, value) -> "$key=$value" }
+    }
+
+    /**
+     * v6 (TCP-only) tak bisa dial hub UDP: tolak dengan pesan yang menyebutkan JALAN KELUARNYA,
+     * bukan cuma menyebut kesalahannya — perangkat v6 di lapangan tak bisa "di-upgrade ke v7".
+     */
+    private fun requireVariantSupported(server: VpnServer, variant: VpnClientVariant) {
+        if (variant == VpnClientVariant.V6 && !server.servesRouterOsV6) {
+            throw ConflictException(
+                "RouterOS v6 hanya bisa men-dial hub TCP; hub '${server.name}' memakai " +
+                    "${server.protocol.name}. Ubah protokol hub ke TCP di halaman Server VPN, " +
+                    "jalankan ulang perintah pasang di VPS, lalu buka port ${server.port}/tcp di firewall.",
+            )
+        }
+    }
+
+    /**
+     * `server.conf` + berkas client-config-dir (CCD) per peer AKTIF (ENABLED). Tiap CCD
+     * berisi `ifconfig-push {overlayIp} {netmask}` agar peer selalu mendapat IP tetap. Bila
+     * CA belum di-set, blok `<ca>` diganti komentar penanda (server tetap bisa dirender).
+     *
+     * Blok di belakang peer muncul DUA KALI dan memang harus: `iroute` di CCD peer pemiliknya
+     * (tabel internal OpenVPN: "blok ini di balik peer itu") dan `route` di `server.conf` (rute
+     * kernel: "paket ke blok ini masuk ke perangkat tun"). Yang satu tanpa yang lain = lubang
+     * hitam yang diam. Hub yang dipasang lewat installer tak memakai berkas ini — di sana
+     * keduanya disinkronkan dari aplikasi, lihat `VpnProvisioningReader.routeTable`.
+     */
+    fun renderServerConfig(server: VpnServer, peers: List<VpnPeer>): ServerConfigView {
+        val subnet = TunnelSubnet.parse(server.tunnelCidr)
+        val netmask = subnet.netmask()
+        val enabled = peers.filter { it.status == VpnPeerStatus.ENABLED }
+        val serverConf = buildString {
+            appendLine("port ${server.port}")
+            appendLine("proto ${server.protocol.name.lowercase()}")
+            appendLine("dev tun")
+            appendLine("topology subnet")
+            appendLine("server ${subnet.networkAddress()} $netmask")
+            enabled.flatMap { it.routes }.forEach {
+                appendLine("route ${it.subnet.networkAddress()} ${it.subnet.netmask()}")
+            }
+            appendLine("client-config-dir ccd")
+            appendLine("username-as-common-name")
+            appendLine("verify-client-cert none")
+            appendLine("keepalive 10 120")
+            appendLine("persist-key")
+            appendLine("persist-tun")
+            // Klien dengan NCP dapat memilih GCM; RouterOS v6/v7 memakai fallback CBC.
+            appendLine("data-ciphers AES-256-GCM:AES-256-CBC")
+            appendLine("data-ciphers-fallback AES-256-CBC")
+            appendLine("verb 3")
+            appendLine("# Sertifikat/kunci server + dh WAJIB disediakan operator (easy-rsa).")
+            val caCert = server.caCertPem
+            if (caCert == null) {
+                appendLine("# CA belum di-set")
+            } else {
+                appendLine("<ca>")
+                appendLine(caCert.trim())
+                appendLine("</ca>")
+            }
+        }
+        val ccd = enabled.associate { peer ->
+            val lines = listOf("ifconfig-push ${peer.overlayIp} $netmask") +
+                peer.routes.map { "iroute ${it.subnet.networkAddress()} ${it.subnet.netmask()}" }
+            peer.username to lines.joinToString("\n")
+        }
+        return ServerConfigView(serverConf = serverConf, ccd = ccd)
+    }
+
+    /**
+     * Installer satu-perintah untuk VPS. Menyisipkan CA + sertifikat/kunci server (dari PKI
+     * aplikasi) dan `server.conf` model callback-langsung ke template bash: OpenVPN memverifikasi
+     * user/pass dan mengunci IP overlay dengan memanggil balik aplikasi memakai [rawNodeToken],
+     * jadi perangkat baru bekerja seketika tanpa menyentuh VPS lagi. Melempar [ConflictException]
+     * bila PKI hub belum lengkap.
+     */
+    fun renderInstallScript(server: VpnServer, appBaseUrl: String, rawNodeToken: String): String {
+        val caCert = server.caCertPem
+        val serverCert = server.serverCertPem
+        val serverKey = server.serverKeyPem
+        if (caCert == null || serverCert == null || serverKey == null) {
+            throw ConflictException("Hub '${server.name}' belum siap: PKI (CA/sertifikat server) belum terbit")
+        }
+        val baseUrl = appBaseUrl.trimEnd('/')
+        val proto = server.protocol.name.lowercase()
+        return installTemplate
+            .replace("{{SERVER_NAME}}", server.name)
+            .replace("{{HOST}}", server.host)
+            .replace("{{PORT}}", server.port.toString())
+            .replace("{{PROTO}}", proto)
+            .replace("{{APP_URL}}", baseUrl)
+            .replace("{{NODE_TOKEN}}", rawNodeToken)
+            .replace("{{TUNNEL_CIDR}}", TunnelSubnet.parse(server.tunnelCidr).cidr)
+            .replace("{{FORWARD_MARKER}}", VpnProvisioningReader.FORWARD_MARKER)
+            .replace("{{ROUTE_MARKER}}", VpnProvisioningReader.ROUTE_MARKER)
+            .replace("{{SYNC_INTERVAL}}", SYNC_INTERVAL)
+            .replace("{{SERVER_CONF}}", renderNodeServerConf(server, proto))
+            .replace("{{CA_CERT}}", caCert.trim())
+            .replace("{{SERVER_CERT}}", serverCert.trim())
+            .replace("{{SERVER_KEY}}", serverKey.trim())
+    }
+
+    /**
+     * `server.conf` untuk model callback-langsung: sertifikat/kunci dari berkas, autentikasi
+     * user/pass dan `ifconfig-push` IP tetap didelegasikan ke skrip yang memanggil balik aplikasi
+     * (`auth-user-pass-verify` + `client-connect`); `client-disconnect` hanya melapor liveness.
+     * Penerusan port diurus timer `ftth-sync`, bukan skrip koneksi. `dh none` memakai ECDHE.
+     */
+    private fun renderNodeServerConf(server: VpnServer, proto: String): String {
+        val subnet = TunnelSubnet.parse(server.tunnelCidr)
+        return buildString {
+            appendLine("port ${server.port}")
+            appendLine("proto $proto")
+            appendLine("dev tun")
+            appendLine("topology subnet")
+            appendLine("server ${subnet.networkAddress()} ${subnet.netmask()}")
+            appendLine("ca ca.crt")
+            appendLine("cert server.crt")
+            appendLine("key server.key")
+            appendLine("dh none")
+            appendLine("verify-client-cert none")
+            appendLine("username-as-common-name")
+            appendLine("script-security 2")
+            appendLine("auth-user-pass-verify /etc/openvpn/server/ftth-verify.sh via-file")
+            appendLine("client-connect /etc/openvpn/server/ftth-connect.sh")
+            appendLine("client-disconnect /etc/openvpn/server/ftth-disconnect.sh")
+            appendLine("keepalive 10 120")
+            appendLine("persist-key")
+            appendLine("persist-tun")
+            // Klien dengan NCP dapat memilih GCM; RouterOS v6/v7 memakai fallback CBC.
+            appendLine("data-ciphers AES-256-GCM:AES-256-CBC")
+            appendLine("data-ciphers-fallback AES-256-CBC")
+            append("verb 3")
+        }
+    }
+
+    /** Template installer dibaca sekali dari classpath (resource statis, aman di-cache). */
+    private val installTemplate: String by lazy {
+        val stream = javaClass.getResourceAsStream(INSTALL_TEMPLATE_PATH)
+            ?: error("Template installer VPN tidak ditemukan di classpath: $INSTALL_TEMPLATE_PATH")
+        stream.use { it.readBytes().toString(StandardCharsets.UTF_8) }
+    }
+
+    private companion object {
+        const val INSTALL_TEMPLATE_PATH = "/vpn/install.sh.template"
+
+        /**
+         * Jeda timer `ftth-sync` di VPS (format systemd). Satu menit adalah kompromi: cukup cepat
+         * agar operator yang baru memindah port Winbox tak lama menunggu, cukup jarang agar hub
+         * tak membanjiri aplikasi (satu permintaan kecil per hub per menit).
+         */
+        const val SYNC_INTERVAL = "1min"
+    }
+}

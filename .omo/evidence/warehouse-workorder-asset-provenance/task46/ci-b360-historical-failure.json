@@ -13,7 +13,7 @@
   "groups": {
     ".omo/runtime/projection-upgrade-20260925T112327Z-4408fdff": [
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialUsageITProjectionUpgrade",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialUsageITProjectionUpgrade",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -23,7 +23,7 @@
     ],
     ".omo/runtime/historical-upgrades-20260925T112721Z-19b076a2/customer-title": [
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetTitleUpgradeIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetTitleUpgradeIT",
         "tests": 1,
         "failures": 1,
         "errors": 0,
@@ -31,7 +31,7 @@
         "reportSha256": "72f2f444855467411d71f8a9885ddcb756d0eec939194873f4313f69b468421c"
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerDeploymentUpgradeIT",
+        "suite": "com.karuhun.ftth.customer.CustomerDeploymentUpgradeIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -41,7 +41,7 @@
     ],
     ".omo/runtime/historical-upgrades-20260925T112721Z-19b076a2/fulfillment": [
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITBngLineageUpgrade",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -49,7 +49,7 @@
         "reportSha256": "e40e2e158e4ede7dd6fa5ed7f6dad5192f723cf4eda825df976b84a9dddb4e31"
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
+        "suite": "com.karuhun.ftth.fulfillment.WarehouseFulfillmentITOwnerUpgrade",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -59,7 +59,7 @@
     ],
     ".omo/runtime/ci/compatibility-results": [
       {
-        "suite": "com.duluin.ftth.AlarmRuleIT",
+        "suite": "com.karuhun.ftth.AlarmRuleIT",
         "tests": 4,
         "failures": 0,
         "errors": 0,
@@ -67,7 +67,7 @@
         "reportSha256": "9a13cb685da8edb907a172321da0221a11159019af9e540ca1777298b09c1977"
       },
       {
-        "suite": "com.duluin.ftth.GisCutBlastRadiusIT",
+        "suite": "com.karuhun.ftth.GisCutBlastRadiusIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -75,7 +75,7 @@
         "reportSha256": "dcd64e46cb0599e1bc78426f3f4eee6f5e7098f3680a2c5ce9bcd0edf173d3a3"
       },
       {
-        "suite": "com.duluin.ftth.GisImpactedIT",
+        "suite": "com.karuhun.ftth.GisImpactedIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -83,7 +83,7 @@
         "reportSha256": "3ec1c4e4d8e8554a763347241318bb8f06c788d6dd146112f43a392d9d46c2a4"
       },
       {
-        "suite": "com.duluin.ftth.GisUtilizationIT",
+        "suite": "com.karuhun.ftth.GisUtilizationIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -91,7 +91,7 @@
         "reportSha256": "f64138c33435d32c0acabc26be24ed0142ebe108a6ddd4a444c3c594a33f35d0"
       },
       {
-        "suite": "com.duluin.ftth.IncidentIT",
+        "suite": "com.karuhun.ftth.IncidentIT",
         "tests": 6,
         "failures": 0,
         "errors": 0,
@@ -99,7 +99,7 @@
         "reportSha256": "0b2dc35e21f502dce8327cf2e0abe8ff9ff7279d333e449f7b0ec6232e777e7e"
       },
       {
-        "suite": "com.duluin.ftth.NetworkEndToEndIT",
+        "suite": "com.karuhun.ftth.NetworkEndToEndIT",
         "tests": 15,
         "failures": 0,
         "errors": 0,
@@ -107,7 +107,7 @@
         "reportSha256": "3fbf833158df8569fcecbcfa07a1e7698626ae53d5e811a0f5154c903ac07b88"
       },
       {
-        "suite": "com.duluin.ftth.NotificationIT",
+        "suite": "com.karuhun.ftth.NotificationIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -115,7 +115,7 @@
         "reportSha256": "19ba4e4949ce6ef894cd69cd4be6996d59a82a364cf511a5e314166d6e585150"
       },
       {
-        "suite": "com.duluin.ftth.OdpPortBoardIT",
+        "suite": "com.karuhun.ftth.OdpPortBoardIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -123,7 +123,7 @@
         "reportSha256": "36ac8008c2f6359aa6bb8be3ac9bd1bef670a62637a1aaabc0595e53db65f65e"
       },
       {
-        "suite": "com.duluin.ftth.PredictiveMaintenanceIT",
+        "suite": "com.karuhun.ftth.PredictiveMaintenanceIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -131,7 +131,7 @@
         "reportSha256": "81081f66b429ae496191274406e49b1834a12e40e0529f43f8656af9d66b71cf"
       },
       {
-        "suite": "com.duluin.ftth.SurveyCapacityIT",
+        "suite": "com.karuhun.ftth.SurveyCapacityIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -139,7 +139,7 @@
         "reportSha256": "468b7bf30171fa9a369dea0f118db4f0c8fe0710ad93d85bd0c008406904e9c3"
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetAuthorizationITPurposes",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetAuthorizationITPurposes",
         "tests": 26,
         "failures": 0,
         "errors": 0,
@@ -147,7 +147,7 @@
         "reportSha256": "4b3d335a426656b7ffa200b12a1b1ee1828a5efd06b1b994e2777fcc076b989f"
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerAssetHandoverEndpointIT",
+        "suite": "com.karuhun.ftth.customer.CustomerAssetHandoverEndpointIT",
         "tests": 11,
         "failures": 0,
         "errors": 0,
@@ -155,7 +155,7 @@
         "reportSha256": "adae7292afd4a3be129171e89196acc0daadc7e513ef314b5acfd1164806f8e7"
       },
       {
-        "suite": "com.duluin.ftth.customer.CustomerDeploymentFinalStateIT",
+        "suite": "com.karuhun.ftth.customer.CustomerDeploymentFinalStateIT",
         "tests": 58,
         "failures": 0,
         "errors": 0,
@@ -163,7 +163,7 @@
         "reportSha256": "0aa8bff30c6a8e8290f1b093408764c0d003ce0e1e4b525ca81b99682e606ee6"
       },
       {
-        "suite": "com.duluin.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
+        "suite": "com.karuhun.ftth.fulfillment.WorkOrderMaterialsITTemplateActions",
         "tests": 1,
         "failures": 0,
         "errors": 0,
@@ -171,7 +171,7 @@
         "reportSha256": "5b1d3874055b555c57675cbe3107705f823203321a93a36174ddd36fe8a4acd3"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseContractTest",
+        "suite": "com.karuhun.ftth.inventory.WarehouseContractTest",
         "tests": 12,
         "failures": 0,
         "errors": 0,
@@ -179,7 +179,7 @@
         "reportSha256": "e7b6e522b657e5cc449fa70fe2a39d8a2fe46043f1909269434d242b69ad1592"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseCustomerRmaDeploymentIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,

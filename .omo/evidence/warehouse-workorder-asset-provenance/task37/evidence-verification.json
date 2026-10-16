@@ -5,7 +5,7 @@
     "sourceCommit": "556f435e",
     "suites": [
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalEvidenceIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalEvidenceIT",
         "tests": 2,
         "failures": 0,
         "errors": 0,
@@ -13,7 +13,7 @@
         "xmlSha256": "8ddb399e61bd46bb825481af477c5fb4485f00dc5129428d43d44ee8226488d4"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalWorkbenchIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalWorkbenchIT",
         "tests": 3,
         "failures": 0,
         "errors": 0,
@@ -21,7 +21,7 @@
         "xmlSha256": "717fb7d9593a3c6485cde6b5952546f98b165ec141d7ced7ff1b61d1050bb4a0"
       },
       {
-        "suite": "com.duluin.ftth.inventory.WarehouseApprovalWorkbenchWorkOrderIT",
+        "suite": "com.karuhun.ftth.inventory.WarehouseApprovalWorkbenchWorkOrderIT",
         "tests": 1,
         "failures": 0,
         "errors": 0,

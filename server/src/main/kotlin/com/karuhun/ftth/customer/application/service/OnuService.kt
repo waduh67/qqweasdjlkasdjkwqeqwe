@@ -1,0 +1,121 @@
+package com.karuhun.ftth.customer.application.service
+
+import com.karuhun.ftth.common.domain.error.ConflictException
+import com.karuhun.ftth.common.domain.error.NotFoundException
+import com.karuhun.ftth.common.infrastructure.audit.AuditRecorder
+import com.karuhun.ftth.customer.application.port.inbound.AttachOnuCommand
+import com.karuhun.ftth.customer.application.port.inbound.ManageOnuUseCase
+import com.karuhun.ftth.customer.application.port.inbound.OnuView
+import com.karuhun.ftth.customer.application.port.inbound.RegisterOnuCommand
+import com.karuhun.ftth.customer.application.port.outbound.CustomerRepository
+import com.karuhun.ftth.customer.application.port.outbound.OnuRepository
+import com.karuhun.ftth.customer.domain.model.Customer
+import com.karuhun.ftth.customer.domain.model.Onu
+import com.karuhun.ftth.customer.domain.model.OnuStatus
+import com.karuhun.ftth.inventory.WarehouseContractException
+import com.karuhun.ftth.inventory.WarehouseError
+import com.karuhun.ftth.inventory.WarehouseErrorCode
+import com.karuhun.ftth.network.NetworkApi
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
+
+/**
+ * Pemasangan ONU ke port ODP — titik temu module customer dan network.
+ *
+ * Pembagian tanggung jawabnya disengaja: module customer tahu port mana yang
+ * sudah terisi (ONU miliknya), module network tahu aturan portnya (kapasitas,
+ * status ODP). Tidak ada module yang perlu mengintip tabel milik yang lain.
+ */
+@Service
+@Transactional
+class OnuService(
+    private val onuRepository: OnuRepository,
+    private val customerRepository: CustomerRepository,
+    private val networkApi: NetworkApi,
+    private val assembler: CustomerAssembler,
+    private val auditor: AuditRecorder,
+    private val assets: com.karuhun.ftth.customer.CustomerAssetApi,
+    private val assetRetention: com.karuhun.ftth.customer.adapter.outbound.persistence.CustomerAssetRetentionStore,
+) : ManageOnuUseCase {
+
+    @Transactional(readOnly = true)
+    override fun listForCustomer(customerId: UUID): List<OnuView> {
+        requireCustomer(customerId)
+        return assembler.toOnuViews(onuRepository.findByCustomerId(customerId))
+    }
+
+    override fun register(customerId: UUID, command: RegisterOnuCommand): OnuView {
+        val deployment = command.deployment ?: throw WarehouseContractException(
+            WarehouseError(WarehouseErrorCode.USE_WORKORDER_ASSET_WORKFLOW, "USE_WORKORDER_ASSET_WORKFLOW"))
+        val episode = assets.install(customerId, deployment.request, com.karuhun.ftth.inventory.WarehouseMutationMetadata(deployment.operationKey))
+        val onuId = episode.onuId ?: throw ConflictException("EQUIPMENT_HAS_NO_ONU_TOPOLOGY")
+        return assembler.toOnuViews(listOf(requireOnu(onuId))).single()
+    }
+
+    override fun attach(id: UUID, command: AttachOnuCommand): OnuView {
+        val onu = requireOnu(id)
+        val odp = networkApi.requireOdp(command.odpId)
+
+        // ONU ini sendiri dikecualikan agar memindahkannya ke port lain di ODP
+        // yang sama tidak dianggap bentrok dengan dirinya sendiri.
+        val occupied = onuRepository.findByOdpId(command.odpId)
+            .filter { it.id != id }
+            .mapNotNullTo(HashSet()) { it.odpPortNumber }
+
+        networkApi.assertOdpPortAssignable(command.odpId, command.portNumber, occupied)
+
+        onu.attachTo(command.odpId, command.portNumber, command.installRxPowerDbm)
+        val saved = onuRepository.save(onu)
+        auditor.record(
+            "onu.attached", "Onu", saved.id, saved.tenantId,
+            mapOf(
+                "serialNumber" to saved.serialNumber,
+                "odp" to odp.code,
+                "port" to command.portNumber,
+                "rxPowerDbm" to saved.installRxPowerDbm,
+                "opticalHealth" to saved.opticalHealth().name,
+            ),
+        )
+        return assembler.toOnuViews(listOf(saved)).single()
+    }
+
+    override fun detach(id: UUID): OnuView {
+        val onu = requireOnu(id)
+        val previousOdp = onu.odpId
+        onu.detach()
+        val saved = onuRepository.save(onu)
+        auditor.record(
+            "onu.detached", "Onu", saved.id, saved.tenantId,
+            mapOf("serialNumber" to saved.serialNumber, "previousOdpId" to previousOdp?.toString()),
+        )
+        return assembler.toOnuViews(listOf(saved)).single()
+    }
+
+    override fun changeStatus(id: UUID, status: OnuStatus): OnuView {
+        val onu = requireOnu(id)
+        onu.changeStatus(status)
+        val saved = onuRepository.save(onu)
+        auditor.record(
+            "onu.status_changed", "Onu", saved.id, saved.tenantId,
+            mapOf("serialNumber" to saved.serialNumber, "status" to status.name),
+        )
+        return assembler.toOnuViews(listOf(saved)).single()
+    }
+
+    override fun delete(id: UUID) {
+        assetRetention.assertOnuRemovable(id)
+        val onu = requireOnu(id)
+        if (onu.attached) {
+            throw ConflictException("ONU ${onu.serialNumber} masih terpasang di ODP, lepas dulu sebelum dihapus")
+        }
+        onuRepository.deleteById(id)
+        auditor.record("onu.deleted", "Onu", id, onu.tenantId, mapOf("serialNumber" to onu.serialNumber))
+    }
+
+    private fun requireOnu(id: UUID): Onu =
+        onuRepository.findById(id) ?: throw NotFoundException("ONU $id tidak ditemukan")
+
+    private fun requireCustomer(id: UUID): Customer =
+        customerRepository.findById(id) ?: throw NotFoundException("Pelanggan $id tidak ditemukan")
+}

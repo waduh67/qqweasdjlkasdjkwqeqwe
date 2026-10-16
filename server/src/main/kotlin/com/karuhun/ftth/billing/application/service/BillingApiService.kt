@@ -1,0 +1,327 @@
+package com.karuhun.ftth.billing.application.service
+
+import com.karuhun.ftth.billing.BillingAccountSummary
+import com.karuhun.ftth.billing.BillingApi
+import com.karuhun.ftth.billing.BillingFinancialReport
+import com.karuhun.ftth.billing.CustomerInvoiceDetailRef
+import com.karuhun.ftth.billing.CustomerInvoiceRef
+import com.karuhun.ftth.billing.CustomerPaymentRef
+import com.karuhun.ftth.billing.ManualInstructionsRef
+import com.karuhun.ftth.billing.MonthlyRevenuePoint
+import com.karuhun.ftth.billing.PaymentMethodCatalog
+import com.karuhun.ftth.billing.PaymentMethodOption
+import com.karuhun.ftth.billing.PublicInvoiceRef
+import com.karuhun.ftth.billing.ReceivableAging
+import com.karuhun.ftth.billing.ReceivableAgingBucket
+import com.karuhun.ftth.billing.StoredInstruction
+import com.karuhun.ftth.billing.SubscriptionRevenue
+import com.karuhun.ftth.billing.application.port.inbound.ManagePaymentGatewaySettingsUseCase
+import com.karuhun.ftth.billing.application.port.inbound.ManualPaymentInstructionsView
+import com.karuhun.ftth.billing.application.port.outbound.InvoiceRepository
+import com.karuhun.ftth.billing.application.port.outbound.PaymentRepository
+import com.karuhun.ftth.billing.application.port.outbound.RefundRepository
+import com.karuhun.ftth.common.domain.error.NotFoundException
+import com.karuhun.ftth.common.domain.error.ValidationException
+import com.karuhun.ftth.common.storage.StoredObject
+import com.karuhun.ftth.billing.domain.model.Invoice
+import com.karuhun.ftth.billing.domain.model.InvoiceStatus
+import com.karuhun.ftth.billing.domain.model.Payment
+import com.karuhun.ftth.customer.CustomerApi
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
+import java.time.Instant
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
+import java.util.UUID
+
+/**
+ * Implementasi [BillingApi] untuk modul lain (mis. aggregator Subscriber-360).
+ * Menghitung ringkasan rekening dari daftar tagihan pelanggan DI SERVER — memindahkan
+ * logika tunggakan yang dulu di browser (`web/.../billing.ts` + TagihanTab) agar angka
+ * uang punya satu sumber kebenaran. [InvoiceRepository] tenant-aware (RLS) → hasil
+ * ter-scope tenant aktif; tak ada parameter tenantId yang dibawa-bawa.
+ */
+@Service
+@Transactional(readOnly = true)
+class BillingApiService(
+    private val invoiceRepository: InvoiceRepository,
+    private val paymentRepository: PaymentRepository,
+    private val refundRepository: RefundRepository,
+    private val invoiceCharger: InvoiceChargePort,
+    private val customerApi: CustomerApi,
+    private val gatewayProbe: ActiveGatewayProbe,
+    private val gatewaySettings: ManagePaymentGatewaySettingsUseCase,
+) : BillingApi {
+
+    override fun findCustomerInvoices(customerId: UUID): List<CustomerInvoiceRef> =
+        invoiceRepository.findByCustomerId(customerId).map { it.toRef() }
+
+    override fun paymentMethods(): List<PaymentMethodOption> = PaymentMethodCatalog.methods
+
+    @Transactional
+    override fun payCustomerInvoice(
+        customerId: UUID,
+        invoiceId: UUID,
+        method: String,
+        channel: String?,
+    ): CustomerInvoiceRef {
+        // Batasi ke tagihan milik pelanggan ini — pelanggan portal tak boleh membayar tagihan orang lain.
+        val invoice = invoiceRepository.findById(invoiceId)
+            ?.takeIf { it.customerId == customerId }
+            ?: throw NotFoundException("Tagihan tidak ditemukan")
+        if (invoice.status != InvoiceStatus.ISSUED && invoice.status != InvoiceStatus.OVERDUE) {
+            throw ValidationException("Tagihan ini tidak dapat dibayar (status ${invoice.status}).")
+        }
+        invoiceCharger.chargeWithMethod(invoice, method, channel)
+        return invoiceRepository.save(invoice).toRef()
+    }
+
+    override fun findInvoiceForPublicLink(invoiceId: UUID): PublicInvoiceRef? =
+        invoiceRepository.findById(invoiceId)?.toPublicRef()
+
+    @Transactional
+    override fun payInvoiceForPublicLink(invoiceId: UUID, method: String, channel: String?): PublicInvoiceRef {
+        // Tanpa penyaringan pemilik — UUID tagihan ITU kapabilitasnya; RLS yang membatasi tenant.
+        val invoice = invoiceRepository.findById(invoiceId)
+            ?: throw NotFoundException("Tagihan tidak ditemukan")
+        if (invoice.status != InvoiceStatus.ISSUED && invoice.status != InvoiceStatus.OVERDUE) {
+            throw ValidationException("Tagihan ini tidak dapat dibayar (status ${invoice.status}).")
+        }
+        PaymentMethodCatalog.validate(method, channel)
+        // Instruksi hidup yang sama dipakai ulang: tautan publik dipegang siapa saja, dan tiap
+        // charge baru berarti satu sesi bayar baru di penyedia.
+        if (invoice.hasLiveInstructionFor(method, channel)) return invoice.toPublicRef()
+        invoiceCharger.chargeWithMethod(invoice, method, channel)
+        return invoiceRepository.save(invoice).toPublicRef()
+    }
+
+    override fun manualQrisImage(): StoredObject? = gatewaySettings.getQrisImage()
+
+    /** Lihat [PaymentMethodCatalog.stillUsable]. */
+    private fun Invoice.hasLiveInstructionFor(method: String, channel: String?): Boolean =
+        PaymentMethodCatalog.stillUsable(
+            StoredInstruction(payMethod, vaChannel, vaNumber, vaExpiresAt, qrContent, qrExpiresAt),
+            method,
+            channel,
+            Instant.now(),
+        )
+
+    private fun Invoice.toPublicRef(): PublicInvoiceRef {
+        val manual = gatewayProbe.manualOnly()
+        val open = status == InvoiceStatus.ISSUED || status == InvoiceStatus.OVERDUE
+        return PublicInvoiceRef(
+            id = id,
+            number = number,
+            customerName = customerApi.findCustomer(customerId)?.name ?: "Pelanggan",
+            periodStart = periodStart,
+            periodEnd = periodEnd,
+            amount = amount,
+            status = status.name,
+            dueDate = dueDate,
+            paidAt = paidAt,
+            payableOnline = open && !manual,
+            payMethod = payMethod,
+            vaChannel = vaChannel,
+            vaNumber = vaNumber,
+            vaName = vaName,
+            vaExpiresAt = vaExpiresAt,
+            qrContent = qrContent,
+            qrExpiresAt = qrExpiresAt,
+            manual = if (manual) gatewaySettings.manualPaymentInstructions().toRef() else null,
+        )
+    }
+
+    private fun ManualPaymentInstructionsView.toRef() = ManualInstructionsRef(
+        transferEnabled = transferEnabled,
+        bankName = bankName,
+        accountNumber = accountNumber,
+        accountHolder = accountHolder,
+        qrisEnabled = qrisEnabled,
+        qrisImageAvailable = qrisImageAvailable,
+    )
+
+    private fun Invoice.toRef() = CustomerInvoiceRef(
+        id = id,
+        number = number,
+        periodStart = periodStart,
+        periodEnd = periodEnd,
+        amount = amount,
+        status = status.name,
+        issuedAt = issuedAt,
+        dueDate = dueDate,
+        paidAt = paidAt,
+        gatewayProvider = gatewayProvider,
+        payUrl = payUrl,
+        payMethod = payMethod,
+        vaChannel = vaChannel,
+        vaNumber = vaNumber,
+        vaName = vaName,
+        vaExpiresAt = vaExpiresAt,
+        qrContent = qrContent,
+        qrUrl = qrUrl,
+        qrExpiresAt = qrExpiresAt,
+    )
+
+    override fun findCustomerPayments(customerId: UUID): List<CustomerPaymentRef> =
+        paymentRepository.findByCustomerId(customerId).map { it.toRef() }
+
+    override fun findCustomerInvoiceDetail(customerId: UUID, invoiceId: UUID): CustomerInvoiceDetailRef? {
+        // Sama seperti jalur bayar portal: tagihan orang lain dijawab "tak ada", bukan "tak berhak".
+        val invoice = invoiceRepository.findById(invoiceId)?.takeIf { it.customerId == customerId } ?: return null
+        return CustomerInvoiceDetailRef(
+            invoice = invoice.toRef(),
+            subscriptionId = invoice.subscriptionId,
+            baseAmount = invoice.baseAmount,
+            taxAmount = invoice.taxAmount,
+            taxRate = invoice.taxRate,
+            prorated = invoice.prorated,
+            proratedDays = invoice.proratedDays,
+            payments = paymentRepository.findByInvoiceId(invoiceId).map { it.toRef() },
+        )
+    }
+
+    private fun Payment.toRef() = CustomerPaymentRef(
+        id = id,
+        invoiceId = invoiceId,
+        amount = amount,
+        provider = provider,
+        paidAt = paidAt,
+        note = note,
+    )
+
+    override fun findAccountSummary(customerId: UUID): BillingAccountSummary {
+        val invoices = invoiceRepository.findByCustomerId(customerId)
+        val today = LocalDate.now()
+        val outstanding = invoices.filter { it.isOutstanding(today) }
+        return BillingAccountSummary(
+            customerId = customerId,
+            outstandingAmount = outstanding.fold(BigDecimal.ZERO) { acc, inv -> acc + inv.amount },
+            outstandingCount = outstanding.size,
+            unpaidCount = invoices.count { it.status == InvoiceStatus.ISSUED || it.status == InvoiceStatus.OVERDUE },
+            oldestDueDate = outstanding.minOfOrNull { it.dueDate },
+            lastPaidAt = invoices.mapNotNull { it.paidAt }.maxOrNull(),
+        )
+    }
+
+    override fun financialReport(from: LocalDate, to: LocalDate): BillingFinancialReport {
+        val fromInstant = from.atStartOfDay(zone).toInstant()
+        val toExclusive = to.plusDays(1).atStartOfDay(zone).toInstant()
+
+        val paid = invoiceRepository.findPaidBetween(fromInstant, toExclusive)
+        val issued = invoiceRepository.findIssuedBetween(fromInstant, toExclusive)
+        val outstanding = invoiceRepository.findOutstanding(LocalDate.now())
+        // Refund dihitung menurut KAPAN UANGNYA KELUAR (completedAt), bukan kapan diajukan — dan hanya
+        // yang berhasil; permintaan yang masih berjalan belum mengurangi kas.
+        val refunds = refundRepository.findSettledBetween(fromInstant, toExclusive)
+        val revenue = paid.sumOfAmount()
+        val refunded = refunds.fold(BigDecimal.ZERO) { acc, r -> acc + r.amount }
+
+        return BillingFinancialReport(
+            revenueCollected = revenue,
+            paidInvoiceCount = paid.size,
+            issuedAmount = issued.sumOfAmount(),
+            issuedInvoiceCount = issued.size,
+            outstandingAmount = outstanding.sumOfAmount(),
+            outstandingInvoiceCount = outstanding.size,
+            statusCounts = invoiceRepository.countByStatus().entries.associate { (s, n) -> s.name to n.toInt() },
+            refundedAmount = refunded,
+            refundCount = refunds.size,
+            netRevenue = revenue.subtract(refunded),
+        )
+    }
+
+    override fun monthlyRevenue(fromMonth: YearMonth, toMonth: YearMonth): List<MonthlyRevenuePoint> {
+        val fromInstant = fromMonth.atDay(1).atStartOfDay(zone).toInstant()
+        val toExclusive = toMonth.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant()
+
+        // Kelompokkan pembayaran menurut bulan kalender zona server (sama seperti penjadwal
+        // yang memakai LocalDate.now()), lalu tebar ke SELURUH bulan rentang agar bolong ikut nol.
+        val byMonth = invoiceRepository.findPaidBetween(fromInstant, toExclusive)
+            .groupBy { YearMonth.from(it.paidAt!!.atZone(zone)) }
+        // Refund ditempatkan di bulan uangnya keluar, yang boleh berbeda dari bulan tagihannya lunas.
+        val refundsByMonth = refundRepository.findSettledBetween(fromInstant, toExclusive)
+            .groupBy { YearMonth.from(it.completedAt!!.atZone(zone)) }
+
+        val points = mutableListOf<MonthlyRevenuePoint>()
+        var m = fromMonth
+        while (!m.isAfter(toMonth)) {
+            val invoices = byMonth[m].orEmpty()
+            points += MonthlyRevenuePoint(
+                month = m.toString(),
+                revenue = invoices.sumOfAmount(),
+                paidInvoiceCount = invoices.size,
+                refunded = refundsByMonth[m].orEmpty().fold(BigDecimal.ZERO) { acc, r -> acc + r.amount },
+            )
+            m = m.plusMonths(1)
+        }
+        return points
+    }
+
+    override fun receivableAging(asOf: LocalDate): ReceivableAging {
+        // Seluruh tagihan yang belum lunas — termasuk yang BELUM jatuh tempo, karena umur piutang
+        // yang hanya memuat tunggakan tak bisa menjawab "berapa yang akan masuk kalau semua bayar".
+        val unpaid = invoiceRepository.findByStatus(InvoiceStatus.ISSUED) +
+            invoiceRepository.findByStatus(InvoiceStatus.OVERDUE)
+
+        val grouped = unpaid.groupBy { agingBucketOf(it.dueDate, asOf) }
+        val buckets = AGING_BUCKETS.map { code ->
+            val rows = grouped[code].orEmpty()
+            ReceivableAgingBucket(bucket = code, amount = rows.sumOfAmount(), invoiceCount = rows.size)
+        }
+
+        return ReceivableAging(
+            asOf = asOf,
+            totalAmount = unpaid.sumOfAmount(),
+            totalInvoiceCount = unpaid.size,
+            buckets = buckets,
+        )
+    }
+
+    override fun revenueBySubscription(from: LocalDate, to: LocalDate): List<SubscriptionRevenue> {
+        val fromInstant = from.atStartOfDay(zone).toInstant()
+        val toExclusive = to.plusDays(1).atStartOfDay(zone).toInstant()
+
+        return invoiceRepository.findPaidBetween(fromInstant, toExclusive)
+            .groupBy { it.subscriptionId }
+            .map { (subscriptionId, invoices) ->
+                SubscriptionRevenue(subscriptionId, invoices.sumOfAmount(), invoices.size)
+            }
+            .sortedByDescending { it.amount }
+    }
+
+    /**
+     * Umur sebuah piutang: selisih hari antara jatuh tempo dan [asOf]. Belum lewat = `NOT_DUE`
+     * (termasuk yang jatuh tempo persis hari ini — masih ada waktu sampai tutup hari).
+     */
+    private fun agingBucketOf(dueDate: LocalDate, asOf: LocalDate): String {
+        val daysLate = ChronoUnit.DAYS.between(dueDate, asOf)
+        return when {
+            daysLate <= 0 -> "NOT_DUE"
+            daysLate <= 30 -> "D1_30"
+            daysLate <= 60 -> "D31_60"
+            daysLate <= 90 -> "D61_90"
+            else -> "D90_PLUS"
+        }
+    }
+
+    private fun List<Invoice>.sumOfAmount(): BigDecimal =
+        fold(BigDecimal.ZERO) { acc, inv -> acc + inv.amount }
+
+    /**
+     * Menunggak = OVERDUE, atau ISSUED yang sudah lewat jatuh tempo. Cermin persis
+     * `isOutstanding` di UI lama; PAID/VOID dikecualikan.
+     */
+    private fun Invoice.isOutstanding(today: LocalDate): Boolean =
+        status == InvoiceStatus.OVERDUE || (status == InvoiceStatus.ISSUED && dueDate.isBefore(today))
+
+    private companion object {
+        /** Batas hari→instant memakai zona server, selaras dengan penjadwal billing (LocalDate.now()). */
+        val zone: ZoneId = ZoneId.systemDefault()
+
+        /** Urutan kelompok umur piutang, dari paling muda ke paling tua. */
+        val AGING_BUCKETS = listOf("NOT_DUE", "D1_30", "D31_60", "D61_90", "D90_PLUS")
+    }
+}

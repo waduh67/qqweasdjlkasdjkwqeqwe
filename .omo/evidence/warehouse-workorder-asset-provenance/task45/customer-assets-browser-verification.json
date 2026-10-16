@@ -42,7 +42,7 @@
     "web/e2e/warehouse/catalog.ts": "c8e7d53d56d1fcc4de0cf257b01096ba8619f7f42f69d919b33cac4dc09f161b",
     "web/e2e/warehouse/fulfillment.ts": "e8ac4fb0710374ac320e292dfda9ebef17ae2ae592e88a4c3515c211dcb29bb5",
     "server/src/main/resources/db/migration/V178_7__warehouse_rma_optional_category.sql": "726b103ef37215b2af736cde9b6cedb336b02b7726b042f4707b673ee02fc081",
-    "server/src/test/kotlin/com/duluin/ftth/inventory/WarehouseCustomerRmaDeploymentIT.kt": "6ddf660948d87cea47fab7371a751396482302818df0c6590fd89f9cdd0e6445"
+    "server/src/test/kotlin/com/karuhun/ftth/inventory/WarehouseCustomerRmaDeploymentIT.kt": "6ddf660948d87cea47fab7371a751396482302818df0c6590fd89f9cdd0e6445"
   },
   "screenshots": "Private traces/screenshots retained. Drawer screenshots show current viewport; fuller history screenshots still needed for final visual review."
 }

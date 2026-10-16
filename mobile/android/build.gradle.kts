@@ -4,9 +4,9 @@ plugins {
 }
 
 android {
-    namespace = "com.duluin.ftth.technician"
+    namespace = "com.karuhun.ftth.technician"
     defaultConfig {
-        applicationId = "com.duluin.ftth.technician"
+        applicationId = "com.karuhun.ftth.technician"
         versionCode = 1
         versionName = "0.1.0"
     }

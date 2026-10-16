@@ -1,0 +1,103 @@
+package com.karuhun.ftth.vpn
+
+import com.karuhun.ftth.common.domain.error.ValidationException
+import com.karuhun.ftth.vpn.config.VpnProperties
+import com.karuhun.ftth.vpn.domain.model.VpnProtocol
+import com.karuhun.ftth.vpn.domain.model.VpnServer
+import com.karuhun.ftth.vpn.domain.model.VpnServerStatus
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Test
+
+/** Menguji validasi & mutasi hub VPN — murni domain. */
+class VpnServerTest {
+
+    private fun newServer(port: Int = 1194, tunnelCidr: String = "10.8.0.0/24"): VpnServer = VpnServer.create(
+        name = "Hub Utama",
+        host = "vpn.example.com",
+        port = port,
+        protocol = VpnProtocol.UDP,
+        tunnelCidr = tunnelCidr,
+    )
+
+    @Test
+    fun `create menghasilkan hub ACTIVE tanpa kredensial`() {
+        val server = newServer()
+        assertThat(server.status).isEqualTo(VpnServerStatus.ACTIVE)
+        assertThat(server.caCertPem).isNull()
+        assertThat(server.tlsAuthKey).isNull()
+    }
+
+    @Test
+    fun `create menolak port di luar rentang`() {
+        assertThatThrownBy { newServer(port = 0) }.isInstanceOf(ValidationException::class.java)
+        assertThatThrownBy { newServer(port = 70_000) }.isInstanceOf(ValidationException::class.java)
+    }
+
+    @Test
+    fun `create menolak tunnelCidr tak valid`() {
+        assertThatThrownBy { newServer(tunnelCidr = "bukan-cidr") }
+            .isInstanceOf(ValidationException::class.java)
+        assertThatThrownBy { newServer(tunnelCidr = "10.8.0.0/33") }
+            .isInstanceOf(ValidationException::class.java)
+    }
+
+    @Test
+    fun `setCredentials mengisi CA dan tls-auth`() {
+        val server = newServer()
+
+        server.setCredentials("-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----", "ta-key-content")
+
+        assertThat(server.caCertPem).contains("BEGIN CERTIFICATE")
+        assertThat(server.tlsAuthKey).isEqualTo("ta-key-content")
+    }
+
+    @Test
+    fun `setCredentials memperlakukan blank sebagai null`() {
+        val server = newServer()
+        server.setCredentials("cert", "key")
+
+        server.setCredentials("   ", null)
+
+        assertThat(server.caCertPem).isNull()
+        assertThat(server.tlsAuthKey).isNull()
+    }
+
+    /**
+     * Perangkat v6 di lapangan (hAP lite/RB941 smips) tak akan pernah bisa di-upgrade ke v7,
+     * jadi protokol hub-lah yang menentukan mereka kebagian atau tidak — bukan sebaliknya.
+     */
+    @Test
+    fun `hanya hub TCP yang bisa di-dial RouterOS v6`() {
+        assertThat(newServer().servesRouterOsV6).isFalse()
+
+        val tcp = VpnServer.create(
+            name = "Hub TCP",
+            host = "vpn.example.com",
+            port = 1194,
+            protocol = VpnProtocol.TCP,
+            tunnelCidr = "10.8.0.0/24",
+        )
+        assertThat(tcp.servesRouterOsV6).isTrue()
+    }
+
+    /**
+     * Bawaan pembuatan hub dipatok TCP: hub yang lahir UDP diam-diam menutup pintu bagi seluruh
+     * armada v6, dan kesalahannya baru ketahuan saat teknisi sudah di depan perangkat.
+     */
+    @Test
+    fun `bawaan protokol hub adalah TCP`() {
+        assertThat(VpnProperties().defaultProtocol).isEqualTo(VpnProtocol.TCP.name)
+    }
+
+    @Test
+    fun `disable lalu enable memindahkan status`() {
+        val server = newServer()
+
+        server.disable()
+        assertThat(server.status).isEqualTo(VpnServerStatus.DISABLED)
+
+        server.enable()
+        assertThat(server.status).isEqualTo(VpnServerStatus.ACTIVE)
+    }
+}
