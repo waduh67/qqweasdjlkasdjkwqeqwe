@@ -51,7 +51,7 @@ export function OdfPanel({
   return (
     <aside className="map-panel blade">
       <BladeHead title={odf.code} subtitle={`ODF · ${odf.name}`} onClose={onClose} />
-      {(primary || actions.length > 0) && <CommandBar compact primary={primary} actions={actions} />}
+      {(primary || actions.length > 0) && <CommandBar layout="wrap" primary={primary} actions={actions} />}
 
       <div className="blade-body stack" style={{ gap: '0.9rem' }}>
         <dl className="essentials">

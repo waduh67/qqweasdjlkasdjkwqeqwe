@@ -8,6 +8,7 @@ export {
   CalendarCheckmark16Filled as Calendar, Payment16Filled as Payment, People16Filled as Users,
   ShieldCheckmark16Filled as Shield, Location16Filled as Area, DocumentSearch16Filled as Audit,
   Building16Filled as Building, Beaker16Filled as Flask, Mail16Filled as Mail, Add16Filled as Plus,
+  Window16Filled as Portal, History16Filled as History,
 } from '@fluentui/react-icons'
 
 import {

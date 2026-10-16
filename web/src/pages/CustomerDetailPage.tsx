@@ -61,6 +61,7 @@ import { Badge, Button, EmptyState, Segmented, SelectField, Spinner, StatusBadge
 import { CommandBar, Ess, type CommandAction } from '@/components/molecules'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { ResourceNavigation, type ResourceNavigationItem } from '@/components/organisms/ResourceNavigation'
+import * as NavIcons from '@/components/molecules/navigationIcons'
 import './customer-detail.css'
 import { useConfirm, useToast } from '@/system'
 import { OpticalChart } from '@/components/atoms'
@@ -288,19 +289,19 @@ export function CustomerDetailPage({
   const ponCount = neighbors?.samePonPort.length ?? 0
 
   const tabDefs: ResourceNavigationItem<Tab>[] = [
-    { key: 'ringkasan', label: 'Ringkasan' },
-    { key: 'langganan', label: 'Langganan', group: 'Layanan' },
-    ...(canAccess ? [{ key: 'akses' as Tab, label: 'Akun jaringan', group: 'Layanan' }] : []),
-    { key: 'perangkat', label: 'Perangkat', group: 'Layanan' },
-    ...(can('portal.credential.view') ? [{ key: 'portal' as Tab, label: 'Portal pelanggan', group: 'Layanan' }] : []),
-    { key: 'jalur', label: 'Jalur koneksi', group: 'Jaringan' },
-    { key: 'tetangga', label: 'Pelanggan sekitar', group: 'Jaringan' },
-    ...(canMetric ? [{ key: 'metrik' as Tab, label: 'Metrik', group: 'Jaringan' }] : []),
-    ...(canTraffic ? [{ key: 'trafik' as Tab, label: 'Trafik', group: 'Jaringan' }] : []),
-    ...(canCpe ? [{ key: 'cpe' as Tab, label: 'ACS', group: 'Jaringan' }] : []),
-    ...(canBilling ? [{ key: 'tagihan' as Tab, label: 'Tagihan', group: 'Operasional' }] : []),
-    ...(canIncident || canWorkorder ? [{ key: 'tiket' as Tab, label: 'Tiket & work order', group: 'Operasional' }] : []),
-    ...(canBilling || canIncident || canWorkorder ? [{ key: 'timeline' as Tab, label: 'Aktivitas', group: 'Operasional' }] : []),
+    { key: 'ringkasan', label: 'Ringkasan', icon: NavIcons.Dashboard },
+    { key: 'langganan', label: 'Langganan', group: 'Layanan', icon: NavIcons.Package },
+    ...(canAccess ? [{ key: 'akses' as Tab, label: 'Akun jaringan', group: 'Layanan', icon: NavIcons.Shield }] : []),
+    { key: 'perangkat', label: 'Perangkat', group: 'Layanan', icon: NavIcons.Storage },
+    ...(can('portal.credential.view') ? [{ key: 'portal' as Tab, label: 'Portal pelanggan', group: 'Layanan', icon: NavIcons.Portal }] : []),
+    { key: 'jalur', label: 'Jalur koneksi', group: 'Jaringan', icon: NavIcons.Route },
+    { key: 'tetangga', label: 'Pelanggan sekitar', group: 'Jaringan', icon: NavIcons.Customers },
+    ...(canMetric ? [{ key: 'metrik' as Tab, label: 'Metrik', group: 'Jaringan', icon: NavIcons.Gauge }] : []),
+    ...(canTraffic ? [{ key: 'trafik' as Tab, label: 'Trafik', group: 'Jaringan', icon: NavIcons.Chart }] : []),
+    ...(canCpe ? [{ key: 'cpe' as Tab, label: 'ACS', group: 'Jaringan', icon: NavIcons.Wifi }] : []),
+    ...(canBilling ? [{ key: 'tagihan' as Tab, label: 'Tagihan', group: 'Operasional', icon: NavIcons.Receipt }] : []),
+    ...(canIncident || canWorkorder ? [{ key: 'tiket' as Tab, label: 'Tiket & work order', group: 'Operasional', icon: NavIcons.WorkOrder }] : []),
+    ...(canBilling || canIncident || canWorkorder ? [{ key: 'timeline' as Tab, label: 'Aktivitas', group: 'Operasional', icon: NavIcons.History }] : []),
   ]
 
   const activeTab = tabDefs.some(item => item.key === tab) ? tab : 'ringkasan'

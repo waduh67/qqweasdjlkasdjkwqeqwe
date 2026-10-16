@@ -1,8 +1,9 @@
-import { useId, type KeyboardEvent, type ReactNode } from 'react'
+import { useId, type ComponentType, type KeyboardEvent, type ReactNode } from 'react'
 import { SelectField } from '@/components/atoms'
+import type { IconProps } from '@/components/atoms/icons'
 import './resource-navigation.css'
 
-export interface ResourceNavigationItem<Key extends string> { key: Key; label: string; group?: string }
+export interface ResourceNavigationItem<Key extends string> { key: Key; label: string; group?: string; icon?: ComponentType<IconProps> }
 
 export function ResourceNavigation<Key extends string>({ label, items, active, onChange, children }: {
   label: string; items: ResourceNavigationItem<Key>[]; active: Key; onChange: (key: Key) => void; children: ReactNode
@@ -23,7 +24,10 @@ export function ResourceNavigation<Key extends string>({ label, items, active, o
       {items.map((item, index) => <div key={item.key} role="presentation">
         {item.group && item.group !== items[index - 1]?.group && <div className="resource-menu-group">{item.group}</div>}
         <button type="button" role="tab" id={`${id}-tab-${item.key}`} aria-selected={selected.key === item.key}
-          aria-controls={`${id}-panel-${item.key}`} tabIndex={selected.key === item.key ? 0 : -1} onClick={() => onChange(item.key)}>{item.label}</button>
+          aria-controls={`${id}-panel-${item.key}`} tabIndex={selected.key === item.key ? 0 : -1} onClick={() => onChange(item.key)}>
+          {item.icon && <item.icon className="resource-menu-icon" aria-hidden />}
+          <span className="resource-menu-text">{item.label}</span>
+        </button>
       </div>)}
     </div>
     <div className="resource-detail-picker"><SelectField label={label} value={selected.key} onChange={(_, data) => onChange(data.value as Key)}>

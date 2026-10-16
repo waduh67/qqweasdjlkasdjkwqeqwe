@@ -43,7 +43,7 @@ export function OdpPanel({
   return (
     <aside className="map-panel blade">
       <BladeHead title={inspection.code} subtitle={`ODP (FAT) · ${inspection.name}`} onClose={onClose} />
-      {(primary || actions.length > 0) && <CommandBar compact primary={primary} actions={actions} />}
+      {(primary || actions.length > 0) && <CommandBar layout="wrap" primary={primary} actions={actions} />}
 
       <div className="blade-body stack" style={{ gap: '0.9rem' }}>
         {!upstream.complete && (
