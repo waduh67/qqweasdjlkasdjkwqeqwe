@@ -42,7 +42,7 @@ export function BlastRadiusPanel({
   return (
     <aside className="map-panel blade">
       <BladeHead title={blast.code} subtitle={`ODC (FDT) · ${blast.name}`} onClose={onClose} />
-      {(primary || actions.length > 0) && <CommandBar compact primary={primary} actions={actions} />}
+      {(primary || actions.length > 0) && <CommandBar layout="wrap" primary={primary} actions={actions} />}
 
       <div className="blade-body stack" style={{ gap: '0.9rem' }}>
         <MessageBar intent={blast.energized ? 'warning' : 'error'}>

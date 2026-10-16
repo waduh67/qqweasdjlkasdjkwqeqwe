@@ -186,7 +186,7 @@ test('unmonitored PSB customer is visible and clickable on dark and satellite ma
 })
 
 for (const width of [375, 1440]) {
-  test(`ODP panel commands stay on one row with secondary actions in the menu at ${width}px`, async ({ page }, info) => {
+  test(`ODP panel exposes all commands in order without an overflow menu at ${width}px`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 1000 })
     const state = await setup(page)
     await page.route('**/api/gis/odps/odp-qa', route => route.fulfill({ json: {
@@ -202,10 +202,21 @@ for (const width of [375, 1440]) {
     await canvas.click({ position: { x: box.width / 2 + (point[0] - center[0]) * 512, y: box.height / 2 + (point[1] - center[1]) * 512 } })
     const panel = page.locator('.map-panel').filter({ hasText: 'ODP-CRB-002' })
     const buttons = panel.getByRole('toolbar').getByRole('button')
-    await expect(buttons).toHaveCount(3)
-    const bounds = await buttons.evaluateAll(elements => elements.map(element => { const box = element.getBoundingClientRect(); return { top: box.top, bottom: box.bottom } }))
-    expect(Math.max(...bounds.map(box => box.top)) - Math.min(...bounds.map(box => box.top))).toBeLessThan(4)
-    // Alignment alone misses controls painted above or bleeding through the panel.
+    await expect(buttons).toHaveText(['Buka detail', 'Tarik kabel', 'Pindahkan', 'Hapus ODP'])
+    await expect(panel.getByRole('button', { name: 'Aksi lainnya' })).toHaveCount(0)
+    const bounds = await buttons.evaluateAll(elements => elements.map(element => { const box = element.getBoundingClientRect(); return { x: box.x, y: box.y, right: box.right, bottom: box.bottom } }))
+    const toolbar = (await panel.getByRole('toolbar').boundingBox())!
+    for (const [index, bound] of bounds.entries()) {
+      expect(bound.x).toBeGreaterThanOrEqual(toolbar.x)
+      expect(bound.right).toBeLessThanOrEqual(toolbar.x + toolbar.width)
+      expect(bound.bottom).toBeLessThanOrEqual(toolbar.y + toolbar.height)
+      for (const previous of bounds.slice(0, index)) {
+        // Firefox can round adjacent fractional edges by less than a device pixel.
+        expect(bound.x >= previous.right - 0.5 || bound.y >= previous.bottom - 0.5).toBe(true)
+      }
+    }
+    expect(Math.abs(bounds[0].y - bounds[1].y)).toBeLessThan(4)
+    // Check actual click targets, including controls painted above the panel.
     for (const button of await buttons.all()) await button.click({ trial: true })
     const picker = page.getByRole('combobox', { name: 'Pilih Site / POP' })
     if (width <= 640) await expect(picker).toBeHidden()
@@ -215,10 +226,7 @@ for (const width of [375, 1440]) {
     await expect(picker).toBeVisible()
     await expect(picker).toHaveValue('POP-LAB · Laboratorium')
     await canvas.click({ position: { x: box.width / 2 + (point[0] - center[0]) * 512, y: box.height / 2 + (point[1] - center[1]) * 512 } })
-    await panel.getByRole('button', { name: 'Aksi lainnya' }).click()
-    await expect(page.getByRole('menuitem', { name: 'Pindahkan' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Hapus ODP' })).toBeVisible()
-    await page.getByRole('menuitem', { name: 'Pindahkan' }).click()
+    await panel.getByRole('button', { name: 'Pindahkan' }).click()
     await expect(page.getByText(/Klik lokasi baru|lokasi baru/i).first()).toBeVisible()
     expect(state.errors).toEqual([])
   })

@@ -86,6 +86,8 @@ export function CablePanel({
     ? { key: 'edit', label: 'Edit jalur', icon: <IconRoute size={15} />, onClick: onEdit }
     : undefined
   const actions: CommandAction[] = []
+  if (canSimulate)
+    actions.push({ key: 'simulate', label: 'Simulasi putus', icon: <IconFlask size={15} />, onClick: onSimulate })
   if (releasable)
     actions.push({
       key: 'release',
@@ -95,8 +97,6 @@ export function CablePanel({
     })
   if (abandoned && canEdit)
     actions.push({ key: 'reuse', label: 'Pakai lagi', icon: <IconCheck size={15} />, onClick: onReuse })
-  if (canSimulate)
-    actions.push({ key: 'simulate', label: 'Simulasi putus', icon: <IconFlask size={15} />, onClick: onSimulate })
   if (canDelete) actions.push(deleteAction('Hapus', onDelete))
 
   return (
@@ -108,7 +108,7 @@ export function CablePanel({
       className="blade-detail"
       onClose={onClose}
     >
-      {(primary || actions.length > 0) && <CommandBar compact primary={primary} actions={actions} />}
+      {(primary || actions.length > 0) && <CommandBar layout="wrap" primary={primary} actions={actions} />}
       <div className="stack" style={{ gap: '0.9rem' }}>
         {causes.length > 0 && <CableCauses causes={causes} />}
 

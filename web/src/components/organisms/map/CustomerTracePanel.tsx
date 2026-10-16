@@ -149,14 +149,23 @@ export function CustomerTracePanel({
   const showResetLogin = canResetLogin && bras != null
   const showCpeActions = trace.cpeDeviceId != null
 
-  // Command bar ala Azure: aksi utama dipatok kiri sebagai CTA biru, aksi perangkat
-  // menyusul, lalu aksi navigasi dipisah garis vertikal. Label berubah saat sibuk —
-  // tombol datar tak punya spinner, jadi teksnyalah yang menjadi tanda kerja jalan.
-  const primaryAction: CommandAction | undefined = canCreateWorkOrder
-    ? { key: 'wo', label: 'Buat WO', icon: <IconWorkOrder size={15} />, onClick: onCreateWorkOrder, disabled: busy != null }
+  // Detail and diagnostics lead; actions that interrupt service come last.
+  const primaryAction: CommandAction | undefined = canOpenCustomer
+    ? { key: 'detail', label: 'Buka detail', icon: <IconCustomers size={15} />, onClick: onOpenCustomer, disabled: busy != null }
     : undefined
 
   const actions: CommandAction[] = []
+  if (showCpeActions && canDiagnose)
+    actions.push({
+      key: 'ping',
+      label: busy === 'ping' ? 'Ping…' : 'Ping',
+      icon: <IconRoute size={15} />,
+      onClick: () => void doPing(),
+      disabled: busy != null,
+    })
+  if (canCreateWorkOrder)
+    actions.push({ key: 'wo', label: 'Buat WO', icon: <IconWorkOrder size={15} />, onClick: onCreateWorkOrder, disabled: busy != null })
+  if (canRelocate) actions.push({ ...relocateAction(onRelocate), disabled: busy != null })
   if (showResetLogin)
     actions.push({
       key: 'reset',
@@ -173,24 +182,6 @@ export function CustomerTracePanel({
       onClick: () => void doReboot(),
       disabled: busy != null,
     })
-  if (showCpeActions && canDiagnose)
-    actions.push({
-      key: 'ping',
-      label: busy === 'ping' ? 'Ping…' : 'Ping',
-      icon: <IconRoute size={15} />,
-      onClick: () => void doPing(),
-      disabled: busy != null,
-    })
-  if (canOpenCustomer)
-    actions.push({
-      key: 'detail',
-      label: 'Detail pelanggan',
-      icon: <IconCustomers size={15} />,
-      onClick: onOpenCustomer,
-      disabled: busy != null,
-      dividerBefore: actions.length > 0,
-    })
-  if (canRelocate) actions.push({ ...relocateAction(onRelocate, !canOpenCustomer && actions.length > 0), disabled: busy != null })
 
   const onuStatus = trace.liveOnuStatus ?? trace.onuStatus
   // Kode ODP tak dibawa sebagai kolom tersendiri di trace — hop ODP-lah sumbernya.
@@ -200,7 +191,7 @@ export function CustomerTracePanel({
     <aside className="map-panel blade">
       <BladeHead title={trace.customerName} subtitle={`Pelanggan · ${trace.customerCode}`} onClose={onClose} />
 
-      {(primaryAction || actions.length > 0) && <CommandBar compact primary={primaryAction} actions={actions} />}
+      {(primaryAction || actions.length > 0) && <CommandBar layout="wrap" primary={primaryAction} actions={actions} />}
 
       <div className="blade-body stack" style={{ gap: '0.9rem' }}>
         <MessageBar intent={VERDICT_INTENT[verdict.tone]}>
