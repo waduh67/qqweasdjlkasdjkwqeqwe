@@ -252,11 +252,17 @@ class CustomerImportPromotionWorker(
     }
 }
 
-private fun CustomerImportBatchView.toSafeCsv(): String {
-    fun safe(value: String): String = if (value.firstOrNull() in setOf('=', '+', '-', '@')) "'$value" else value.replace("\"", "\"\"").let { if (it.any { ch -> ch == ',' || ch == '\n' || ch == '\r' }) "\"$it\"" else it }
+internal fun CustomerImportBatchView.toSafeCsv(): String {
+    fun safe(value: String): String {
+        val protected = if (value.trimStart().firstOrNull() in setOf('=', '+', '-', '@')) "'$value" else value
+        val escaped = protected.replace("\"", "\"\"")
+        return if (protected.any { it == ',' || it == '\n' || it == '\r' || it == '"' }) "\"$escaped\"" else escaped
+    }
     return buildString {
         append("row,column,code,message\r\n")
-        errors.forEach { append(it.row).append(',').append(safe(it.column.orEmpty())).append(',').append(safe(it.code)).append(',').append(safe(it.message)).append("\r\n") }
-        result?.rows?.forEachIndexed { index, row -> append(index + 1).append(",username,status,message\r\n"); append(safe(row.username)).append(',').append(row.status).append(',').append(safe(row.message.orEmpty())).append("\r\n") }
+        errors.forEach { append(listOf(it.row.toString(), it.column.orEmpty(), it.code, it.message).joinToString(",", transform = ::safe)).append("\r\n") }
+        result?.rows?.forEachIndexed { index, row ->
+            append(listOf((index + 2).toString(), row.username, row.status.name, row.message.orEmpty()).joinToString(",", transform = ::safe)).append("\r\n")
+        }
     }
 }
