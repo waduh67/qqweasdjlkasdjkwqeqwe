@@ -69,7 +69,7 @@ class WarehouseDraftExpiryUpgradeIT {
                         check(blocked && !migration.isDone) { "Migration did not wait for the legacy document writer" }
                         writerTime = Instant.parse(value(writer, "SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC','YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')"))
                         writer.commit()
-                        assertThat(migration.get(60, TimeUnit.SECONDS).migrations.map { it.version }).containsExactly("178.12", "179")
+                        WarehouseMigrationInventory.assertUpgrade("178.11", migration.get(60, TimeUnit.SECONDS))
                         } finally { writer.rollback() }
                     }
                 } finally { writer.rollback() }
