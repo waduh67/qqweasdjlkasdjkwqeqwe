@@ -24,7 +24,7 @@ export interface ExpressPsbRequest {
   phone?: string | null
   email?: string | null
   address: string
-  location: LocationPayload
+  location?: LocationPayload | null
   areaId?: string | null
   // Langganan
   planId: string

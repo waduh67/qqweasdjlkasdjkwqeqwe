@@ -31,7 +31,7 @@ data class ExpressPsbCommand(
     val phone: String?,
     val email: String?,
     val address: String,
-    val location: Coordinate,
+    val location: Coordinate?,
     val areaId: UUID?,
     // Langganan
     val planId: UUID,

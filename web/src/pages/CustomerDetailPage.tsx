@@ -336,8 +336,7 @@ export function CustomerDetailPage({
       {!onTitleChange && <h1 className="page-title">{customer.name}</h1>}
       <div className="customer-identity">
         <span>{customer.code}</span>
-        <span>{customerStatusLabel(customer.status)}</span>
-        {customer.awaitingInstallation && <span>Menunggu instalasi</span>}
+        <span>{customerStatusLabel(customer.status, customer.awaitingInstallation)}</span>
       </div>
 
       <CommandBar primary={commands[0]} actions={commands.slice(1)} />

@@ -87,7 +87,7 @@ export function AddHereMenu({
         <button
           type="button"
           className="map-menu-item"
-          title="Pelanggan hasil impor yang belum punya titik di peta"
+          title="Tentukan lokasi pelanggan yang belum memiliki koordinat"
           onClick={() => onPick('CUSTOMER')}
         >
           <IconCustomers size={15} />

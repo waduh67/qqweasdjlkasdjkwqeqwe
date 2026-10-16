@@ -182,6 +182,90 @@ class OnboardingExpressPsbIT {
         assertThat(listOf(code1, code2, code3, code4)).doesNotHaveDuplicates()
     }
 
+    @Test
+    fun `PSB without coordinates can be found and placed on the map before installation`() {
+        val token = onboard("onbl${uniq()}")
+        val planId = createPlan(token)
+        for (locationJson in listOf("", ",\"location\":null")) {
+            val result = post("/api/onboarding/psb", token,
+                """{"name":"Belum dipetakan","address":"Jl. Lokasi","planId":"$planId"$locationJson}""")
+            val customerId = JsonPath.read<String>(result, "$.customerId")
+            val customer = get("/api/customers/$customerId", token)
+            assertThat(JsonPath.read<Any?>(customer, "$.location")).isNull()
+            assertThat(JsonPath.read<String>(customer, "$.locationStatus")).isEqualTo("UNLOCATED")
+            assertThat(JsonPath.read<Boolean>(customer, "$.awaitingInstallation")).isTrue()
+            assertThat(JsonPath.read<List<String>>(get("/api/customers/unmapped", token), "$[*].id")).contains(customerId)
+            assertThat(tileContents(token)).doesNotContain(customerId)
+
+            // Editing contact details must preserve an intentionally unlocated customer.
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/customers/$customerId")
+                .header("Authorization", "Bearer $token").contentType(MediaType.APPLICATION_JSON)
+                .content("""{"name":"Belum dipetakan","address":"Jl. Lokasi baru","location":null}"""))
+                .andExpect { assertThat(it.response.status).isEqualTo(200) }
+            assertThat(JsonPath.read<Any?>(get("/api/customers/$customerId", token), "$.location")).isNull()
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/customers/$customerId/location")
+                .header("Authorization", "Bearer $token").contentType(MediaType.APPLICATION_JSON)
+                .content("""{"longitude":108.562168,"latitude":-6.728143}"""))
+                .andExpect { assertThat(it.response.status).isEqualTo(200) }
+            val placed = get("/api/customers/$customerId", token)
+            assertThat(JsonPath.read<String>(placed, "$.locationStatus")).isEqualTo("LOCATED")
+            assertThat(JsonPath.read<String>(placed, "$.subscription.status")).isEqualTo("PENDING")
+            assertThat(JsonPath.read<Boolean>(placed, "$.awaitingInstallation")).isTrue()
+            assertThat(JsonPath.read<List<Any>>(placed, "$.onus")).isEmpty()
+            assertThat(JsonPath.read<List<String>>(get("/api/customers/unmapped", token), "$[*].id")).doesNotContain(customerId)
+            assertThat(tileContents(token)).contains(customerId)
+        }
+    }
+
+    @Test
+    fun `located PSB is mapped without ONU and stays isolated from other tenants`() {
+        val token = onboard("onbm${uniq()}")
+        val planId = createPlan(token)
+        val result = post("/api/onboarding/psb", token,
+            """{"name":"Sudah dipetakan","address":"Jl. Lokasi","planId":"$planId","location":{"longitude":108.562168,"latitude":-6.728143}}""")
+        val customerId = JsonPath.read<String>(result, "$.customerId")
+        assertThat(tileContents(token)).contains(customerId)
+        val otherToken = onboard("onbx${uniq()}")
+        assertThat(tileContents(otherToken)).doesNotContain(customerId)
+    }
+
+    @Test
+    fun `PSB rejects partial and out of range coordinates without creating a customer`() {
+        val token = onboard("onbv${uniq()}")
+        val planId = createPlan(token)
+        for (location in listOf("{\"longitude\":108.5}", "{\"latitude\":-6.7}",
+            "{\"longitude\":181,\"latitude\":0}", "{\"longitude\":0,\"latitude\":91}")) {
+            post("/api/onboarding/psb", token,
+                """{"name":"Koordinat salah","address":"Jl. Lokasi","planId":"$planId","location":$location}""", 400)
+        }
+        assertThat(JsonPath.read<Int>(get("/api/customers", token), "$.totalElements")).isZero()
+    }
+
+    @Test
+    fun `installation status follows a pending subscription rather than missing ONU inventory`() {
+        val token = onboard("onbs${uniq()}")
+        val prospect = post("/api/customers", token, """{"name":"Prospek saja","address":"Jl. Baru"}""")
+        assertThat(JsonPath.read<Any?>(prospect, "$.location")).isNull()
+        assertThat(JsonPath.read<Boolean>(prospect, "$.awaitingInstallation")).isFalse()
+        val planId = createPlan(token)
+        val pending = post("/api/customers", token, """{"name":"Pendaftaran baru","address":"Jl. Baru","planId":"$planId"}""")
+        assertThat(JsonPath.read<Boolean>(pending, "$.awaitingInstallation")).isTrue()
+        val customerId = id(pending)
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/customers/$customerId/status")
+            .header("Authorization", "Bearer $token").contentType(MediaType.APPLICATION_JSON)
+            .content("""{"status":"ACTIVE"}"""))
+            .andExpect { assertThat(it.response.status).isEqualTo(200) }
+        val active = get("/api/customers/$customerId", token)
+        assertThat(JsonPath.read<List<Any>>(active, "$.onus")).isEmpty()
+        assertThat(JsonPath.read<Boolean>(active, "$.awaitingInstallation")).isFalse()
+    }
+
+    private fun tileContents(token: String): String =
+        mockMvc.perform(get("/api/gis/tiles/0/0/0.mvt").header("Authorization", "Bearer $token"))
+            .andExpect { assertThat(it.response.status).isEqualTo(200) }
+            .andReturn().response.contentAsByteArray.toString(Charsets.ISO_8859_1)
+
     // --- Perkakas HTTP ---
 
     private fun onboard(slug: String): String {

@@ -90,6 +90,7 @@ class Customer private constructor(
 
     /** Memindah titik rumah pelanggan di peta tanpa menyentuh atribut lain. */
     fun relocate(location: Coordinate) {
+        this.locationStatus = LocationStatus.LOCATED
         this.location = location
     }
 

@@ -12,7 +12,7 @@ describe('kontrak presentasi tabel pelanggan', () => {
 
     expect(source).toMatch(/<DataTable[\s\S]*?presentation="resource"/)
     expect(source).not.toMatch(/cell: \(c\) => \([\s\S]*?<StatusBadge/)
-    expect(source).toContain('customerStatusLabel(c.status)')
+    expect(source).toContain('customerStatusLabel(c.status, c.awaitingInstallation)')
     expect(source).toContain('onCellClick: (c) => setDetailId(c.id)')
     expect(source).toContain('inlineActions: hasRowActions ? inlineActions : undefined')
     expect(source).toContain('selection={canDelete ? { selected, onChange: setSelected } : undefined}')

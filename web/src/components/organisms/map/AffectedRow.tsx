@@ -1,3 +1,4 @@
+import { UNMONITORED_CUSTOMER_COLOR } from '@/map/mapStyle'
 import { Text } from '@fluentui/react-components'
 import type { AffectedCustomer } from '@/api/network'
 
@@ -6,8 +7,8 @@ const ONU_DOT: Record<string, string> = {
   ONLINE: '#34d399',
   LOS: '#ff3b5c',
   OFFLINE: '#ff5470',
-  PENDING: '#8b95a7',
-  DISMANTLED: '#8b95a7',
+  PENDING: UNMONITORED_CUSTOMER_COLOR,
+  DISMANTLED: UNMONITORED_CUSTOMER_COLOR,
 }
 
 export function AffectedRow({ c }: { c: AffectedCustomer }) {

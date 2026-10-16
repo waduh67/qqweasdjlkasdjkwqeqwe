@@ -4,7 +4,7 @@ import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { CreationSummary, useCreationReview } from '@/components/organisms/CreationReview'
 import { ResourceStep } from '@/components/organisms/ResourceStep'
 import { WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
-import { Text } from '@fluentui/react-components'
+import { Field, Text } from '@fluentui/react-components'
 import { SERVICE_TYPE_LABEL } from '@/api/catalog'
 import { oneOf } from '@/api/warehouse/codec'
 import { Button, SelectField, TextField, TextareaField } from '@/components/atoms'
@@ -19,7 +19,7 @@ export function ExpressPsbPanel({ onClose, onCreated }: {
   const { draft, set, areas, nasByArea, changeArea, plans, planId, changePlan,
     authType, setAuthType, availableTypes, macBased, secret, showSecret, setSecret, setShowSecret,
     randomSecret, nasId, setNasId, nasList, reference, workflowMode, technicians, submit, saving, invalid,
-    canManage, canViewPlans, loading, loadError, reloadPlans, workflow } = model
+    locationError, canManage, canViewPlans, loading, loadError, reloadPlans, workflow } = model
   const [error, setError] = useState('')
   const creation = useCreationReview(true)
   const ready = canManage && !loading && !loadError && plans.length > 0 && workflowMode !== null
@@ -44,6 +44,7 @@ export function ExpressPsbPanel({ onClose, onCreated }: {
       ['Pelanggan', draft.name], ['Telepon', draft.phone], ['Alamat', draft.address], ['Area', areas.find(area => area.id === draft.areaId)?.name],
       ['Paket', plans.find(plan => plan.id === planId)?.name], ['Layanan', SERVICE_TYPE_LABEL[authType]],
       ['Username', draft.username || 'Otomatis'], ['BRAS', nasList.find(nas => nas.id === nasId)?.name],
+      ['Koordinat', draft.latitude && draft.longitude ? `${draft.latitude}, ${draft.longitude}` : 'Belum ditentukan'],
       ['Jadwal pemasangan', draft.scheduledAt || 'Belum dijadwalkan'],
     ]} /></div>
   return <ResourceForm title="Buat PSB" onClose={onClose} onBack={creation.back}
@@ -51,10 +52,7 @@ export function ExpressPsbPanel({ onClose, onCreated }: {
     readOnly={!ready} loading={canManage && loading} busy={busy}
     onReview={() => void prepare()} review={ready && creation.reviewing ? summary : undefined}
     steps={[
-      { key: 'customer', label: 'Pelanggan' }, { key: 'location', label: 'Lokasi', validate: () => {
-        const lat = Number(draft.latitude), lng = Number(draft.longitude)
-        return !draft.latitude.trim() || !draft.longitude.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180 ? 'Tentukan lokasi pemasangan yang valid.' : null
-      } }, { key: 'plan', label: 'Paket' }, { key: 'network', label: 'Akun jaringan' }, { key: 'installation', label: 'Pemasangan' },
+      { key: 'customer', label: 'Pelanggan' }, { key: 'location', label: 'Lokasi', validate: () => locationError }, { key: 'plan', label: 'Paket' }, { key: 'network', label: 'Akun jaringan' }, { key: 'installation', label: 'Pemasangan' },
     ]}
     footer={<Button onClick={onClose}>Batal</Button>}
     reviewFooter={<><Button disabled={busy} onClick={creation.back}>Sebelumnya</Button><Button disabled={busy} onClick={onClose}>Batal</Button><Button variant="primary" disabled={busy || invalid || !ready} onClick={() => void prepare()}>{busy ? 'Memproses…' : 'Buat PSB'}</Button></>}>
@@ -88,15 +86,15 @@ export function ExpressPsbPanel({ onClose, onCreated }: {
             </div>
           </ResourceStep><ResourceStep step="location">
             <TextField label="Alamat" required value={draft.address} onChange={(_, data) => set({ address: data.value })} placeholder="Jl. Merdeka No. 10" />
-            <label>
-              <span>Lokasi *</span>
+            <Field label="Koordinat (opsional)" hint="Dapat ditentukan nanti di peta.">
               <LocationPicker
                 longitude={draft.longitude}
                 latitude={draft.latitude}
                 onChange={(longitude, latitude) => set({ longitude, latitude })}
                 onAddress={(address) => set(draft.address.trim() ? {} : { address })}
               />
-            </label>
+            </Field>
+            {(draft.longitude || draft.latitude) && <div><Button onClick={() => set({ longitude: '', latitude: '' })}>Kosongkan koordinat</Button></div>}
             {areas.length > 0 && (
               <div className="row wrap" style={{ gap: '0.6rem' }}>
                 <div style={{ flex: 1, minWidth: 200 }}>

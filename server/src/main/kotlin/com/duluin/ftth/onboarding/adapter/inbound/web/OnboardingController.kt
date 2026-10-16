@@ -340,7 +340,7 @@ data class ExpressPsbRequest(
     @field:Size(max = 30) val phone: String? = null,
     @field:Size(max = 255) val email: String? = null,
     @field:NotBlank @field:Size(max = 500) val address: String?,
-    @field:NotNull @field:Valid val location: LocationPayload?,
+    @field:Valid val location: LocationPayload? = null,
     val areaId: UUID? = null,
     // Langganan
     @field:NotNull val planId: UUID?,
@@ -364,7 +364,7 @@ data class ExpressPsbRequest(
         phone = phone,
         email = email,
         address = address!!,
-        location = Coordinate(location!!.longitude, location.latitude),
+        location = location?.let { Coordinate(it.longitude, it.latitude) },
         areaId = areaId,
         planId = planId!!,
         monthlyFeeOverride = monthlyFeeOverride,
