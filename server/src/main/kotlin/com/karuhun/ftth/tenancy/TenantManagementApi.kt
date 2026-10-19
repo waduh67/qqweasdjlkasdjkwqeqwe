@@ -1,12 +1,11 @@
-package com.karuhun.ftth.tenancy.application.port.inbound
+package com.karuhun.ftth.tenancy
 
 import com.karuhun.ftth.common.domain.Page
 import com.karuhun.ftth.common.domain.PageRequest
-import com.karuhun.ftth.tenancy.TenantRef
 import java.util.UUID
 
-/** Use case pengelolaan tenant untuk platform admin (dipakai lapisan web). */
-interface ManageTenantUseCase {
+/** Public management port used by platform tenant/owner orchestration in iam. */
+interface TenantManagementApi {
 
     fun list(pageRequest: PageRequest): Page<TenantRef>
 

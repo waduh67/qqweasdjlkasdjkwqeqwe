@@ -10,7 +10,7 @@ import com.karuhun.ftth.common.security.CurrentUserProvider
 import com.karuhun.ftth.tenancy.TenantApi
 import com.karuhun.ftth.tenancy.TenantCreatedEvent
 import com.karuhun.ftth.tenancy.TenantRef
-import com.karuhun.ftth.tenancy.application.port.inbound.ManageTenantUseCase
+import com.karuhun.ftth.tenancy.TenantManagementApi
 import com.karuhun.ftth.tenancy.application.port.outbound.TenantRepository
 import com.karuhun.ftth.tenancy.domain.model.Tenant
 import org.springframework.context.ApplicationEventPublisher
@@ -21,7 +21,7 @@ import java.util.UUID
 
 /**
  * Mengimplementasikan API lintas-module [TenantApi] sekaligus use case web
- * [ManageTenantUseCase]. Semua mutasi berada dalam transaksi.
+ * [TenantManagementApi]. Semua mutasi berada dalam transaksi.
  */
 @Service
 @Transactional
@@ -30,7 +30,7 @@ class TenantService(
     private val events: ApplicationEventPublisher,
     private val currentUser: CurrentUserProvider,
     private val tenantEraser: TenantEraser,
-) : TenantApi, ManageTenantUseCase {
+) : TenantApi, TenantManagementApi {
 
     companion object {
         const val PLATFORM_SLUG = "platform"

@@ -45,6 +45,24 @@ Requests are independent of WO. Approval does not reserve stock. Admin handover 
 
 New WO completes after evidence and material validation without human completion review. Existing integration semantics remain source-aware. Old stock transactions must finish before each tenant activates the new writer; history remains readable.
 
+## Module boundaries
+
+Platform tenant and owner HTTP orchestration lives in IAM. It uses tenancy's public
+`TenantManagementApi`; inventory and workorder read the current tenant's owner ID
+through `CurrentTenantOwnerApi`. Tenancy does not depend on IAM.
+
+Workorder reads operational settings through `InventoryReferenceSettingsApi` and
+consumes technician material through `InventoryReferenceConsumptionApi`. Inventory
+owns stock validation, custody, CUT/REMNANT posting and usage documents. Consumption
+requires the caller's transaction and authority fence; the callback saves the
+immutable completion proof before stock posting. Proof, stock movement, work-order
+completion and fulfillment events therefore retain the same atomic transaction.
+
+Completion snapshots exposed to fulfillment live in workorder's public package.
+Shared warehouse errors, strict JSON, canonical payloads, tenant-bound JDBC and
+microsecond timestamps live in common. Inventory source aliases preserve its
+existing callers. `ModularityTests` verifies these boundaries without exemptions.
+
 ## Verification ledger
 
 Record each behavior commit and its executed checks below. UI and native evidence must come from the real application/API, and historical database safeguards must remain tested.

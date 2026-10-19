@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow, Text } from '@fluentui/react-components'
 import { Link } from 'react-router-dom'
 import { api } from '../api/client'
@@ -7,9 +7,11 @@ import type { AlarmView, MonitoringDashboard } from '../api/monitoring'
 import { useAuth } from '../auth/useAuth'
 import { useCan } from '../auth/useCan'
 import { Button, StatusBadge } from '@/components/atoms'
-import { PageHeader } from '@/components/molecules'
+import { PageHeader, Tabs } from '@/components/molecules'
 import { IconCustomers, IconInventory, IconMap, IconMonitor, IconWorkOrder, type IconProps } from '@/components/atoms/icons'
 import type { ComponentType } from 'react'
+
+const KpiPanel = lazy(() => import('./field/KpiPanel').then(module => ({ default: module.KpiPanel })))
 
 /**
  * Ringkasan operasional, bukan lagi placeholder.
@@ -20,6 +22,15 @@ import type { ComponentType } from 'react'
  * atas dengan penanda status, bukan sekadar deret bilangan.
  */
 export function DashboardPage() {
+  const { hasPermission } = useCan()
+  const [tab, setTab] = useState<'overview' | 'kpi'>('overview')
+  const visible = hasPermission('kpi.technician.view') || hasPermission('kpi.team.view')
+  if (!visible) return <DashboardOverview />
+  return <div className="stack"><Tabs idPrefix="dashboard" tabs={[{ key: 'overview', label: 'Ringkasan' }, { key: 'kpi', label: 'KPI Teknisi' }]} active={tab} onChange={setTab} />
+    <div role="tabpanel" id={'dashboard-panel-' + tab} aria-labelledby={'dashboard-tab-' + tab}>{tab === 'overview' ? <DashboardOverview /> : <div className="stack"><PageHeader title="KPI Teknisi" subtitle="Capaian bulanan teknisi NE dan FO." /><Suspense fallback={<p role="status">Memuat KPI teknisi…</p>}><KpiPanel /></Suspense></div>}</div>
+  </div>
+}
+function DashboardOverview() {
   const { user } = useAuth()
   const { can } = useCan()
   const [errors, setErrors] = useState<string[]>([])

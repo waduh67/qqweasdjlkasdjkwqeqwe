@@ -4,18 +4,11 @@ import { b2b, type B2BMonth, type B2BPage, type B2BVisit } from '@/api/b2b'
 import { Modal } from '@/components/molecules/Modal'
 import { WarehousePagination } from '@/components/organisms/warehouse/WarehousePagination'
 import { WarehouseDataError } from '@/api/warehouse/codec'
+import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 
 export function useB2BPage<T>(load: () => Promise<B2BPage<T>>) {
-  const [data, setData] = useState<B2BPage<T> | null>(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [version, setVersion] = useState(0)
-  useEffect(() => {
-    let live = true; setLoading(true); setError(''); setData(null)
-    load().then(result => { if (live) setData(result) }).catch(e => { if (live) setError(errorText(e)) }).finally(() => { if (live) setLoading(false) })
-    return () => { live = false }
-  }, [load, version])
-  return { data, error, loading, reload: () => setVersion(v => v + 1) }
+  const { state, reload } = useWarehouseQuery(load)
+  return { data: state.status === 'ready' ? state.data : null, error: state.status === 'error' ? errorText(state.error) : '', loading: state.status === 'loading', reload }
 }
 export function errorText(e: unknown) { return e instanceof WarehouseDataError ? 'Data B2B tidak dapat dibaca. Coba muat ulang.' : e instanceof Error ? e.message : 'Data B2B gagal dimuat.' }
 export function B2BPagination<T>({ data, onChange }: { data: B2BPage<T> | null; onChange: (n: number) => void }) {

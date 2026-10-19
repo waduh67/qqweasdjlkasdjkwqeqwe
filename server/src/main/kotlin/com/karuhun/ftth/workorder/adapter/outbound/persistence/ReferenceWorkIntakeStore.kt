@@ -2,7 +2,7 @@ package com.karuhun.ftth.workorder.adapter.outbound.persistence
 
 import com.karuhun.ftth.common.security.AuthorityScope
 import com.karuhun.ftth.inventory.*
-import com.karuhun.ftth.inventory.adapter.outbound.persistence.WarehouseCommandJdbc
+import com.karuhun.ftth.common.infrastructure.persistence.WarehouseCommandJdbc
 import com.karuhun.ftth.workorder.application.port.inbound.ReferenceWorkIntakeView
 import com.karuhun.ftth.workorder.application.port.inbound.ReferenceWorkSource
 import org.springframework.stereotype.Repository

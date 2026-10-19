@@ -30,7 +30,7 @@ data class ReferenceRequestView(val id: UUID, val revision: Long, val kind: Refe
 data class ReferenceRequestEvent(val operationId: UUID, val revision: Long, val action: String, val actorName: String,
     val notes: String, val movementId: UUID?, val recordedAt: Instant)
 data class ReferenceRequestDetail(val request: ReferenceRequestView, val timeline: List<ReferenceRequestEvent>)
-data class ReferenceOperationalSettings(val revision: Long = 0, val requireManagerApproval: Boolean = true, val overdueDays: Int = 3)
+typealias ReferenceOperationalSettings = com.karuhun.ftth.inventory.ReferenceOperationalSettings
 data class ReferenceOperationalSettingsInput(val expectedRevision: Long, val requireManagerApproval: Boolean, val overdueDays: Int)
 data class ReferenceRequestStockPreview(val skuId: UUID, val skuName: String, val baseUnit: WarehouseBaseUnit,
     val totalWarehouseBase: String, val technicianId: UUID?, val technicianName: String?, val technicianQuantityBase: String?,

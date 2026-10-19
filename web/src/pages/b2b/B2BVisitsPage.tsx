@@ -8,6 +8,7 @@ import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { B2BPagination, currentMonth, dateLabel, LoadError, MonthDetail, useB2BPage, VisitDetail } from './shared'
+import { FieldFilterError, monthError } from '@/pages/field/filters'
 
 function ReportForm({ report, onDone, onClose }: { report: B2BMonth; onDone: () => void; onClose: () => void }) {
   const { can } = useCan(), writable = can('b2b.visit.report')
@@ -34,22 +35,25 @@ function ReportForm({ report, onDone, onClose }: { report: B2BMonth; onDone: () 
 export function B2BVisitsPage({ admin = false }: { admin?: boolean }) {
   const { can } = useCan()
   const [month, setMonth] = useState(currentMonth), [q, setQ] = useState(''), [n, setN] = useState(0), [historyPage, setHistoryPage] = useState(0)
+  const [historyMonth, setHistoryMonth] = useState(currentMonth)
+  const validation = monthError(month), historyValidation = monthError(historyMonth, true)
   const [detail, setDetail] = useState<B2BMonth | null>(null), [reporting, setReporting] = useState<B2BMonth | null>(null), [visit, setVisit] = useState<B2BVisit | null>(null)
-  const load = useCallback(() => b2b.reports(month, q, n), [month, q, n]), reports = useB2BPage(load)
-  const loadHistory = useCallback(() => b2b.visits(month, undefined, historyPage), [month, historyPage]), history = useB2BPage(loadHistory)
+  const load = useCallback(() => validation ? Promise.reject(new FieldFilterError(validation)) : b2b.reports(month, q, n), [month, q, n, validation]), reports = useB2BPage(load)
+  const loadHistory = useCallback(() => historyValidation ? Promise.reject(new FieldFilterError(historyValidation)) : b2b.visits(historyMonth, undefined, historyPage), [historyMonth, historyPage, historyValidation]), history = useB2BPage(loadHistory)
   return <div className="stack"><PageHeader title={admin ? 'Rekap B2B' : 'Visit B2B'} subtitle={admin ? 'Pantau target, minggu tanpa visit, dan bukti kunjungan setiap client.' : 'Client yang ditugaskan kepada Anda beserta target dan riwayat visit bulanan.'} />
-    <div className="row wrap"><TextField label="Bulan rekap" type="month" required max={currentMonth()} value={month} onChange={(_, d) => { if (/^[0-9]{4}-[0-9]{2}$/.test(d.value)) { setMonth(d.value); setN(0); setHistoryPage(0) } }} />
+    <div className="row wrap"><TextField label="Bulan rekap" type="month" required min="2000-01" max={currentMonth()} value={month} validationState={validation ? 'error' : undefined} validationMessage={validation} onChange={(_, d) => { setMonth(d.value); setN(0); setDetail(null); setReporting(null) }} />
       <TextField label="Cari client pada rekap" value={q} onChange={(_, d) => { setQ(d.value); setN(0) }} /></div>
-    <LoadError error={reports.error} reload={reports.reload} />
-    <DataTable presentation="warehouse" rows={reports.data?.content ?? []} rowKey={r => r.clientId} loading={reports.loading} empty={reports.error ? <></> : admin ? 'Belum ada client pada bulan ini.' : 'Belum ada client B2B yang ditugaskan kepada Anda pada bulan ini.'}
+    {!validation && <LoadError error={reports.error} reload={reports.reload} />}
+    <DataTable presentation="warehouse" rows={reports.data?.content ?? []} rowKey={r => r.clientId} loading={!validation && reports.loading} empty={validation ? 'Pilih bulan untuk melihat rekap.' : reports.error ? <></> : admin ? 'Belum ada client pada bulan ini.' : 'Belum ada client B2B yang ditugaskan kepada Anda pada bulan ini.'}
       columns={[{ key: 'client', header: 'Client', cell: r => r.setting.name, description: r => r.setting.address, onCellClick: setDetail }, { key: 'ne', header: 'Teknisi NE', cell: r => r.setting.technicianName },
         { key: 'target', header: 'Dihitung / target', cell: r => r.counted + ' / ' + r.setting.target }, { key: 'remaining', header: 'Sisa', cell: r => r.remaining },
         { key: 'weeks', header: 'Minggu tanpa visit', cell: r => r.weeks.filter(w => w.missed).length }, { key: 'status', header: 'Status', cell: r => <Badge>{r.setting.active ? 'Aktif' : 'Nonaktif'}</Badge> },
         ...(!admin ? [{ key: 'report', header: 'Laporan', cell: (r: B2BMonth) => <Button disabled={!can('b2b.visit.report') || !r.setting.active || month !== currentMonth()} onClick={() => setReporting(r)}>Laporkan visit</Button> }] : [])]} />
     <B2BPagination data={reports.data} onChange={setN} />
     <section className="stack" aria-label="Riwayat visit B2B"><h2>Riwayat visit</h2><p className="muted">Visit tambahan pada hari yang sama tetap terlihat, tanpa menambah jumlah yang dihitung.</p>
-      <LoadError error={history.error} reload={history.reload} />
-      <DataTable presentation="warehouse" rows={history.data?.content ?? []} rowKey={r => r.id} loading={history.loading} empty={history.error ? <></> : 'Belum ada laporan visit pada bulan ini.'} columns={[
+      <TextField label="Bulan riwayat visit" type="month" required min="2000-01" max="2100-12" value={historyMonth} validationState={historyValidation ? 'error' : undefined} validationMessage={historyValidation} onChange={(_, d) => { setHistoryMonth(d.value); setHistoryPage(0); setVisit(null) }} />
+      {!historyValidation && <LoadError error={history.error} reload={history.reload} />}
+      <DataTable presentation="warehouse" rows={history.data?.content ?? []} rowKey={r => r.id} loading={!historyValidation && history.loading} empty={historyValidation ? 'Pilih bulan untuk melihat riwayat.' : history.error ? <></> : 'Belum ada laporan visit pada bulan ini.'} columns={[
         { key: 'client', header: 'Client', cell: r => r.clientName, onCellClick: setVisit }, { key: 'date', header: 'Tanggal visit', cell: r => dateLabel(r.visitDate) }, { key: 'reporter', header: 'Pelapor', cell: r => r.reporterName },
         { key: 'counted', header: 'Perhitungan', cell: r => <Badge>{r.counted ? 'Dihitung' : 'Tambahan'}</Badge> }, { key: 'photos', header: 'Bukti', cell: r => <Button onClick={() => setVisit(r)}>{r.photos.length} foto · Buka</Button> }]} />
       <B2BPagination data={history.data} onChange={setHistoryPage} />

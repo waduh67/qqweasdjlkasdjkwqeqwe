@@ -1,7 +1,7 @@
 package com.karuhun.ftth.workorder.adapter.inbound.web
 
 import com.karuhun.ftth.inventory.WarehouseErrorCode
-import com.karuhun.ftth.inventory.application.port.inbound.masterFailure
+import com.karuhun.ftth.common.warehouse.warehouseFailure
 import com.karuhun.ftth.workorder.application.service.ReferenceWorkOrderEvidenceService
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -16,7 +16,7 @@ class ReferenceWorkOrderEvidenceController(private val service: ReferenceWorkOrd
     @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun upload(@PathVariable id: UUID, @RequestHeader("Idempotency-Key") key: String, @RequestParam expectedRevision: Long,
         @RequestParam slot: String, @RequestParam file: MultipartFile): ResponseEntity<String> {
-        if (file.size !in 1..5L * 1024 * 1024) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        if (file.size !in 1..5L * 1024 * 1024) warehouseFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val receipt = service.upload(id, expectedRevision, slot, file.contentType ?: "", file.bytes, key)
         return ResponseEntity.status(receipt.originalStatus).header("Cache-Control", "no-store")
             .contentType(MediaType.APPLICATION_JSON).body(receipt.originalBody)

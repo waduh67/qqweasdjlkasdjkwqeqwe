@@ -25,7 +25,29 @@ class IamApiService(
     private val areaRepository: AreaRepository,
     private val roleRepository: RoleRepository,
     private val owners: com.karuhun.ftth.iam.application.port.outbound.TenantOwnerStore,
-) : IamApi, AreaReferenceApi, com.karuhun.ftth.iam.NeTechnicianApi {
+) : IamApi, AreaReferenceApi, com.karuhun.ftth.iam.NeTechnicianApi, com.karuhun.ftth.iam.FieldTeamApi {
+
+    override fun ownerId(): UUID? = owners.findUserId()
+    override fun canViewTeam(userId: UUID): Boolean = userRepository.findById(userId)?.let { user ->
+        user.active && !user.platformAdmin && (owners.findUserId() == userId ||
+            roleRepository.findAllByIds(user.roleIds).any { it.defaultKey in setOf("ADMIN", "MANAGER") })
+    } == true
+
+    override fun technicians(): List<com.karuhun.ftth.iam.FieldTechnician> {
+        val owner = owners.findUserId()
+        val result = mutableListOf<com.karuhun.ftth.iam.FieldTechnician>()
+        var page = 0
+        do {
+            val users = userRepository.search(null, PageRequest(page++, 100))
+            users.content.filter { it.active && !it.platformAdmin && it.id != owner }.forEach { user ->
+                val keys = roleRepository.findAllByIds(user.roleIds).map { it.defaultKey }.toSet()
+                val team = if (keys.isEmpty() || keys.any { it !in setOf("TECHNICIAN_NE", "TECHNICIAN_FO") }) null
+                    else if ("TECHNICIAN_FO" in keys) com.karuhun.ftth.iam.FieldTeam.FO else com.karuhun.ftth.iam.FieldTeam.NE
+                if (team != null) result.add(com.karuhun.ftth.iam.FieldTechnician(user.id, user.name, team))
+            }
+        } while (page.toLong() * 100 < users.totalElements)
+        return result.sortedWith(compareBy({ it.team }, { it.name }, { it.id }))
+    }
 
     override fun searchNetworkEngineers(query: String, page: PageRequest): Page<UserRef> =
         userRepository.searchNetworkEngineers(query, page).map { it.toRef() }

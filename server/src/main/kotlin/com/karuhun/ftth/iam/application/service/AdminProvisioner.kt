@@ -44,12 +44,16 @@ class AdminProvisioner(
 
     fun ensureOperationalRoles(tenantId: UUID): UUID {
         val admin = ensureRole(tenantId, "ADMIN", "Admin", "Kelola gudang, work order dan akun teknisi", permissionIdsForCodes(ADMIN_PERMISSION_CODES))
-        ensureRole(tenantId, "MANAGER", "Manager", "Persetujuan pengajuan material", permissionIdsForCodes(MANAGER_PERMISSION_CODES))
+        val manager = ensureRole(tenantId, "MANAGER", "Manager", "Persetujuan pengajuan material", permissionIdsForCodes(MANAGER_PERMISSION_CODES))
         val ne = ensureRole(tenantId, "TECHNICIAN_NE", "Teknisi NE", "Teknisi Network Equipment", permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES + B2B_NE_PERMISSION_CODES))
-        ensureRole(tenantId, "TECHNICIAN_FO", "Teknisi FO", "Teknisi Fiber Optic", permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES))
+        val fo = ensureRole(tenantId, "TECHNICIAN_FO", "Teknisi FO", "Teknisi Fiber Optic", permissionIdsForCodes(TECHNICIAN_PERMISSION_CODES))
         ensureFeaturePermissions(admin, B2B_ADMIN_PERMISSION_CODES)
         ensureFeaturePermissions(admin, setOf("iam.user.resetpassword"), "ACCOUNT_PASSWORD_RESET_V1")
         ensureFeaturePermissions(ne, B2B_NE_PERMISSION_CODES)
+        listOf(admin, manager).forEach { ensureFeaturePermissions(it, setOf("kpi.team.view"), "FIELD_KPI_V1") }
+        listOf(ne, fo).forEach { ensureFeaturePermissions(it, setOf("kpi.technician.view"), "FIELD_KPI_V1") }
+        listOf(admin, manager).forEach { ensureFeaturePermissions(it, setOf("field.report.all"), "FIELD_REPORT_V1") }
+        listOf(ne, fo).forEach { ensureFeaturePermissions(it, setOf("field.report.view", "field.report.submit"), "FIELD_REPORT_V1") }
         return admin
     }
 

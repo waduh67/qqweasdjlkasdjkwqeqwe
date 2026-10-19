@@ -7,8 +7,8 @@ import com.karuhun.ftth.customer.CustomerApi
 import com.karuhun.ftth.iam.CurrentAuthorityApi
 import com.karuhun.ftth.iam.CurrentAuthority
 import com.karuhun.ftth.inventory.*
-import com.karuhun.ftth.inventory.application.port.inbound.masterFailure
-import com.karuhun.ftth.inventory.application.service.referenceTimestamp
+import com.karuhun.ftth.common.warehouse.warehouseFailure
+import com.karuhun.ftth.common.infrastructure.time.referenceTimestamp
 import com.karuhun.ftth.workorder.adapter.outbound.persistence.ReferenceWorkIntakeStore
 import com.karuhun.ftth.workorder.application.port.inbound.*
 import com.karuhun.ftth.workorder.application.port.outbound.WorkOrderRepository
@@ -30,16 +30,16 @@ class ReferenceWorkIntakeService(private val store: ReferenceWorkIntakeStore, pr
     fun open(source: ReferenceWorkSource, sourceId: UUID, type: WorkOrderType, title: String, description: String?,
         priority: WorkOrderPriority, customerId: UUID, areaId: UUID?, scheduledAt: Instant?, subscriptionId: UUID? = null): WorkOrder {
         val fence = cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.REFERENCE_WORK_ORDER)
-        val customer = customers.findCustomer(customerId) ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
+        val customer = customers.findCustomer(customerId) ?: warehouseFailure(WarehouseErrorCode.NOT_FOUND)
         val workArea = areaId ?: customer.areaId
         val current = if (source == ReferenceWorkSource.PREVENTIVE) null else authority.lockCurrent().also { actor ->
             accessChecker.assertWritable()
-            if (!actor.platformAdmin && "workorder.order.create" !in actor.permissions) masterFailure(WarehouseErrorCode.FORBIDDEN)
+            if (!actor.platformAdmin && "workorder.order.create" !in actor.permissions) warehouseFailure(WarehouseErrorCode.FORBIDDEN)
             val scope = actor.areaScope
-            if (!actor.platformAdmin && scope is AuthorityScope.Restricted && (workArea == null || workArea !in scope.ids)) masterFailure(WarehouseErrorCode.NOT_FOUND)
+            if (!actor.platformAdmin && scope is AuthorityScope.Restricted && (workArea == null || workArea !in scope.ids)) warehouseFailure(WarehouseErrorCode.NOT_FOUND)
         }
         if (title.isBlank() || title.length > 200 || (description?.length ?: 0) > 2000 ||
-            (title + description.orEmpty()).any { it == '<' || it == '>' || it.isISOControl() && it.code != 10 }) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+            (title + description.orEmpty()).any { it == '<' || it == '>' || it.isISOControl() && it.code != 10 }) warehouseFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val now = referenceTimestamp()
         val order = WorkOrder.open(TenantContext.tenantId(), type, title, description, priority, customerId, null, workArea,
             scheduledAt?.let(::referenceTimestamp), emptySet(), current?.fence?.identity?.userId, subscriptionId, null, now)
@@ -50,7 +50,7 @@ class ReferenceWorkIntakeService(private val store: ReferenceWorkIntakeStore, pr
         return saved
     }
     fun list(page: Int, size: Int, search: String?): WarehousePage<ReferenceWorkIntakeView> {
-        if (page < 0 || size !in 1..100 || search != null && search.length > 200) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        if (page < 0 || size !in 1..100 || search != null && search.length > 200) warehouseFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val current = readAuthority()
         return store.list(page, size, current.areaScope, search)
     }
@@ -58,13 +58,13 @@ class ReferenceWorkIntakeService(private val store: ReferenceWorkIntakeStore, pr
         val current = readAuthority()
         val intake = store.get(id)
         val scope = current.areaScope
-        if (!current.platformAdmin && scope is AuthorityScope.Restricted && (intake.areaId == null || intake.areaId !in scope.ids)) masterFailure(WarehouseErrorCode.NOT_FOUND)
+        if (!current.platformAdmin && scope is AuthorityScope.Restricted && (intake.areaId == null || intake.areaId !in scope.ids)) warehouseFailure(WarehouseErrorCode.NOT_FOUND)
         return intake
     }
     private fun readAuthority(): CurrentAuthority {
         cutovers.lockForCommand(cutovers.read().epoch, WarehouseOperationClass.CONTROL_PLANE)
         return authority.lockCurrent().also {
-            if (!it.platformAdmin && "workorder.order.view" !in it.permissions) masterFailure(WarehouseErrorCode.FORBIDDEN)
+            if (!it.platformAdmin && "workorder.order.view" !in it.permissions) warehouseFailure(WarehouseErrorCode.FORBIDDEN)
         }
     }
 }

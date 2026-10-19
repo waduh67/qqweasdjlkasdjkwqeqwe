@@ -4,7 +4,8 @@ import { getOperationalSettings, saveOperationalSettings, type operationalSettin
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { useAuth } from '@/auth/useAuth'
 import { Button, TextField } from '@/components/atoms'
-import { PageHeader } from '@/components/molecules'
+import { PageHeader, Tabs } from '@/components/molecules'
+import { FieldSettingsPanel } from '@/pages/field/CalendarSettings'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
 import { WarehouseDenied, WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
@@ -17,8 +18,12 @@ export function ReferenceSettingsPage() {
   return workflow.state.status === 'ready' && workflow.state.data.owner ? <OwnerSettings /> : <WarehouseDenied />
 }
 function OwnerSettings() {
+  const [tab, setTab] = useState<'warehouse' | 'calendar' | 'kpi'>('warehouse')
+  return <div className="settings-page stack"><PageHeader title="Setelan Gudang" subtitle="Kebijakan gudang, hari kerja, dan target teknisi yang dikelola owner." /><Tabs active={tab} onChange={setTab} tabs={[{ key: 'warehouse', label: 'Material & WO' }, { key: 'calendar', label: 'Kalender kerja' }, { key: 'kpi', label: 'KPI' }]} />{tab === 'warehouse' ? <WarehouseSettingsPanel /> : <FieldSettingsPanel key={tab} calendar={tab === 'calendar'} />}</div>
+}
+function WarehouseSettingsPanel() {
   const result = useWarehouseQuery(getOperationalSettings), { readOnly } = useAuth(), [editing, setEditing] = useState(false)
-  return <div className="settings-page stack"><PageHeader title="Setelan Gudang" subtitle="Kebijakan operasional yang dikelola owner tenant." />
+  return <div className="stack">
     <WarehouseState {...result}>{data => <>
       <div className="card stack"><p>Persetujuan Manager: <strong>{data.requireManagerApproval ? 'Wajib' : 'Tidak wajib'}</strong></p>
         <p>Batas WO terlambat: <strong>{data.overdueDays} hari</strong></p><p className="muted">Revisi {data.revision}. Perubahan persetujuan berlaku untuk permintaan yang diajukan berikutnya.</p>

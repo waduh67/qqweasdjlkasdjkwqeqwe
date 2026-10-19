@@ -19,7 +19,7 @@ data class FulfillmentApprovalSnapshot(
     val customerBinding: com.karuhun.ftth.customer.CustomerFulfillmentBinding?,
     val orderBinding: com.karuhun.ftth.order.OrderFulfillmentBinding? = null,
     val bngBinding: com.karuhun.ftth.bng.BngFulfillmentBinding? = null,
-    val referenceCompletion: com.karuhun.ftth.workorder.application.port.inbound.ReferenceWorkOrderCompletionView? = null,
+    val referenceCompletion: com.karuhun.ftth.workorder.ReferenceWorkOrderCompletionView? = null,
 )
 
 data class FrozenFulfillment(val snapshot: FulfillmentApprovalSnapshot, val request: FulfillmentRequest)

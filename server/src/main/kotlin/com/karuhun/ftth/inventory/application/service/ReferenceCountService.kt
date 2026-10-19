@@ -3,7 +3,7 @@ package com.karuhun.ftth.inventory.application.service
 import com.karuhun.ftth.common.domain.identity.MacIdentity
 import com.karuhun.ftth.common.domain.identity.SerialIdentity
 import com.karuhun.ftth.iam.IamApi
-import com.karuhun.ftth.iam.application.port.outbound.TenantOwnerStore
+import com.karuhun.ftth.iam.CurrentTenantOwnerApi
 import com.karuhun.ftth.inventory.*
 import com.karuhun.ftth.inventory.adapter.outbound.persistence.*
 import com.karuhun.ftth.inventory.application.port.inbound.*
@@ -17,7 +17,7 @@ import java.util.UUID
 @Service
 @Transactional
 class ReferenceCountService(private val accessService: ReferenceRequestService, private val store: ReferenceCountStore,
-    private val masters: WarehouseMasterStore, private val owners: TenantOwnerStore,
+    private val masters: WarehouseMasterStore, private val owners: CurrentTenantOwnerApi,
     private val stock: WarehouseTransferStock, private val warehouse: ReferenceWarehouseService, private val bindings: ReferenceWarehouseStore,
     private val posting: WarehousePosting, private val operations: WarehouseOperationStore, private val iam: IamApi) {
     private val mapper = jacksonObjectMapper()

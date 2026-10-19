@@ -1,7 +1,7 @@
 package com.karuhun.ftth.workorder.adapter.outbound.persistence
 
-import com.karuhun.ftth.inventory.adapter.outbound.persistence.WarehouseCommandJdbc
-import com.karuhun.ftth.inventory.adapter.outbound.persistence.uuid
+import com.karuhun.ftth.common.infrastructure.persistence.WarehouseCommandJdbc
+import com.karuhun.ftth.common.infrastructure.persistence.uuid
 import com.karuhun.ftth.workorder.application.port.inbound.ReferenceWorkOrderPhotoView
 import com.karuhun.ftth.workorder.domain.model.WorkOrderEvidence
 import org.springframework.stereotype.Repository

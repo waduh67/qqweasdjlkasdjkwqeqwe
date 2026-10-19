@@ -6,7 +6,7 @@ import { WarehouseDataError } from './codec'
 
 const id = '00000000-0000-4000-8000-000000000001'
 const area = { id, name: 'Area Utara', code: 'UTARA' }
-const type = { id, revision: 3, name: 'Periksa', workType: 'PREVENTIVE', materialRequired: false, photoSlots: ['Hasil'], active: true, deleted: false } as const
+const type = { id, revision: 3, name: 'Periksa', workType: 'PREVENTIVE', kpiCategory: 'NONE', materialRequired: false, photoSlots: ['Hasil'], active: true, deleted: false } as const
 const response = (body: unknown) => new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
 let fetchMock: ReturnType<typeof vi.fn>
 beforeEach(() => { tokenStore.clear(); fetchMock = vi.fn(); vi.stubGlobal('fetch', fetchMock) })

@@ -7,5 +7,5 @@ export function typeDetails(draft: Omit<WorkTypeInput, 'photoSlots'> & { readonl
   if (photoSlots.length < 1 || photoSlots.length > 12 || photoSlots.some(slot => !slot || slot.length > 100)) throw new WorkDraftError('Isi 1–12 foto wajib, satu nama per baris, maksimal 100 karakter per nama.')
   if (new Set(photoSlots.map(slot => slot.toLocaleLowerCase('id'))).size !== photoSlots.length) throw new WorkDraftError('Setiap nama foto wajib harus berbeda.')
   if ([name, ...photoSlots].some(value => /[<>]/.test(value) || Array.from(value).some(character => { const code = character.charCodeAt(0); return code < 32 || (code >= 127 && code <= 159) }))) throw new WorkDraftError('Gunakan nama berupa teks biasa tanpa HTML atau karakter kontrol.')
-  return { name, photoSlots, workType: draft.workType, materialRequired: draft.materialRequired, active: draft.active, expectedRevision: draft.expectedRevision }
+  return { name, photoSlots, workType: draft.workType, kpiCategory: draft.kpiCategory, materialRequired: draft.materialRequired, active: draft.active, expectedRevision: draft.expectedRevision }
 }

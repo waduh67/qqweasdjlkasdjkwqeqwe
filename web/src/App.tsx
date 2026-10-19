@@ -37,6 +37,8 @@ import { ReferenceWorkTypesPage } from './pages/workorder/ReferenceWorkTypesPage
 import { MyVisitsPage } from './pages/MyVisitsPage'
 const B2BClientsPage = lazy(() => import('./pages/b2b/B2BClientsPage').then(m => ({ default: m.B2BClientsPage })))
 const B2BVisitsPage = lazy(() => import('./pages/b2b/B2BVisitsPage').then(m => ({ default: m.B2BVisitsPage })))
+const KpiPage = lazy(() => import('./pages/field/KpiPanel').then(m => ({ default: m.KpiPage })))
+const DailyReportsPage = lazy(() => import('./pages/field/DailyReportsPage').then(m => ({ default: m.DailyReportsPage })))
 import { WorkOrderDetailPage } from './pages/WorkOrderDetailPage'
 import { CatalogPage } from './pages/CatalogPage'
 import { AcsPage } from './pages/AcsPage'
@@ -107,6 +109,12 @@ function B2BIndexRoute() {
   if (hasPermission('b2b.client.view')) return <Navigate to="/b2b/clients" replace />
   if (hasPermission('b2b.visit.view')) return <Navigate to="/b2b/visits" replace />
   return <ForbiddenPermission permission="b2b.client.view atau b2b.visit.view" />
+}
+
+function RequireFieldPermission({ permissions, children }: { readonly permissions: readonly string[]; readonly children: ReactNode }) {
+  const { hasPermission } = useCan()
+  if (!permissions.some(hasPermission)) return <ForbiddenPermission permission={permissions.join(' atau ')} />
+  return <>{children}</>
 }
 
 function ForbiddenPermission({ permission }: { permission: string }) {
@@ -190,6 +198,8 @@ function OperatorApp() {
             }
           >
             <Route index element={<DashboardPage />} />
+            <Route path="kpi" element={<RequireFieldPermission permissions={['kpi.technician.view', 'kpi.team.view']}><KpiPage /></RequireFieldPermission>} />
+            <Route path="daily-reports" element={<RequireFieldPermission permissions={['field.report.view', 'field.report.all']}><DailyReportsPage /></RequireFieldPermission>} />
             {/* Akun sendiri: tanpa gerbang izin — mengamankan akunmu bukan wewenang
                 yang perlu diberikan siapa pun, dan menggerbanginya berarti sebagian
                 operator tak boleh memasang 2FA. */}

@@ -62,6 +62,13 @@ const GROUPS: NavGroup[] = [
     items: [],
   },
   {
+    label: 'Operasional',
+    items: [
+      { to: '/kpi', label: 'KPI Teknisi', permission: ['kpi.technician.view', 'kpi.team.view'], access: 'read', icon: NavIcons.Chart },
+      { to: '/daily-reports', label: 'Laporan Pagi / Sore', permission: ['field.report.view', 'field.report.all'], access: 'read', icon: NavIcons.Calendar },
+    ],
+  },
+  {
     label: 'Lapangan',
     items: [
       { to: '/incidents', label: 'Insiden', permission: 'incident.ticket.view', icon: NavIcons.Alert },

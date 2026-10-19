@@ -6,6 +6,7 @@ import com.karuhun.ftth.common.tenant.TenantContext
 import com.karuhun.ftth.iam.DeliveryAuthorityApi
 import com.karuhun.ftth.iam.application.port.inbound.OnboardTenantCommand
 import com.karuhun.ftth.iam.application.port.inbound.OnboardTenantUseCase
+import com.karuhun.ftth.iam.application.port.outbound.PermissionRepository
 import com.karuhun.ftth.iam.application.port.outbound.RoleRepository
 import com.karuhun.ftth.iam.application.port.outbound.TenantOwnerStore
 import com.karuhun.ftth.iam.application.port.outbound.UserRepository
@@ -39,6 +40,7 @@ class TenantDefaultsIT {
     @Autowired private lateinit var onboarding: OnboardTenantUseCase
     @Autowired private lateinit var provisioner: AdminProvisioner
     @Autowired private lateinit var defaults: WarehouseTenantDefaults
+    @Autowired private lateinit var permissions: PermissionRepository
     @Autowired private lateinit var roles: RoleRepository
     @Autowired private lateinit var users: UserRepository
     @Autowired private lateinit var owners: TenantOwnerStore
@@ -147,15 +149,19 @@ class TenantDefaultsIT {
     fun `backfill B2B menambah izin sekali dan mempertahankan kustomisasi setelah upgrade`() {
         val (tenant, _) = tenant()
         within(tenant) {
-            jdbc.update("DELETE FROM iam_default_role_feature WHERE tenant_id=?", tenant)
+            jdbc.update("DELETE FROM iam_default_role_feature WHERE tenant_id=? AND feature='B2B_V1'", tenant)
             listOf("ADMIN", "TECHNICIAN_NE").forEach { key ->
                 val role = requireNotNull(roles.findByDefaultKey(key))
                 role.replacePermissions(emptySet())
                 roles.save(role)
             }
             provisioner.ensureOperationalRoles(tenant)
-            assertThat(roles.findByDefaultKey("ADMIN")?.permissionIds).hasSize(2)
-            assertThat(roles.findByDefaultKey("TECHNICIAN_NE")?.permissionIds).hasSize(2)
+            val admin = requireNotNull(roles.findByDefaultKey("ADMIN"))
+            val ne = requireNotNull(roles.findByDefaultKey("TECHNICIAN_NE"))
+            assertThat(permissions.findAllByIds(admin.permissionIds).map { it.code.value })
+                .containsExactlyInAnyOrder("b2b.client.view", "b2b.client.manage")
+            assertThat(permissions.findAllByIds(ne.permissionIds).map { it.code.value })
+                .containsExactlyInAnyOrder("b2b.visit.view", "b2b.visit.report")
             listOf("ADMIN", "TECHNICIAN_NE").forEach { key ->
                 val role = requireNotNull(roles.findByDefaultKey(key))
                 role.replacePermissions(emptySet())
@@ -164,7 +170,7 @@ class TenantDefaultsIT {
             provisioner.ensureOperationalRoles(tenant)
             assertThat(roles.findByDefaultKey("ADMIN")?.permissionIds).isEmpty()
             assertThat(roles.findByDefaultKey("TECHNICIAN_NE")?.permissionIds).isEmpty()
-            assertThat(jdbc.queryForObject("SELECT count(*) FROM iam_default_role_feature WHERE tenant_id=?", Long::class.java,tenant)).isEqualTo(2)
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM iam_default_role_feature WHERE tenant_id=? AND feature='B2B_V1'", Long::class.java,tenant)).isEqualTo(2)
         }
     }
 

@@ -5,8 +5,9 @@ import com.karuhun.ftth.common.infrastructure.security.AccessChecker
 import com.karuhun.ftth.iam.CurrentAuthority
 import com.karuhun.ftth.iam.CurrentAuthorityApi
 import com.karuhun.ftth.iam.IamApi
-import com.karuhun.ftth.iam.application.port.outbound.TenantOwnerStore
+import com.karuhun.ftth.iam.CurrentTenantOwnerApi
 import com.karuhun.ftth.inventory.*
+import com.karuhun.ftth.inventory.ReferenceOperationalSettings
 import com.karuhun.ftth.inventory.adapter.outbound.persistence.ReferenceRequestStore
 import com.karuhun.ftth.inventory.application.port.inbound.*
 import com.karuhun.ftth.inventory.application.port.outbound.WarehouseMasterStore
@@ -20,7 +21,7 @@ import java.util.UUID
 @Service
 @Transactional
 class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, private val authority: CurrentAuthorityApi,
-    private val owners: TenantOwnerStore, private val scopes: InventoryWarehouseScopeApi, private val iam: IamApi,
+    private val owners: CurrentTenantOwnerApi, private val scopes: InventoryWarehouseScopeApi, private val iam: IamApi,
     private val masters: WarehouseMasterStore, private val catalog: WarehouseMasterService, private val store: ReferenceRequestStore,
     private val sites: SiteReferenceApi, private val accessChecker: AccessChecker) {
     private val mapper = jacksonObjectMapper()

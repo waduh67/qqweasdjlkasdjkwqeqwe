@@ -4,8 +4,8 @@ import com.karuhun.ftth.common.storage.DeleteGuard
 import com.karuhun.ftth.common.storage.ObjectStorage
 import com.karuhun.ftth.inventory.WarehouseErrorCode
 import com.karuhun.ftth.inventory.WarehouseOperationReceipt
-import com.karuhun.ftth.inventory.application.port.inbound.masterFailure
-import com.karuhun.ftth.inventory.application.service.referenceTimestamp
+import com.karuhun.ftth.common.warehouse.warehouseFailure
+import com.karuhun.ftth.common.infrastructure.time.referenceTimestamp
 import com.karuhun.ftth.workorder.adapter.outbound.persistence.ReferenceWorkOrderEvidenceStore
 import com.karuhun.ftth.workorder.adapter.outbound.persistence.ReferenceWorkOrderStore
 import com.karuhun.ftth.workorder.application.port.inbound.DownloadedContent
@@ -41,7 +41,7 @@ class ReferenceWorkOrderEvidenceService(private val orders: ReferenceWorkOrderSe
         val canonical = orders.canonical(id, input)
         orders.replay("PHOTO", key, canonical, access)?.let { return it }
         val prior = orders.editable(id, revision, access)
-        if (slot !in prior.type.photoSlots) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST, "Pilih slot foto work order")
+        if (slot !in prior.type.photoSlots) warehouseFailure(WarehouseErrorCode.MALFORMED_REQUEST, "Pilih slot foto work order")
         val now = referenceTimestamp()
         val photo = WorkOrderEvidence.attach(access.current.fence.identity.tenantId, id, EvidenceKind.OTHER, slot,
             contentType, bytes.size.toLong(), null, null, null, access.current.fence.identity.userId, now, now, hash)
@@ -65,18 +65,18 @@ class ReferenceWorkOrderEvidenceService(private val orders: ReferenceWorkOrderSe
     fun download(id: UUID, photoId: UUID): DownloadedContent {
         val access = orders.readAccess()
         val current = orders.authorized(store.get(id), access)
-        if (photos.list(id, current.assignmentGeneration).none { it.id == photoId }) masterFailure(WarehouseErrorCode.NOT_FOUND)
-        val photo = evidence.findVisibleById(photoId)?.takeIf { it.workOrderId == id } ?: masterFailure(WarehouseErrorCode.NOT_FOUND)
+        if (photos.list(id, current.assignmentGeneration).none { it.id == photoId }) warehouseFailure(WarehouseErrorCode.NOT_FOUND)
+        val photo = evidence.findVisibleById(photoId)?.takeIf { it.workOrderId == id } ?: warehouseFailure(WarehouseErrorCode.NOT_FOUND)
         val stored = storage.get(photo.storageKey)
         if (stored.size != photo.sizeBytes || stored.contentType != photo.contentType || sha256(stored.bytes) != photo.sha256)
-            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Bukti foto berubah di penyimpanan")
+            warehouseFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Bukti foto berubah di penyimpanan")
         return DownloadedContent(photo.contentType, stored.bytes)
     }
     internal fun requireCurrent(id: UUID, generation: Long, slots: List<String>): List<WorkOrderEvidence> {
         val current = photos.list(id, generation).filter { it.current }
-        if (current.map { it.slot }.toSet() != slots.toSet()) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST, "Lengkapi semua foto wajib")
+        if (current.map { it.slot }.toSet() != slots.toSet()) warehouseFailure(WarehouseErrorCode.MALFORMED_REQUEST, "Lengkapi semua foto wajib")
         return current.map { view ->
-            val photo = evidence.findVisibleById(view.id) ?: masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+            val photo = evidence.findVisibleById(view.id) ?: warehouseFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
             verify(photo)
             photo
         }
@@ -84,7 +84,7 @@ class ReferenceWorkOrderEvidenceService(private val orders: ReferenceWorkOrderSe
     private fun verify(photo: WorkOrderEvidence) {
         val stored = storage.get(photo.storageKey)
         if (stored.size != photo.sizeBytes || stored.contentType != photo.contentType || sha256(stored.bytes) != photo.sha256)
-            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Bukti foto gagal diverifikasi")
+            warehouseFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED, "Bukti foto gagal diverifikasi")
     }
     private fun rollbackCleanup(photo: WorkOrderEvidence) {
         TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
@@ -111,7 +111,7 @@ class ReferenceWorkOrderEvidenceService(private val orders: ReferenceWorkOrderSe
             else -> false
         }
         if (bytes.size !in 1..5 * 1024 * 1024 || !signatureMatches)
-            masterFailure(WarehouseErrorCode.MALFORMED_REQUEST, "Gunakan foto PNG, JPEG, GIF, atau WebP maksimal 5 MB")
+            warehouseFailure(WarehouseErrorCode.MALFORMED_REQUEST, "Gunakan foto PNG, JPEG, GIF, atau WebP maksimal 5 MB")
     }
     private fun ByteArray.startsWith(prefix: ByteArray) = size >= prefix.size && copyOf(prefix.size).contentEquals(prefix)
     private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }

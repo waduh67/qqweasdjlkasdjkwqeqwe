@@ -12,4 +12,4 @@ data class ApprovedWorkOrderContext(val material: WorkOrderMaterialContext, val 
     val completedBy: UUID, val proofHash: String)
 
 data class ReferenceWorkOrderSettlement(val workOrder: ApprovedWorkOrderContext,
-    val completion: com.karuhun.ftth.workorder.application.port.inbound.ReferenceWorkOrderCompletionView)
+    val completion: ReferenceWorkOrderCompletionView)

@@ -2,9 +2,9 @@ package com.karuhun.ftth.workorder.adapter.outbound.persistence
 
 import com.karuhun.ftth.common.security.AuthorityScope
 import com.karuhun.ftth.inventory.*
-import com.karuhun.ftth.inventory.adapter.outbound.persistence.WarehouseCommandJdbc
-import com.karuhun.ftth.inventory.adapter.outbound.persistence.uuid
-import com.karuhun.ftth.inventory.application.service.WarehouseCanonicalPayload
+import com.karuhun.ftth.common.infrastructure.persistence.WarehouseCommandJdbc
+import com.karuhun.ftth.common.infrastructure.persistence.uuid
+import com.karuhun.ftth.common.infrastructure.web.WarehouseCanonicalPayload
 import com.karuhun.ftth.workorder.application.port.inbound.*
 import org.springframework.stereotype.Repository
 import tools.jackson.module.kotlin.jacksonObjectMapper

@@ -69,6 +69,12 @@ All colors come from `src/index.css`: `--plane`, `--surface`, `--surface-2`, `--
 - States: selected, hover, focus, disabled supplied by Fluent.
 - Layout: horizontally scrollable when space is constrained.
 
+### Operational calendar, daily reports and KPI
+- Setelan Gudang uses shared tabs for Material & WO, Kalender kerja and KPI. The document owns scrolling; reviewed changes use ResourceForm and WarehouseCommandDialog. Calendar rows name dates, sources and edit actions; source errors remain visible beside saved holidays. Moving a holiday can cross years. KPI count targets and inactivity days are distinct labeled settings.
+- Laporan Pagi / Sore shows the selected date, optional holiday status, full-scope completeness totals and both slots for each technician. Today submissions retain notes and optional photo bytes through review/retry. Revisions are immutable and photos load privately only in an opened detail. History has its own month filter and pagination.
+- KPI uses one shared panel in the sidebar page and Dashboard tab. Month, team and technician filters apply to chart, table and average together. Horizontal score bars use the existing accent and surface tokens, with visible names and percentages; detail tables expose actual, target and percentage for each metric. Bars reflow in the document at 375px and have text equivalents. No motion or dependency is added.
+- Empty, invalid and future KPI months clear results and show a field error. B2B history has an independent month control and permits an empty future month. Existing Fluent focus, token spacing and wrapping tables apply; no new accessibility debt.
+
 ### Provisioning workspace
 - Structure: page header, safety summary, shared `Tabs`, and one section panel at a time.
 - States: loading, empty, error, read-only, provisional, rejected, running, rollback, manual reconciliation.

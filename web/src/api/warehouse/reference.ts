@@ -37,6 +37,7 @@ export function workType(value: unknown) {
   const row = record(value)
   return { id: uuid(row.id), revision: integer(row.revision), name: text(row.name),
     workType: oneOf(row.workType, ['PSB', 'REPAIR', 'MIGRATION', 'DISMANTLE', 'PREVENTIVE']),
+    kpiCategory: oneOf(row.kpiCategory, ['NONE', 'PSB', 'PROJECT']),
     materialRequired: boolean(row.materialRequired), photoSlots: array(row.photoSlots, text, 'photoSlots', 12),
     active: boolean(row.active), deleted: boolean(row.deleted) }
 }
