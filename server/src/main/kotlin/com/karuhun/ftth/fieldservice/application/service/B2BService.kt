@@ -111,7 +111,7 @@ class B2BService(private val store: B2BStore, private val authority: CurrentAuth
     }
     fun visits(month: YearMonth, clientId: UUID?, page: PageRequest): Page<B2BVisitView> {
         val actor=access(); val all=readScope(actor)
-        if(month>YearMonth.from(clock.today())) throw ValidationException("Riwayat bulan depan belum tersedia")
+        if(month.year !in 2000..2100) throw ValidationException("Tahun riwayat harus 2000 sampai 2100")
         return store.use { sql ->
             val ids=sql.page("""SELECT id FROM b2b_visit WHERE tenant_id=? AND month=? AND (? OR reporter_id=?)
                 AND (?::uuid IS NULL OR client_id=?::uuid) ORDER BY created_at DESC,id""",page,sql.tenant,month.atDay(1),all,
