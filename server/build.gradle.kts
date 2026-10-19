@@ -61,6 +61,7 @@ dependencies {
     implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("com.github.ben-manes.caffeine:caffeine")
     implementation("org.apache.pdfbox:pdfbox:3.0.8")
+    implementation("org.jsoup:jsoup:1.23.2")
 
     implementation(libs.springdoc.webmvc.ui)
 
