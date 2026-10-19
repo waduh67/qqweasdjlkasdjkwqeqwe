@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test'
 import { createUser, login, signup } from './helpers'
+import { captureReferenceThemes as captureThemes } from './reference-setup'
 
-test('admin creates B2B client and assigned NE reports private monthly visits', async ({ page }) => {
+test('admin creates B2B client and assigned NE reports private monthly visits', async ({ page }, info) => {
   test.setTimeout(180_000)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   const owner = await signup(page)
   const engineer = await createUser(page, 'Teknisi NE', { prefix: 'TeknisiNE' })
   const admin = await createUser(page, 'Admin', { prefix: 'AdminB2B' })
@@ -23,6 +25,7 @@ test('admin creates B2B client and assigned NE reports private monthly visits', 
   await page.getByRole('textbox', { name: 'Nama client', exact: true }).fill('Kantor B2B')
   await page.getByRole('textbox', { name: 'Alamat', exact: true }).fill('Jl. Kantor 12')
   await page.getByRole('textbox', { name: 'Kontak / PIC', exact: true }).fill('PIC kantor 08123456789')
+  await page.getByRole('button', { name: 'Berikutnya: Kunjungan', exact: true }).click()
   await page.getByRole('spinbutton', { name: 'Target visit per bulan', exact: true }).fill('4')
   await page.getByRole('button', { name: 'Pilih', exact: true }).click()
   await page.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
@@ -49,13 +52,30 @@ test('admin creates B2B client and assigned NE reports private monthly visits', 
   }
   await expect(page.getByRole('gridcell', { name: '1 / 4', exact: true })).toBeVisible()
   await expect(page.getByLabel('Riwayat visit B2B').getByRole('gridcell', { name: 'Tambahan', exact: true })).toBeVisible()
+  await captureThemes(page, info, 'b2b-visits')
+  const recapMonth = await page.getByLabel('Bulan rekap').inputValue()
+  const [year, month] = recapMonth.split('-').map(Number)
+  const futureMonth = month === 12 ? String(year + 1) + '-01' : String(year) + '-' + String(month + 1).padStart(2, '0')
+  await page.getByLabel('Bulan riwayat visit').fill(futureMonth)
+  await expect(page.getByText('Belum ada laporan visit pada bulan ini.', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Bulan rekap')).toHaveValue(recapMonth)
+  await expect(page.getByRole('gridcell', { name: '1 / 4', exact: true })).toBeVisible()
+  await captureThemes(page, info, 'b2b-history-future')
+  await page.getByLabel('Bulan riwayat visit').fill('')
+  await expect(page.getByText('Pilih bulan untuk melihat riwayat.', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Riwayat visit B2B').getByRole('button', { name: '1 foto · Buka', exact: true })).toHaveCount(0)
+  await captureThemes(page, info, 'b2b-history-empty')
+  await page.getByLabel('Bulan riwayat visit').fill(recapMonth)
+  await expect(page.getByLabel('Riwayat visit B2B').getByRole('gridcell', { name: 'Tambahan', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Keluar', exact: true }).click()
   await login(page, admin)
   await page.goto('/b2b/reports')
   await expect(page.getByRole('gridcell', { name: '1 / 4', exact: true })).toBeVisible()
+  await captureThemes(page, info, 'b2b-recap')
   await page.getByRole('button', { name: '1 foto · Buka', exact: true }).first().click()
   await expect(page.getByAltText('Bukti visit 1')).toBeVisible()
   await expect.poll(() => page.getByAltText('Bukti visit 1').evaluate(image => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0)).toBeTruthy()
+  await captureThemes(page, info, 'b2b-private-evidence')
   await page.getByRole('button', { name: 'Tutup', exact: true }).last().click()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
   await page.getByRole('button', { name: 'Keluar', exact: true }).click()

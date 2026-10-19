@@ -12,7 +12,7 @@ Admin membuka **Lapangan → Rekap B2B** (`/b2b/reports`) untuk melihat jumlah v
 - Perubahan client berlaku bulan berikutnya. Snapshot dan penugasan bulan berjalan tetap; teknisi baru mendapat tugas mulai bulan berikutnya. Bulan yang terlewat tetap dibuat berdasarkan pengaturan yang berlaku saat itu.
 - Satu client hanya menghitung satu visit per hari. Laporan tambahan pada hari yang sama disimpan dengan label **Tambahan**. Target bersifat bulanan; tidak ada kuota mingguan.
 - Minggu berjalan Senin–Minggu dan dipotong pada batas bulan. Minggu aktif tanpa visit baru ditandai setelah berakhir. Client nonaktif tidak menghasilkan minggu terlewat.
-- Bulan mendatang ditolak. Bulan sebelum client dibuat tidak berisi client tersebut.
+- Bulan rekap mendatang ditolak. Filter bulan riwayat visit berdiri sendiri; bulan mendatang diterima dengan hasil kosong tanpa membuat snapshot. Bulan sebelum client dibuat tidak berisi client tersebut. Bulan kosong atau tidak valid menampilkan validasi pada field.
 - Client hanya dapat dihapus sebelum memiliki visit. Sesudahnya, nonaktifkan untuk bulan berikutnya agar riwayat tetap tersimpan.
 - Revisi client mencegah penimpaan perubahan bersamaan. Kunci pengiriman dan payload tetap dipertahankan saat mencoba ulang; kunci yang sama dengan payload berbeda ditolak.
 
