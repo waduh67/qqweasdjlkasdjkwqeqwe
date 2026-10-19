@@ -4,7 +4,7 @@ import { dispatchWorkIntake, listWorkIntake, loadReferenceWorkDocument } from '.
 
 const id = '00000000-0000-4000-8000-000000000001'
 const now = '2026-10-09T10:00:00Z'
-const type = { id, revision: 0, name: 'Pemasangan', workType: 'PSB', photoSlots: ['Bukti'], materialRequired: false, active: true, deleted: false }
+const type = { id, revision: 0, name: 'Pemasangan', workType: 'PSB', kpiCategory: 'PSB', photoSlots: ['Bukti'], materialRequired: false, active: true, deleted: false }
 const work = { id, code: 'WO-1', revision: 0, type, title: 'Pasang layanan', description: '', priority: 'NORMAL', customerId: id,
   areaId: id, technicianId: id, technicianName: 'Teknisi', scheduledAt: null, state: 'PENDING', assignmentGeneration: 1,
   lastActivityAt: now, blockedReason: null, createdAt: now }

@@ -5,10 +5,13 @@ import com.karuhun.ftth.workorder.domain.model.WorkOrderType
 import java.time.Instant
 import java.util.UUID
 
+enum class WorkOrderKpiCategory(val points: Int) { NONE(0), PSB(1), PROJECT(3) }
 data class ReferenceWorkOrderTypeInput(val name: String, val workType: WorkOrderType, val materialRequired: Boolean,
-    val photoSlots: List<String>, val active: Boolean = true, val expectedRevision: Long = 0)
+    val photoSlots: List<String>, val active: Boolean = true, val expectedRevision: Long = 0,
+    val kpiCategory: WorkOrderKpiCategory = if (workType == WorkOrderType.PSB) WorkOrderKpiCategory.PSB else WorkOrderKpiCategory.NONE)
 data class ReferenceWorkOrderTypeView(val id: UUID, val revision: Long, val name: String, val workType: WorkOrderType,
-    val materialRequired: Boolean, val photoSlots: List<String>, val active: Boolean, val deleted: Boolean = false)
+    val materialRequired: Boolean, val photoSlots: List<String>, val active: Boolean, val deleted: Boolean = false,
+    val kpiCategory: WorkOrderKpiCategory = if (workType == WorkOrderType.PSB) WorkOrderKpiCategory.PSB else WorkOrderKpiCategory.NONE)
 data class ReferenceWorkOrderInput(val typeId: UUID, val title: String, val technicianId: UUID, val areaId: UUID,
     val description: String = "", val priority: WorkOrderPriority = WorkOrderPriority.NORMAL, val customerId: UUID? = null,
     val scheduledAt: Instant? = null, val subscriptionId: UUID? = null, val orderId: UUID? = null)
