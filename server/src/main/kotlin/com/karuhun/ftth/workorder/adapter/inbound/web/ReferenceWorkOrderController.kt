@@ -1,7 +1,7 @@
 package com.karuhun.ftth.workorder.adapter.inbound.web
 
 import com.karuhun.ftth.inventory.WarehouseOperationReceipt
-import com.karuhun.ftth.inventory.adapter.inbound.web.WarehouseReceiptJson
+import com.karuhun.ftth.common.infrastructure.web.WarehouseReceiptJson
 import com.karuhun.ftth.workorder.application.port.inbound.*
 import com.karuhun.ftth.workorder.application.service.ReferenceWorkIntakeService
 import com.karuhun.ftth.workorder.application.service.ReferenceWorkOrderService

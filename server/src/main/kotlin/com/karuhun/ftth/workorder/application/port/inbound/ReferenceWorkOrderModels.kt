@@ -32,10 +32,6 @@ data class ReferenceWorkOrderDetail(val workOrder: ReferenceWorkOrderView, val o
 data class ReferenceWorkOrderMaterialInput(val stockIdentityId: UUID, val quantityBase: String)
 data class ReferenceWorkOrderCompletionInput(val expectedRevision: Long, val notes: String = "",
     val materials: List<ReferenceWorkOrderMaterialInput> = emptyList())
-data class ReferenceCompletionPhoto(val id: UUID, val slot: String, val sha256: String, val sizeBytes: Long, val contentType: String)
-data class ReferenceCompletionMaterial(val lineId: UUID, val stockIdentityId: UUID, val consumedIdentityId: UUID,
-    val skuId: UUID, val skuName: String, val quantityBase: String, val baseUnit: String, val tracking: String,
-    val serial: String?, val mac: String?)
-data class ReferenceWorkOrderCompletionView(val workOrderId: UUID, val revision: Long, val assignmentGeneration: Long,
-    val technicianId: UUID, val notes: String, val completedAt: Instant, val photos: List<ReferenceCompletionPhoto>,
-    val materials: List<ReferenceCompletionMaterial>, val documentId: UUID?)
+typealias ReferenceCompletionPhoto = com.karuhun.ftth.workorder.ReferenceCompletionPhoto
+typealias ReferenceCompletionMaterial = com.karuhun.ftth.workorder.ReferenceCompletionMaterial
+typealias ReferenceWorkOrderCompletionView = com.karuhun.ftth.workorder.ReferenceWorkOrderCompletionView

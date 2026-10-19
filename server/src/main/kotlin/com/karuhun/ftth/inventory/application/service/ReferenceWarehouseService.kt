@@ -5,7 +5,7 @@ import com.karuhun.ftth.common.infrastructure.security.AccessChecker
 import com.karuhun.ftth.iam.CurrentAuthority
 import com.karuhun.ftth.iam.CurrentAuthorityApi
 import com.karuhun.ftth.iam.IamApi
-import com.karuhun.ftth.iam.application.port.outbound.TenantOwnerStore
+import com.karuhun.ftth.iam.CurrentTenantOwnerApi
 import com.karuhun.ftth.inventory.*
 import com.karuhun.ftth.inventory.adapter.outbound.persistence.*
 import com.karuhun.ftth.inventory.application.port.inbound.*
@@ -20,7 +20,7 @@ import java.util.UUID
 @Service
 @Transactional
 class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyService, private val authority: CurrentAuthorityApi,
-    private val owners: TenantOwnerStore, private val scopes: InventoryWarehouseScopeApi,
+    private val owners: CurrentTenantOwnerApi, private val scopes: InventoryWarehouseScopeApi,
     private val masters: WarehouseMasterStore, private val masterService: WarehouseMasterService,
     private val validation: ReceiptDraftValidation, private val receipts: WarehouseReceiptPersistence,
     private val origins: WarehouseReceiptOrigins, private val stock: WarehouseTransferStock,

@@ -1,10 +1,10 @@
-package com.karuhun.ftth.tenancy.adapter.inbound.web
+package com.karuhun.ftth.iam.adapter.inbound.web
 
 import com.karuhun.ftth.common.domain.PageRequest
 import com.karuhun.ftth.common.infrastructure.web.PageResponse
 import com.karuhun.ftth.tenancy.TenantRef
 import com.karuhun.ftth.tenancy.TenantStatus
-import com.karuhun.ftth.tenancy.application.port.inbound.ManageTenantUseCase
+import com.karuhun.ftth.tenancy.TenantManagementApi
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
@@ -36,7 +36,7 @@ import java.util.UUID
 @Tag(name = "Platform — Tenants")
 @SecurityRequirement(name = "bearer-jwt")
 class TenantController(
-    private val manageTenant: ManageTenantUseCase,
+    private val manageTenant: TenantManagementApi,
     private val owners: TenantOwnerApi,
 ) {
     @GetMapping

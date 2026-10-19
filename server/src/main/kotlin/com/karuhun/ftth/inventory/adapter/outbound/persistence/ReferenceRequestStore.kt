@@ -1,6 +1,7 @@
 package com.karuhun.ftth.inventory.adapter.outbound.persistence
 
 import com.karuhun.ftth.inventory.WarehouseErrorCode
+import com.karuhun.ftth.inventory.InventoryReferenceSettingsApi
 import com.karuhun.ftth.inventory.WarehouseOperationReceipt
 import com.karuhun.ftth.inventory.WarehousePage
 import com.karuhun.ftth.inventory.application.port.inbound.*
@@ -11,7 +12,7 @@ import java.util.UUID
 data class ReferenceRequestCommand(val actorId: UUID, val resourceId: UUID, val hash: String, val epoch: Long, val permission: String, val receipt: WarehouseOperationReceipt)
 
 @Repository
-class ReferenceRequestStore(private val jdbc: WarehouseCommandJdbc) {
+class ReferenceRequestStore(private val jdbc: WarehouseCommandJdbc) : InventoryReferenceSettingsApi {
     private val mapper = jacksonObjectMapper()
 
     fun get(id: UUID, lock: Boolean = false): ReferenceRequestView = jdbc.execute { sql ->
@@ -59,7 +60,7 @@ class ReferenceRequestStore(private val jdbc: WarehouseCommandJdbc) {
         Unit
     }
 
-    fun settings(): ReferenceOperationalSettings = jdbc.execute { sql ->
+    override fun settings(): ReferenceOperationalSettings = jdbc.execute { sql ->
         sql.value("SELECT snapshot::text FROM inventory_reference_settings WHERE tenant_id=?", sql.tenant)
             ?.let { mapper.readValue(it, ReferenceOperationalSettings::class.java) } ?: ReferenceOperationalSettings()
     }
