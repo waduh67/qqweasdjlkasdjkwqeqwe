@@ -15,6 +15,8 @@ import {
 const LABELS: Record<string, string> = {
   '': 'Beranda',
   reports: 'Laporan',
+  kpi: 'KPI Teknisi',
+  'daily-reports': 'Laporan Pagi / Sore',
   subscription: 'Langganan Aplikasi',
   map: 'Peta Jaringan',
   inventory: 'Aset jaringan',

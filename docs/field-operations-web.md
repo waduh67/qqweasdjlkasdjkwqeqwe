@@ -5,6 +5,8 @@
 - Dispatcher membuat dan menugaskan work order melalui **Lapangan → Work Order**.
 - Teknisi bekerja melalui **Lapangan → Tugas Saya**, termasuk mulai kerja, bukti, pembacaan optik, dan submission penyelesaian.
 - Penyelia meninjau submission `DONE/PENDING` dari detail work order. Server menolak persetujuan oleh pengirim submission yang sama.
+- Teknisi NE/FO mengirim dan merevisi pekerjaan pagi/sore melalui **Operasional → Laporan Pagi / Sore** (`/daily-reports`); owner/Admin/Manager memantau kelengkapan tim. Aturan dan API ada di [daily-reports.md](daily-reports.md).
+- **Operasional → KPI Teknisi** (`/kpi`) serta tab KPI dashboard menampilkan capaian bulanan dan detail. Owner mengatur kalender dan target melalui Pengaturan Gudang; lihat [operational-kpi-calendar.md](operational-kpi-calendar.md).
 - Impor pelanggan memakai **Layanan Pelanggan → Pelanggan** dan hanya menampilkan metadata batch serta laporan aman dari server.
 
 ## Batas portal pelanggan

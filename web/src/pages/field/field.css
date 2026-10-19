@@ -1,0 +1,19 @@
+.warehouse-data-table-card .table-cell-content .field-cell-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  white-space: normal;
+}
+
+.field-cell-actions > button {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.field-detail-dialog .console-dialog-heading > .fui-DialogTitle {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

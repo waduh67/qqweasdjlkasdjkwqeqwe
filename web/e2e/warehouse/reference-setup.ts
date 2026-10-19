@@ -15,11 +15,25 @@ export async function captureReferenceDocument(page: Page, info: TestInfo, name:
   const theme = await page.locator('html').getAttribute('data-theme')
   for (const end of [false, true]) {
     await page.evaluate(atEnd => {
-      const body = document.querySelector('.resource-form-dialog .fui-DialogContent')
+      const body = document.querySelector('.console-dialog .fui-DialogContent')
       if (body) body.scrollTop = atEnd ? body.scrollHeight : 0
       window.scrollTo(0, atEnd && !body ? document.documentElement.scrollHeight : 0)
     }, end)
     await captureReference(page, info, theme + '-' + name + (end ? '-end' : ''))
+  }
+}
+
+export async function captureReferenceThemes(page: Page, info: TestInfo, name: string) {
+  for (const theme of ['light', 'dark']) {
+    if (await page.locator('html').getAttribute('data-theme') !== theme) {
+      const toggle = page.getByRole('button', { name: theme === 'dark' ? 'Ganti ke tema gelap' : 'Ganti ke tema terang', includeHidden: true })
+      if (await page.getByRole('dialog').count()) {
+        // Preserve the modal focus trap while changing the QA theme.
+        await toggle.evaluate(button => { if (button instanceof HTMLButtonElement) button.click() })
+      } else await toggle.click()
+    }
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+    await captureReferenceDocument(page, info, name)
   }
 }
 
