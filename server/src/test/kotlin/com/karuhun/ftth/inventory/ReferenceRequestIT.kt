@@ -75,6 +75,80 @@ class ReferenceRequestIT : WarehouseMasterHttpFixture() {
         "warehouseId" to if (warehouse) setup.warehouse else null,
         "lines" to listOf(mapOf("skuId" to setup.sku, "baseUnit" to "EA", "requestedBase" to "9")))), key, 201)
 
+    @Test fun `action count follows role decisions and counts a partially processed request once`() {
+        val s = setup()
+        fun count(token: String) = ok("GET", "/requests/action-count", token).path("count").asLong()
+        val submitted = submit(s)
+        val id = submitted.path("id").asString()
+        assertThat(count(s.admin)).isEqualTo(1)
+        assertThat(count(s.manager)).isZero()
+        assertThat(count(s.technician)).isZero()
+        assertThat(ok("GET", "/requests?actionOnly=true&size=1", s.admin).path("totalElements").asLong()).isEqualTo(1)
+        ok("POST", "/requests/$id/review", s.admin,
+            """{"expectedRevision":0,"lines":[{"lineId":"${submitted.path("lines")[0].path("id").asString()}","approvedBase":"9"}]}""")
+        assertThat(count(s.admin)).isZero()
+        assertThat(count(s.manager)).isEqualTo(1)
+        ok("POST", "/requests/$id/decision", s.manager, """{"expectedRevision":1,"approved":false,"reason":"Tidak diperlukan"}""")
+        assertThat(count(s.manager)).isZero()
+        val procurement = approved(s, "PROCUREMENT")
+        val procurementId = procurement.path("id").asString()
+        assertThat(count(s.admin)).isEqualTo(1)
+        val received = ok("POST", "/requests/$procurementId/receipts", s.admin, receiveBody(s, procurement, "3"))
+        assertThat(count(s.admin)).isEqualTo(1)
+        val identity = stock(s).path("positions").single().path("stockIdentityId").asString()
+        ok("POST", "/requests/$procurementId/handovers", s.admin, handoverBody(s, received, identity, "3"))
+        assertThat(count(s.admin)).isEqualTo(1)
+        assertThat(ok("GET", "/requests?actionOnly=true", s.admin).path("items").single().path("id").asString()).isEqualTo(procurementId)
+        val foreign = setup()
+        assertThat(count(foreign.admin)).isZero()
+        assertThat(ok("GET", "/requests?actionOnly=true", foreign.admin).path("items").isEmpty).isTrue()
+    }
+
+    @Test fun `request overview totals include every page and respect requester and tenant scopes`() {
+        val s = setup()
+        repeat(26) { submit(s) }
+        submit(s, token = s.other)
+        val foreign = setup()
+        submit(foreign)
+
+        val admin = ok("GET", "/requests/overview", s.admin)
+        val own = ok("GET", "/requests/overview", s.technician)
+        val other = ok("GET", "/requests/overview", s.other)
+
+        assertThat(admin.path("states").path("SUBMITTED").asLong()).isEqualTo(27)
+        assertThat(admin.path("actionable").asLong()).isEqualTo(27)
+        assertThat(admin.path("latest").size()).isEqualTo(5)
+        assertThat(own.path("states").path("SUBMITTED").asLong()).isEqualTo(26)
+        assertThat(own.path("actionable").asLong()).isZero()
+        assertThat(own.path("latest").values().map { it.path("requesterId").asString() }.toSet()).isEqualTo(setOf(s.technicianId))
+        assertThat(other.path("states").path("SUBMITTED").asLong()).isEqualTo(1)
+    }
+
+    @Test fun `stock overview checks minimum per scoped warehouse and excludes issued stock`() {
+        val s = setup()
+        val low = create("skus", s.owner, """{"code":"LOW","name":"Stok rendah","tracking":"BULK","baseUnit":"EA","minimumQuantityBase":"10"}""").path("id").asString()
+        create("skus", s.owner, """{"code":"EMPTY","name":"Belum tersedia","tracking":"BULK","baseUnit":"EA","minimumQuantityBase":"5"}""")
+        val empty = create("locations", s.owner, """{"code":"EMPTY","name":"Gudang kedua","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString()
+        val hidden = create("locations", s.owner, """{"code":"HIDDEN","name":"Gudang tersembunyi","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString()
+        val adminId = mapper.readTree(request("GET", "/api/me", s.admin).contentAsString).path("id").asString()
+        assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/$adminId/$empty", s.owner,
+            """{"expectedRevision":0,"active":true}""").status).isEqualTo(200)
+        ok("POST", "/receipts", s.admin, """{"warehouseId":"${s.warehouse}","lines":[{"skuId":"${s.sku}","quantityBase":"12"},{"skuId":"$low","quantityBase":"4"}]}""", status = 201)
+        ok("POST", "/receipts", s.owner, """{"warehouseId":"$hidden","lines":[{"skuId":"$low","quantityBase":"99"}]}""", status = 201)
+        val approved = approved(s, "RESTOCK", sku = low, quantity = "3")
+        val identity = stock(s, low).path("positions").single { it.path("locationId").asString() == s.warehouse }.path("stockIdentityId").asString()
+        ok("POST", "/requests/${approved.path("id").asString()}/handovers", s.admin, handoverBody(s, approved, identity, "3"))
+
+        val overview = ok("GET", "/stock/overview", s.admin)
+
+        assertThat(overview.path("safe").asInt()).isEqualTo(1)
+        assertThat(overview.path("low").asInt()).isEqualTo(1)
+        assertThat(overview.path("empty").asInt()).isEqualTo(4)
+        assertThat(overview.path("attention").values().map { it.path("warehouseId").asString() }).doesNotContain(hidden)
+        assertThat(overview.path("attention").single { it.path("skuId").asString() == low && it.path("warehouseId").asString() == s.warehouse }.path("availableBase").asString()).isEqualTo("1")
+        assertThat(request("GET", "/api/v2/warehouse/stock/overview", s.technician).status).isEqualTo(403)
+    }
+
     @Test fun `technician restock quantity review manager approval and retry never move stock`() {
         val setup = setup()
         val before = fixture(setup.owner).transaction { counts() }

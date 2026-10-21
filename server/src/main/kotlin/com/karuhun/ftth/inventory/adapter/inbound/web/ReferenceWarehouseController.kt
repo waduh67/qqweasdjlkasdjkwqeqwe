@@ -37,6 +37,8 @@ class ReferenceWarehouseController(private val service: ReferenceWarehouseServic
         ResponseEntity.ok().header("Cache-Control", "no-store").body(movements.lines(id, page, size))
     @GetMapping("/stock/{skuId}") fun stock(@PathVariable skuId: UUID, @RequestParam(defaultValue = "true") includePositions: Boolean) =
         ResponseEntity.ok().header("Cache-Control", "no-store").body(stock.stock(skuId, includePositions))
+    @GetMapping("/stock/overview") fun stockOverview() =
+        ResponseEntity.ok().header("Cache-Control", "no-store").body(stock.overview())
     @GetMapping("/stock/{skuId}/positions") fun positions(@PathVariable skuId: UUID, @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "25") size: Int, @RequestParam(required = false) search: String?,
         @RequestParam(required = false) locationId: UUID?, @RequestParam(required = false) holderKind: String?,

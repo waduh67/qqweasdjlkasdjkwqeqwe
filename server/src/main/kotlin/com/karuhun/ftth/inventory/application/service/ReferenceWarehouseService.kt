@@ -222,7 +222,11 @@ class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyServi
     internal fun receiveReturn(input: ReferenceTechnicianReturnInput, key: String): WarehouseOperationReceipt {
         val access = access("warehouse.return.manage", key)
         notes(input.notes)
-        val destination = warehouse(input.warehouseId, access)
+        val destination = masters.get(MasterKind.LOCATION, input.warehouseId, true) as LocationSnapshot
+        masterService.authorizeLocation(destination, if (destination.areaId == null)
+            access.current.copy(areaScope = com.karuhun.ftth.common.security.AuthorityScope.Unrestricted) else access.current, access.scope)
+        if (destination.state != WarehouseMasterState.ACTIVE || destination.kind != LocationKind.WAREHOUSE)
+            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (input.lines.size !in 1..100 || input.lines.distinctBy { it.stockIdentityId }.size != input.lines.size)
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val canonical = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(input))

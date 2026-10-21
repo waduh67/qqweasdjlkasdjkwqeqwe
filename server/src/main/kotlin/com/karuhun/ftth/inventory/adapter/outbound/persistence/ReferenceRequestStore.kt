@@ -10,6 +10,7 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.util.UUID
 
 data class ReferenceRequestCommand(val actorId: UUID, val resourceId: UUID, val hash: String, val epoch: Long, val permission: String, val receipt: WarehouseOperationReceipt)
+data class ReferenceRequestActions(val review: Boolean, val approve: Boolean, val receive: Boolean, val handover: Boolean)
 
 @Repository
 class ReferenceRequestStore(private val jdbc: WarehouseCommandJdbc) : InventoryReferenceSettingsApi {
@@ -20,7 +21,8 @@ class ReferenceRequestStore(private val jdbc: WarehouseCommandJdbc) : InventoryR
             ?.let { mapper.readValue(it, ReferenceRequestView::class.java) } ?: sql.fail(WarehouseErrorCode.NOT_FOUND)
     }
 
-    fun list(page: Int, size: Int, state: ReferenceRequestState?, search: String?, own: UUID?, warehouses: Set<UUID>?, technicians: Boolean): WarehousePage<ReferenceRequestView> = jdbc.execute { sql ->
+    fun list(page: Int, size: Int, state: ReferenceRequestState?, search: String?, own: UUID?, warehouses: Set<UUID>?, technicians: Boolean,
+        actions: ReferenceRequestActions? = null): WarehousePage<ReferenceRequestView> = jdbc.execute { sql ->
         val predicates = mutableListOf("tenant_id=?")
         val values = mutableListOf<Any?>(sql.tenant)
         if (own != null) { predicates += "technician_id=?"; values += own }
@@ -31,6 +33,7 @@ class ReferenceRequestStore(private val jdbc: WarehouseCommandJdbc) : InventoryR
             }.joinToString(" OR ").let { if (it.isEmpty()) "false" else "($it)" }
         }
         if (state != null) { predicates += "snapshot->>'state'=?"; values += state.name }
+        if (actions != null) predicates += actionable(actions)
         if (search != null) {
             predicates += "(position(lower(?) in lower(snapshot->>'reason'))>0 OR position(lower(?) in lower(snapshot->>'requesterName'))>0)"
             values += search; values += search
@@ -40,6 +43,20 @@ class ReferenceRequestStore(private val jdbc: WarehouseCommandJdbc) : InventoryR
         val rows = sql.query("SELECT snapshot::text FROM inventory_reference_request WHERE $where ORDER BY created_at DESC,id LIMIT ? OFFSET ?",
             *values.toTypedArray(), size, page.toLong() * size) { mapper.readValue(it.getString(1), ReferenceRequestView::class.java) }
         WarehousePage(rows, page, size, total)
+    }
+
+    private fun actionable(actions: ReferenceRequestActions): String {
+        val choices = mutableListOf<String>()
+        if (actions.review) choices += "snapshot->>'state'='SUBMITTED'"
+        if (actions.approve) choices += "snapshot->>'state'='MANAGER_REVIEW'"
+        val unfinished = "snapshot->>'state' IN ('APPROVED','PARTIALLY_RECEIVED','RECEIVED','PARTIALLY_FULFILLED')"
+        if (actions.receive) choices += """($unfinished AND snapshot->>'kind'='PROCUREMENT' AND EXISTS(
+            SELECT FROM jsonb_array_elements(snapshot->'lines') line
+            WHERE (line->>'receivedBase')::numeric < (line->>'approvedBase')::numeric))"""
+        if (actions.handover) choices += """($unfinished AND EXISTS(SELECT FROM jsonb_array_elements(snapshot->'lines') line
+            WHERE (line->>'fulfilledBase')::numeric < (line->>'approvedBase')::numeric
+            AND (snapshot->>'kind'='RESTOCK' OR (line->>'fulfilledBase')::numeric < (line->>'receivedBase')::numeric)))"""
+        return choices.joinToString(" OR ").let { if (it.isEmpty()) "false" else "($it)" }
     }
 
     fun timeline(id: UUID): List<ReferenceRequestEvent> = jdbc.execute { sql ->

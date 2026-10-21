@@ -7,6 +7,41 @@ import java.util.UUID
 
 @Repository
 class ReferenceStockStore(private val jdbc: WarehouseCommandJdbc) {
+    fun overview(roots: Map<UUID, UUID>): ReferenceStockOverview = jdbc.execute { sql ->
+        if (roots.isEmpty()) return@execute ReferenceStockOverview(0, 0, 0, emptyList())
+        val projection = """WITH visible_location(id,warehouse_id) AS (VALUES ${roots.keys.joinToString(",") { "(?::uuid,?::uuid)" }}),
+            stock AS (SELECT balance.sku_id,visible.warehouse_id,sum(balance.quantity_base) quantity
+                FROM inventory_balance_projection balance JOIN inventory_segment segment
+                  ON segment.tenant_id=balance.tenant_id AND segment.id=balance.stock_identity_id
+                JOIN visible_location visible ON visible.id=balance.location_id
+                WHERE balance.tenant_id=?
+                  AND balance.quantity_base>0 AND balance.warehouse_admission='VERIFIED'
+                  AND segment.state='ACTIVE' AND balance.status='AVAILABLE' AND balance.custody_owner_kind='WAREHOUSE'
+                GROUP BY balance.sku_id,visible.warehouse_id),
+            positions AS (SELECT sku.id,sku.code,sku.name,sku.base_unit,sku.minimum_quantity_base,
+                warehouse.id warehouse_id,coalesce(warehouse.name,warehouse.code) warehouse_name,coalesce(stock.quantity,0) quantity
+                FROM inventory_sku sku CROSS JOIN inventory_location warehouse
+                LEFT JOIN stock ON stock.sku_id=sku.id AND stock.warehouse_id=warehouse.id
+                WHERE sku.tenant_id=? AND sku.state='ACTIVE' AND warehouse.tenant_id=sku.tenant_id
+                  AND warehouse.state='ACTIVE' AND warehouse.id IN (SELECT warehouse_id FROM visible_location))"""
+        val parameters = buildList<Any> {
+            roots.forEach { (location, warehouse) -> add(location); add(warehouse) }
+            add(sql.tenant); add(sql.tenant)
+        }.toTypedArray()
+        val counts = sql.query("""$projection SELECT count(*) FILTER (WHERE quantity>0 AND quantity>=minimum_quantity_base) safe,
+            count(*) FILTER (WHERE quantity>0 AND quantity<minimum_quantity_base) low,
+            count(*) FILTER (WHERE quantity=0) empty FROM positions""", *parameters) {
+            Triple(it.getInt("safe"), it.getInt("low"), it.getInt("empty"))
+        }.single()
+        val rows = sql.query("""$projection SELECT *,quantity::text available FROM positions
+            WHERE quantity=0 OR quantity<minimum_quantity_base ORDER BY quantity,code,warehouse_name,id,warehouse_id LIMIT 5""", *parameters) {
+            ReferenceStockAttention(it.uuid("id"), it.getString("code"), it.getString("name"),
+                it.uuid("warehouse_id"), it.getString("warehouse_name"), WarehouseBaseUnit.valueOf(it.getString("base_unit")),
+                it.getString("available"), it.getLong("minimum_quantity_base").toString())
+        }
+        ReferenceStockOverview(counts.first, counts.second, counts.third, rows)
+    }
+
     private val joins = """FROM inventory_balance_projection balance JOIN inventory_segment segment
         ON segment.tenant_id=balance.tenant_id AND segment.id=balance.stock_identity_id
         JOIN inventory_sku sku ON sku.tenant_id=balance.tenant_id AND sku.id=balance.sku_id
