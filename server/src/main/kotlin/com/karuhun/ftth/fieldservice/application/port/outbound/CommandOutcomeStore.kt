@@ -4,7 +4,8 @@ import com.karuhun.ftth.common.domain.error.ConflictException
 import com.karuhun.ftth.fieldservice.domain.model.CommandMetadata
 import java.util.concurrent.ConcurrentHashMap
 
-data class CommandOutcome(val namespace: String, val operationKey: String, val payloadHash: String, val result: String)
+data class CommandOutcome(val namespace: String, val operationKey: String, val payloadHash: String, val result: String,
+    val targetId: java.util.UUID? = null)
 
 interface CommandOutcomeStore {
     fun find(command: CommandMetadata): CommandOutcome?
@@ -13,15 +14,23 @@ interface CommandOutcomeStore {
 }
 
 class InMemoryCommandOutcomeStore : CommandOutcomeStore {
-    private val outcomes = ConcurrentHashMap<Pair<String, String>, CommandOutcome>()
+    private val outcomes = ConcurrentHashMap<Triple<java.util.UUID, String, String>, CommandOutcome>()
 
-    override fun find(command: CommandMetadata): CommandOutcome? = outcomes[command.namespace to command.operationKey]
+    override fun find(command: CommandMetadata): CommandOutcome? = outcomes[Triple(command.tenantId, command.namespace, command.operationKey)]
 
     override fun record(command: CommandMetadata, result: String): CommandOutcome {
-        val key = command.namespace to command.operationKey
-        val candidate = CommandOutcome(command.namespace, command.operationKey, command.payloadHash, result)
+        return save(command, null, result)
+    }
+
+    override fun record(command: CommandMetadata, targetId: java.util.UUID, result: String): CommandOutcome =
+        save(command, targetId, result)
+
+    private fun save(command: CommandMetadata, targetId: java.util.UUID?, result: String): CommandOutcome {
+        val key = Triple(command.tenantId, command.namespace, command.operationKey)
+        val candidate = CommandOutcome(command.namespace, command.operationKey, command.payloadHash, result, targetId)
         val existing = outcomes.putIfAbsent(key, candidate) ?: return candidate
-        if (existing.payloadHash != command.payloadHash) throw ConflictException("Operation key was used with a different payload")
+        if (existing.payloadHash != command.payloadHash || existing.targetId != targetId)
+            throw ConflictException("Operation key was used with a different payload or visit")
         return existing
     }
 }

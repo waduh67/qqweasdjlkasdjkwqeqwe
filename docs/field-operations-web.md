@@ -2,11 +2,12 @@
 
 ## Jalur peran
 
-- Dispatcher membuat dan menugaskan work order melalui **Lapangan → Work Order**.
-- Teknisi bekerja melalui **Lapangan → Tugas Saya**, termasuk mulai kerja, bukti, pembacaan optik, dan submission penyelesaian.
-- Penyelia meninjau submission `DONE/PENDING` dari detail work order. Server menolak persetujuan oleh pengirim submission yang sama.
-- Teknisi NE/FO mengirim dan merevisi pekerjaan pagi/sore melalui **Operasional → Laporan Pagi / Sore** (`/daily-reports`); owner/Admin/Manager memantau kelengkapan tim. Aturan dan API ada di [daily-reports.md](daily-reports.md).
-- **Operasional → KPI Teknisi** (`/kpi`) serta tab KPI dashboard menampilkan capaian bulanan dan detail. Owner mengatur kalender dan target melalui Pengaturan Gudang; lihat [operational-kpi-calendar.md](operational-kpi-calendar.md).
+- Dispatcher membuat dan menugaskan work order melalui **Work Order & Kunjungan → Work Order**.
+- Teknisi NE/FO membuka **Work Order & Kunjungan → Work Order Saya** (`/my-work-orders`). Pada workflow REFERENCE, tugas yang ditujukan ke teknisi tetap terlihat tanpa grant area atau gudang pribadi; daftar operator tetap dibatasi akses area.
+- **Work Order & Kunjungan → Kunjungan Saya** (`/my-visits`) memuat kunjungan biasa pada penugasan WO, terpisah dari Visit B2B. Teknisi melakukan check-in, tiba di lokasi, check-out, lalu mengirim kunjungan. Tab Riwayat tetap menampilkan kunjungan miliknya sesudah penugasan berubah.
+- Pada workflow legacy, penyelia meninjau submission `DONE/PENDING` dari detail work order; server menolak persetujuan oleh pengirim submission yang sama. Pada workflow REFERENCE, teknisi menyelesaikan WO setelah bukti dan material tervalidasi tanpa persetujuan penyelia.
+- Teknisi NE/FO mengirim dan merevisi pekerjaan pagi/sore melalui **Daily Report → Laporan Pagi / Sore** (`/daily-reports`); owner/Admin/Manager memantau kelengkapan tim. Aturan dan API ada di [daily-reports.md](daily-reports.md).
+- **Dashboard → KPI Teknisi** (`/kpi`) serta tab KPI dashboard menampilkan aktual, target, dan persentase capaian bulanan. Filter tim hanya tersedia bagi pemilik izin `kpi.team.view`. Owner mengatur kalender dan target melalui Setelan Gudang; lihat [operational-kpi-calendar.md](operational-kpi-calendar.md).
 - Impor pelanggan memakai **Layanan Pelanggan → Pelanggan** dan hanya menampilkan metadata batch serta laporan aman dari server.
 
 ## Batas portal pelanggan
@@ -21,8 +22,11 @@ Fieldservice memakai endpoint terautentikasi `/api/v1/fieldservice/visits`.
 `GET /api/v1/fieldservice/visits` returns `PageResponse` with `scope=SELF`
 (default, authenticated technician assignment), or explicit `scope=AREA|ALL`
 for dispatcher/approver permissions. Optional `status`, `page`, and `size`
-follow the common pagination contract. Each row contains only visit/work-order/
-order IDs, state, revision, work-order schedule, and session timestamps.
+follow the common pagination contract. Filter `history=ACTIVE|HISTORY|ALL` memisahkan
+penugasan aktif dan riwayat. Baris memuat purpose `FULFILLMENT|WORK_ORDER`,
+kode/judul WO, nama pelanggan/area bila ada, jadwal, state, revision,
+dan session timestamps. Nama dan akses berasal dari
+server; teknisi hanya melihat penugasan/riwayat miliknya.
 Pembuatan visit menerima `orderId`, `workOrderId`, `technicianId`, `plannedAt`, dan
 `namespace`, `operationKey`, `payloadHash`, `revision`. Perintah `check-in`,
 `on-site`, `check-out`, dan `submit` memakai `decision`/`reason` (hanya check-in)

@@ -8,6 +8,7 @@ import com.karuhun.ftth.fieldservice.application.port.outbound.CommandOutcomeSto
 import com.karuhun.ftth.fieldservice.application.port.outbound.VisitRepository
 import com.karuhun.ftth.fieldservice.domain.model.CommandMetadata
 import com.karuhun.ftth.fieldservice.domain.model.VisitState
+import com.karuhun.ftth.fieldservice.domain.model.VisitPurpose
 import java.util.UUID
 import org.springframework.stereotype.Service
 
@@ -22,20 +23,20 @@ class FieldServiceFulfillmentApiService(
     override fun visit(id: UUID) = visitRepository.findById(
         com.karuhun.ftth.common.tenant.TenantContext.tenantId(),
         id,
-    )?.let {
+    )?.takeIf { it.purpose == VisitPurpose.FULFILLMENT }?.let {
         com.karuhun.ftth.fieldservice.VisitRef(it.tenantId, it.id, it.orderId, it.workOrderId, it.technicianId, it.state, it.revision, null)
     }
 
     override fun visitsByWorkOrder(workOrderId: UUID): List<com.karuhun.ftth.fieldservice.VisitRef> =
-        visitRepository.findByWorkOrderId(com.karuhun.ftth.common.tenant.TenantContext.tenantId(), workOrderId).map {
+        visitRepository.findByWorkOrderId(com.karuhun.ftth.common.tenant.TenantContext.tenantId(), workOrderId).filter { it.purpose == VisitPurpose.FULFILLMENT }.map {
             com.karuhun.ftth.fieldservice.VisitRef(it.tenantId, it.id, it.orderId, it.workOrderId, it.technicianId, it.state, it.revision, null)
         }
 
     @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     override fun lockFulfillment(visitId: UUID, workOrderId: UUID): com.karuhun.ftth.fieldservice.VisitRef {
         val tenant = com.karuhun.ftth.common.tenant.TenantContext.tenantId()
-        val visit = visitRepository.findById(tenant,visitId) ?: throw ConflictException("FULFILLMENT_VISIT_BINDING")
-        if (visit.workOrderId != workOrderId || visit.state != VisitState.CHECKED_OUT || !visit.assignmentActive)
+        val visit = visitRepository.findByIdForUpdate(tenant,visitId) ?: throw ConflictException("FULFILLMENT_VISIT_BINDING")
+        if (visit.purpose != VisitPurpose.FULFILLMENT || visit.workOrderId != workOrderId || visit.state != VisitState.CHECKED_OUT || !visit.assignmentActive)
             throw ConflictException("FULFILLMENT_VISIT_BINDING")
         return com.karuhun.ftth.fieldservice.VisitRef(tenant,visit.id,visit.orderId,visit.workOrderId,visit.technicianId,visit.state,visit.revision,null)
     }
@@ -43,6 +44,8 @@ class FieldServiceFulfillmentApiService(
     @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     override fun applyFulfillment(command: VisitFulfillmentCommand): VisitFulfillmentResult {
         require(command.namespace.isNotBlank() && command.operationKey.isNotBlank() && command.payloadHash.isNotBlank())
+        val bound = visits.findByIdForUpdate(command.tenantId, command.visitId) ?: throw ConflictException("FULFILLMENT_VISIT_BINDING")
+        if (bound.purpose != VisitPurpose.FULFILLMENT) throw ConflictException("FULFILLMENT_VISIT_BINDING")
         val metadata = CommandMetadata(
             tenantId = command.tenantId,
             actorId = command.actorId,

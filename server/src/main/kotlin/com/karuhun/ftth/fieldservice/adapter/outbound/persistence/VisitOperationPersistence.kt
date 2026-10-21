@@ -38,21 +38,23 @@ interface VisitOperationJpaRepository : JpaRepository<VisitOperationJpaEntity, U
 
 @Component
 class VisitOperationPersistenceAdapter(private val operations: VisitOperationJpaRepository) : CommandOutcomeStore {
-    override fun find(command: CommandMetadata): CommandOutcome? = operations.findByTenantIdAndNamespaceAndOperationKey(command.tenantId, command.namespace, command.operationKey)?.let { CommandOutcome(it.namespace, it.operationKey, it.payloadHash, it.result) }
+    override fun find(command: CommandMetadata): CommandOutcome? = operations.findByTenantIdAndNamespaceAndOperationKey(command.tenantId, command.namespace, command.operationKey)?.let { CommandOutcome(it.namespace, it.operationKey, it.payloadHash, it.result, it.visitId) }
 
     override fun record(command: CommandMetadata, result: String): CommandOutcome = record(command, command.revisionId(), result)
 
     override fun record(command: CommandMetadata, targetId: UUID, result: String): CommandOutcome {
         val existing = operations.findByTenantIdAndNamespaceAndOperationKey(command.tenantId, command.namespace, command.operationKey)
         if (existing != null) {
-            if (existing.payloadHash != command.payloadHash) throw ConflictException("Operation key was used with a different payload")
-            return CommandOutcome(existing.namespace, existing.operationKey, existing.payloadHash, existing.result)
+            if (existing.payloadHash != command.payloadHash || existing.visitId != targetId)
+                throw ConflictException("Operation key was used with a different payload or visit")
+            return CommandOutcome(existing.namespace, existing.operationKey, existing.payloadHash, existing.result, existing.visitId)
         }
         val inserted = operations.insertIfAbsent(UUID.randomUUID(), command.tenantId, targetId, command.namespace, command.operationKey, command.payloadHash, result)
         val saved = operations.findByTenantIdAndNamespaceAndOperationKey(command.tenantId, command.namespace, command.operationKey)
             ?: throw ConflictException("Visit operation disappeared during concurrent insert")
-        if (inserted == 0 && saved.payloadHash != command.payloadHash) throw ConflictException("Operation key was used with a different payload")
-        return CommandOutcome(saved.namespace, saved.operationKey, saved.payloadHash, saved.result)
+        if (inserted == 0 && (saved.payloadHash != command.payloadHash || saved.visitId != targetId))
+            throw ConflictException("Operation key was used with a different payload or visit")
+        return CommandOutcome(saved.namespace, saved.operationKey, saved.payloadHash, saved.result, saved.visitId)
     }
 
     private fun CommandMetadata.revisionId(): UUID = UUID.nameUUIDFromBytes("$tenantId:$namespace:$operationKey".toByteArray())

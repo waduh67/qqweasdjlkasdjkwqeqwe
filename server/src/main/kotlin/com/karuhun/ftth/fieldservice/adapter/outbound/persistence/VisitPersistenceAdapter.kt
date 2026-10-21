@@ -6,6 +6,7 @@ import com.karuhun.ftth.fieldservice.domain.model.Attendance
 import com.karuhun.ftth.fieldservice.domain.model.AttendanceDecision
 import com.karuhun.ftth.fieldservice.domain.model.Visit
 import com.karuhun.ftth.fieldservice.domain.model.VisitState
+import com.karuhun.ftth.fieldservice.domain.model.VisitPurpose
 import com.karuhun.ftth.fieldservice.domain.model.WorkSession
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -23,7 +24,7 @@ import java.util.UUID
 @Table(name = "fieldservice_visit")
 class VisitJpaEntity(
     id: UUID,
-    @Column(name = "order_id", nullable = false, updatable = false) var orderId: UUID,
+    @Column(name = "order_id", updatable = false) var orderId: UUID?,
     @Column(name = "work_order_id", nullable = false, updatable = false) var workOrderId: UUID,
     @Column(name = "technician_id", nullable = false, updatable = false) var technicianId: UUID,
     @Enumerated(EnumType.STRING) @Column(nullable = false) var state: VisitState,
@@ -32,6 +33,8 @@ class VisitJpaEntity(
     @Enumerated(EnumType.STRING) @Column(name = "attendance_decision") var attendanceDecision: AttendanceDecision?,
     @Column(name = "attendance_reason") var attendanceReason: String?,
     @Column(name = "attendance_received_at") var attendanceReceivedAt: Instant?,
+    @Enumerated(EnumType.STRING) @Column(nullable = false, updatable = false) var purpose: VisitPurpose,
+    @Column(name = "assignment_generation", updatable = false) var assignmentGeneration: Long?,
 ) : TenantAwareJpaEntity(id)
 
 @Entity
@@ -47,8 +50,10 @@ class WorkSessionJpaEntity(
 ) : TenantAwareJpaEntity(id)
 
 interface VisitJpaRepository : JpaRepository<VisitJpaEntity, UUID> {
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findByTenantIdAndId(tenantId: UUID, id: UUID): VisitJpaEntity?
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select v from VisitJpaEntity v where v.tenantId = :tenantId and v.id = :id")
+    fun findLockedById(tenantId: UUID, id: UUID): VisitJpaEntity?
     fun findByTenantIdAndWorkOrderId(tenantId: UUID, workOrderId: UUID): List<VisitJpaEntity>
     fun findByTenantIdOrderByCreatedAtDescIdDesc(tenantId: UUID): List<VisitJpaEntity>
     fun findByTenantIdAndTechnicianIdOrderByCreatedAtDescIdDesc(tenantId: UUID, technicianId: UUID): List<VisitJpaEntity>
@@ -59,12 +64,13 @@ interface WorkSessionJpaRepository : JpaRepository<WorkSessionJpaEntity, UUID> {
 }
 
 @Component
-class VisitPersistenceAdapter(private val visits: VisitJpaRepository, private val sessions: WorkSessionJpaRepository) : VisitRepository {
+class VisitPersistenceAdapter(private val visits: VisitJpaRepository, private val sessions: WorkSessionJpaRepository,
+    private val entityManager: jakarta.persistence.EntityManager) : VisitRepository {
     override fun save(visit: Visit): Visit {
         val entity = visits.findByTenantIdAndId(visit.tenantId, visit.id)?.apply {
             state = visit.state; revision = visit.revision; assignmentActive = visit.assignmentActive
             attendanceDecision = visit.attendance?.decision; attendanceReason = visit.attendance?.reason; attendanceReceivedAt = visit.attendance?.serverReceivedAt
-        } ?: VisitJpaEntity(visit.id, visit.orderId, visit.workOrderId, visit.technicianId, visit.state, visit.revision, visit.assignmentActive, visit.attendance?.decision, visit.attendance?.reason, visit.attendance?.serverReceivedAt)
+        } ?: VisitJpaEntity(visit.id, visit.orderId, visit.workOrderId, visit.technicianId, visit.state, visit.revision, visit.assignmentActive, visit.attendance?.decision, visit.attendance?.reason, visit.attendance?.serverReceivedAt, visit.purpose, visit.assignmentGeneration)
         visits.save(entity)
         val session = sessions.findByTenantIdAndVisitId(visit.tenantId, visit.id)
             ?: WorkSessionJpaEntity(UUID.randomUUID(), visit.id, visit.workOrderId, visit.technicianId, null, null, null)
@@ -76,6 +82,10 @@ class VisitPersistenceAdapter(private val visits: VisitJpaRepository, private va
     }
 
     override fun findById(tenantId: UUID, visitId: UUID): Visit? = visits.findByTenantIdAndId(tenantId, visitId)?.toDomain()
+    override fun findByIdForUpdate(tenantId: UUID, visitId: UUID): Visit? = visits.findLockedById(tenantId, visitId)?.let {
+        entityManager.refresh(it, LockModeType.PESSIMISTIC_WRITE)
+        it.toDomain()
+    }
 
     override fun findAll(tenantId: UUID): List<Visit> = visits.findByTenantIdOrderByCreatedAtDescIdDesc(tenantId).map { it.toDomain() }
 
@@ -89,5 +99,5 @@ class VisitPersistenceAdapter(private val visits: VisitJpaRepository, private va
         WorkSession(it.id, it.tenantId!!, it.visitId, it.workOrderId, it.technicianId, it.startedAt, it.endedAt, it.submittedAt)
     }
 
-    private fun VisitJpaEntity.toDomain() = Visit.rehydrate(id, tenantId!!, orderId, workOrderId, technicianId, state, revision, assignmentActive, attendanceDecision?.let { Attendance(it, attendanceReason, attendanceReceivedAt ?: Instant.EPOCH) })
+    private fun VisitJpaEntity.toDomain() = Visit.rehydrate(id, tenantId!!, orderId, workOrderId, technicianId, state, revision, assignmentActive, attendanceDecision?.let { Attendance(it, attendanceReason, attendanceReceivedAt ?: Instant.EPOCH) }, purpose, assignmentGeneration)
 }

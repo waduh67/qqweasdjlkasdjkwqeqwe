@@ -34,7 +34,7 @@ data class VisitFulfillmentResult(
 data class VisitRef(
     val tenantId: UUID,
     val id: UUID,
-    val orderId: UUID,
+    val orderId: UUID?,
     val workOrderId: UUID,
     val technicianId: UUID,
     val state: VisitState,

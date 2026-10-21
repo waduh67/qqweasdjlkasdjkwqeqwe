@@ -1,6 +1,7 @@
 package com.karuhun.ftth.fieldservice.adapter.inbound.web
 
 import com.karuhun.ftth.common.security.CurrentUserProvider
+import com.karuhun.ftth.common.domain.error.NotFoundException
 import com.karuhun.ftth.fieldservice.application.port.inbound.CreateVisitCommand
 import com.karuhun.ftth.fieldservice.application.port.inbound.FieldServiceUseCase
 import com.karuhun.ftth.fieldservice.domain.model.AttendanceDecision
@@ -8,6 +9,7 @@ import com.karuhun.ftth.fieldservice.domain.model.CommandMetadata
 import com.karuhun.ftth.fieldservice.domain.model.Visit
 import com.karuhun.ftth.fieldservice.application.service.FieldServiceService
 import com.karuhun.ftth.fieldservice.application.service.VisitListScope
+import com.karuhun.ftth.fieldservice.application.service.VisitHistory
 import com.karuhun.ftth.fieldservice.application.service.FieldServiceVisitView
 import com.karuhun.ftth.fieldservice.domain.model.VisitState
 import com.karuhun.ftth.fieldservice.application.port.outbound.CommandOutcomeStore
@@ -39,8 +41,9 @@ class FieldServiceController(
         @RequestParam(required = false) status: VisitState?,
         @RequestParam(defaultValue = "0") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
+        @RequestParam(defaultValue = "ALL") history: VisitHistory,
     ): PageResponse<FieldServiceVisitView> = PageResponse.from(
-        fieldService.listForHttp(currentUser.current(), scope, status, PageRequest(page, size, sort = "createdAt", descending = true)),
+        fieldService.listForHttp(currentUser.current(), scope, status, PageRequest(page, size, sort = "createdAt", descending = true), history),
     )
 
     @PostMapping
@@ -61,7 +64,7 @@ class FieldServiceController(
     @PreAuthorize("@authz.canAny('workorder.order.field','fieldservice.visit.view','fieldservice.visit.manage')")
     fun get(@PathVariable id: UUID): VisitResponse {
         val actor = currentUser.current()
-        val visit = fieldService.readableForHttp(actor, id) ?: throw NoSuchElementException("Visit tidak ditemukan")
+        val visit = fieldService.readableForHttp(actor, id) ?: throw NotFoundException("Kunjungan tidak ditemukan")
         return visit.toResponse()
     }
 
@@ -69,8 +72,8 @@ class FieldServiceController(
     @PreAuthorize("@authz.canAny('workorder.order.field','fieldservice.session.view','fieldservice.visit.view')")
     fun workSession(@PathVariable id: UUID): WorkSessionResponse {
         val actor = currentUser.current()
-        val visit = fieldService.readableForHttp(actor, id) ?: throw NoSuchElementException("Visit tidak ditemukan")
-        val session = fieldService.workSessionForHttp(actor.tenantId, visit.id) ?: throw NoSuchElementException("Work session tidak ditemukan")
+        val visit = fieldService.readableForHttp(actor, id) ?: throw NotFoundException("Kunjungan tidak ditemukan")
+        val session = fieldService.workSessionForHttp(actor.tenantId, visit.id) ?: throw NotFoundException("Sesi kerja tidak ditemukan")
         return WorkSessionResponse(session.id, session.visitId, session.startedAt, session.endedAt, session.submittedAt)
     }
 
