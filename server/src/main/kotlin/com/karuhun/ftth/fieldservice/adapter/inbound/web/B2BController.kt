@@ -44,6 +44,10 @@ class B2BController(private val service: B2BService) {
     fun reports(@RequestParam month: YearMonth,@RequestParam(defaultValue="") q: String,
         @RequestParam(defaultValue="0") page: Int,@RequestParam(defaultValue="20") size: Int)=service.reports(month,q,PageRequest(page,size))
 
+    @GetMapping("/overview")
+    @PreAuthorize("@authz.canAny('b2b.client.view','b2b.visit.view')")
+    fun overview(@RequestParam month: YearMonth) = ResponseEntity.ok().header("Cache-Control", "no-store").body(service.overview(month))
+
     @GetMapping("/visits")
     @PreAuthorize("@authz.canAny('b2b.client.view','b2b.visit.view')")
     fun visits(@RequestParam month: YearMonth,@RequestParam(required=false) clientId: UUID?,

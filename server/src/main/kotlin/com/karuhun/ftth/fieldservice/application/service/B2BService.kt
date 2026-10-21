@@ -109,6 +109,14 @@ class B2BService(private val store: B2BStore, private val authority: CurrentAuth
             ids.map { sql.month(it,date,today) }
         }
     }
+    fun overview(month: YearMonth): B2BOverview {
+        val actor = access(); val all = readScope(actor); val today = clock.today(); val date = month.atDay(1)
+        if (month.year !in 2000..2100 || date > today.withDayOfMonth(1)) throw ValidationException("Bulan rekap tidak valid")
+        return store.use { sql ->
+            sql.lock(); sql.prepare(date)
+            sql.overview(date, today, all, actor.fence.identity.userId)
+        }
+    }
     fun visits(month: YearMonth, clientId: UUID?, page: PageRequest): Page<B2BVisitView> {
         val actor=access(); val all=readScope(actor)
         if(month.year !in 2000..2100) throw ValidationException("Tahun riwayat harus 2000 sampai 2100")

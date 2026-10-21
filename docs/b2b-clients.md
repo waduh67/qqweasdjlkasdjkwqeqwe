@@ -1,10 +1,12 @@
 # Client B2B dan Visit Bulanan
 
-Admin membuka **Lapangan → Client B2B** (`/b2b/clients`), memilih **Tambah client B2B**, mengisi nama, alamat, kontak/PIC, target 1–31 visit per bulan, status, dan Teknisi NE. Pilihan teknisi hanya memuat akun aktif dengan role bawaan Teknisi NE tanpa role lain, serta bukan owner atau admin platform. Formulir selalu ditinjau sebelum disimpan.
+Admin membuka **B2B → Client B2B** (`/b2b/clients`), memilih **Tambah client B2B**, mengisi nama, alamat, kontak/PIC, target 1–31 visit per bulan, status, dan Teknisi NE. Pilihan teknisi hanya memuat akun aktif dengan role bawaan Teknisi NE tanpa role lain, serta bukan owner atau admin platform. Formulir selalu ditinjau sebelum disimpan.
 
-Teknisi NE membuka **Lapangan → Visit B2B** (`/b2b/visits`). Daftar hanya memuat penugasan teknisi tersebut pada bulan yang dipilih. **Laporkan visit** tersedia untuk client aktif pada bulan berjalan. Catatan wajib diisi, maksimal 5.000 karakter, disertai 1–5 foto JPEG/PNG asli, maksimal 5 MiB per foto dan 25 juta piksel per gambar. Hari operasional mengikuti Asia/Jakarta. Foto hanya dibaca melalui endpoint terautentikasi oleh admin yang memiliki izin atau pelapor.
+Teknisi NE membuka **B2B → Visit B2B** (`/b2b/visits`). Daftar hanya memuat penugasan teknisi tersebut pada bulan yang dipilih. **Laporkan visit** tersedia untuk client aktif pada bulan berjalan. Catatan wajib diisi, maksimal 5.000 karakter, disertai 1–5 foto JPEG/PNG asli, maksimal 5 MiB per foto dan 25 juta piksel per gambar. Hari operasional mengikuti Asia/Jakarta. Foto hanya dibaca melalui endpoint terautentikasi oleh admin yang memiliki izin atau pelapor.
 
-Admin membuka **Lapangan → Rekap B2B** (`/b2b/reports`) untuk melihat jumlah visit dihitung, target, sisa, minggu tanpa visit, riwayat, dan foto. Klik nama client untuk rincian minggu atau **Buka** pada bukti untuk catatan dan foto. Pencarian client memfilter rekap; riwayat tetap mencakup semua client pada bulan tersebut.
+Admin membuka **B2B → Rekap B2B** (`/b2b/reports`) untuk melihat jumlah visit dihitung, target, sisa, minggu tanpa visit, riwayat, dan foto. Klik nama client untuk rincian minggu atau **Buka** pada bukti untuk catatan dan foto. Pencarian client memfilter rekap; riwayat tetap mencakup semua client pada bulan tersebut.
+
+Tab **Visit B2B** pada Dashboard menampilkan target, visit tercatat, sisa target, minggu terlewat, dan lima client dengan sisa terbesar. Total dihitung dari seluruh client yang dapat diakses pada bulan tersebut. Kunjungan Saya untuk WO memiliki menu dan riwayat terpisah.
 
 ## Aturan bulan dan riwayat
 
@@ -36,6 +38,7 @@ Semua endpoint berawal `/api/v1/b2b`, memerlukan sesi tenant dan izin saat ini. 
 | `PUT /clients/{id}` | Mengubah pengaturan bulan berikutnya; kunci UUID wajib |
 | `DELETE /clients/{id}?expectedRevision=` | Menghapus client tanpa visit |
 | `GET /reports?month=YYYY-MM&q=&page=&size=` | Rekap bulanan sesuai akses |
+| `GET /overview?month=YYYY-MM` | Total seluruh rekap sesuai akses dan lima client dengan sisa terbesar; `no-store` |
 | `GET /visits?month=YYYY-MM&clientId=&page=&size=` | Riwayat bulanan sesuai akses |
 | `POST /clients/{id}/visits` | Multipart `notes`, `photos` berulang; kunci UUID wajib |
 | `GET /visits/{visit}/photos/{id}` | Bukti privat, `private, no-store`, `nosniff` |
