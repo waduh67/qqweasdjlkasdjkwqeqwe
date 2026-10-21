@@ -42,9 +42,10 @@ class ReferenceWorkOrderStore(private val jdbc: WarehouseCommandJdbc) {
             view.name, view.revision, mapper.writeValueAsString(view), sql.tenant, view.id, view.revision - 1) != 1) stale()
         Unit
     }
-    fun get(id: UUID, lock: Boolean = false): ReferenceWorkOrderView = jdbc.execute { sql ->
+    fun get(id: UUID, lock: Boolean = false): ReferenceWorkOrderView = find(id, lock) ?: missing()
+    fun find(id: UUID, lock: Boolean = false): ReferenceWorkOrderView? = jdbc.execute { sql ->
         sql.value("SELECT snapshot::text FROM work_order_reference WHERE tenant_id=? AND id=?" + if (lock) " FOR UPDATE" else "", sql.tenant, id)
-            ?.let { mapper.readValue(it, ReferenceWorkOrderView::class.java) } ?: missing()
+            ?.let { mapper.readValue(it, ReferenceWorkOrderView::class.java) }
     }
     fun save(view: ReferenceWorkOrderView, create: Boolean) = jdbc.execute { sql ->
         val body = mapper.writeValueAsString(view)

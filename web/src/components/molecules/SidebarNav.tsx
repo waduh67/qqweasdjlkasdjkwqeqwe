@@ -1,9 +1,10 @@
 import { useEffect, useId, useRef, useState, type ComponentType } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { ChevronDown12Regular, ChevronDoubleLeft16Regular, ChevronDoubleRight16Regular, Search12Regular } from '@fluentui/react-icons'
 import { Input } from '@fluentui/react-components'
 import { Button } from '@/components/atoms'
 import type { IconProps } from '@/components/atoms/icons'
+import type { RequestCount } from '@/hooks/useRequestActionCount'
 
 export type NavItem = {
   to: string
@@ -12,6 +13,7 @@ export type NavItem = {
   icon: ComponentType<IconProps>
   end?: boolean
   access?: 'read' | 'write'
+  badge?: RequestCount | null
 }
 export type NavGroup = { label: string | null; items: NavItem[] }
 
@@ -33,18 +35,23 @@ export function SidebarNav({ groups, can, hasPermission = can, storageKey, compa
   expanded?: boolean
 }) {
   const key = `${storageKey}.v3.closed`
-  const { pathname } = useLocation()
+  const { pathname, search: locationSearch } = useLocation()
   const id = useId()
-  const matchesPath = (item: NavItem) => item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)
+  const matchesPath = (item: NavItem) => {
+    const [path, queryString] = item.to.split('?')
+    const pathMatches = item.end ? pathname === path : pathname === path || pathname.startsWith(path + '/')
+    return pathMatches && (!queryString || [...new URLSearchParams(queryString)].every(([key, value]) => (new URLSearchParams(locationSearch).get(key) ?? (key === 'tab' ? 'skus' : '')) === value))
+  }
   const activeGroup = groups.find(group => group.items.some(matchesPath))?.label
-  const [closed, setClosed] = useState(() => loadClosed(key, compact ? groups.filter(group => group.label).slice(1).map(group => group.label!).filter(label => label !== activeGroup) : []))
+  const [closed, setClosed] = useState(() => loadClosed(key, compact ? groups.flatMap(group => group.label ? [group.label] : []).slice(1).filter(label => label !== activeGroup) : []))
   const [query, setQuery] = useState('')
-  const previousPath = useRef(pathname)
+  const route = pathname + locationSearch
+  const previousPath = useRef(route)
 
   useEffect(() => { if (!expanded) setQuery('') }, [expanded])
   useEffect(() => {
-    if (previousPath.current === pathname) return
-    previousPath.current = pathname
+    if (previousPath.current === route) return
+    previousPath.current = route
     setQuery('')
     if (activeGroup) setClosed(previous => {
       if (!previous.has(activeGroup)) return previous
@@ -52,7 +59,7 @@ export function SidebarNav({ groups, can, hasPermission = can, storageKey, compa
       try { localStorage.setItem(key, JSON.stringify([...next])) } catch { /* Optional preference storage. */ }
       return next
     })
-  }, [pathname, activeGroup, key])
+  }, [route, activeGroup, key])
 
   const toggle = (label: string) => setClosed(previous => {
     const next = new Set(previous)
@@ -92,10 +99,11 @@ export function SidebarNav({ groups, can, hasPermission = can, storageKey, compa
             )}
             <nav id={sectionId} aria-label={group.label ?? 'Menu utama'}>
               {group.items.map(item => (
-                <NavLink key={item.to} to={item.to} end={item.end ?? false} title={item.label} aria-label={item.label}>
+                <Link key={item.to} to={item.to} className={matchesPath(item) ? 'active' : ''} aria-current={matchesPath(item) ? 'page' : undefined} title={item.label + (item.badge?.status === 'ready' ? ' · ' + item.badge.count + ' perlu tindakan' : item.badge?.status === 'error' ? ' · Jumlah request belum tersedia' : '')} aria-label={item.label}>
                   <item.icon className="nav-icon" aria-hidden />
                   <span className="nav-text">{item.label}</span>
-                </NavLink>
+                  {item.badge && <span className={'nav-badge ' + item.badge.status} aria-label={item.badge.status === 'ready' ? item.badge.count + ' request perlu tindakan' : item.badge.status === 'error' ? 'Jumlah request belum tersedia' : 'Memuat jumlah request'}>{item.badge.status === 'ready' ? item.badge.count : item.badge.status === 'error' ? '!' : '…'}</span>}
+                </Link>
               ))}
             </nav>
           </div>

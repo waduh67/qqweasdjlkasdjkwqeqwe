@@ -15,6 +15,7 @@ interface WorkorderApi {
 
     fun assignment(workOrderId: UUID, technicianId: UUID): WorkOrderAssignmentRef? = null
     fun scheduledAt(workOrderId: UUID): Instant? = null
+    fun visitContext(workOrderId: UUID, lock: Boolean = false): WorkOrderVisitContext? = null
 
     /**
      * WO PSB (pasang baru) yang masih terbuka, dipetakan per pelanggan yang dituju.
@@ -77,6 +78,20 @@ data class WorkOrderAssignmentRef(
     val technicianId: UUID,
     val active: Boolean,
     val areaId: UUID?,
+    val assignmentGeneration: Long? = null,
+)
+
+data class WorkOrderVisitContext(
+    val tenantId: UUID,
+    val code: String,
+    val title: String,
+    val customerName: String?,
+    val areaId: UUID?,
+    val areaName: String?,
+    val scheduledAt: Instant?,
+    val active: Boolean,
+    val technicianIds: Set<UUID>,
+    val assignmentGeneration: Long?,
 )
 
 /**

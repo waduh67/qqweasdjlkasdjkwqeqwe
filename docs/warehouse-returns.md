@@ -1,5 +1,20 @@
 # Retur dan inspeksi gudang
 
+## Retur pada workflow REFERENCE
+
+Teknisi NE/FO membuka **Gudang & Material → Retur Barang** (`/warehouse/returns`),
+memilih **Retur baru**, gudang tujuan, material miliknya, jumlah, dan
+alasan. Tujuan diambil dari `GET /api/v2/warehouse/returns/destinations`:
+gudang aktif milik tenant, termasuk gudang tanpa area atau tanpa izin pengeluaran.
+Pilihan tujuan tidak memerlukan grant area/gudang pribadi teknisi. Server tetap
+membatasi sumber ke material teknisi tersebut serta mengunci dan memvalidasi
+tujuan saat pengiriman. Tujuan nonaktif atau tenant lain ditolak.
+
+Pengelola menerima atau menolak retur dalam akses gudangnya. Gudang tanpa area
+dapat dikelola melalui grant gudang yang sesuai. Penerimaan retur dapat dilakukan
+pada gudang aktif yang tidak dipakai untuk pengeluaran; aturan karantina dan
+inspeksi stok tetap berlaku.
+
 Retur memakai dokumen baru yang menunjuk asal fisiknya. Retur material menunjuk
 residual WO yang sudah diterima; retur perangkat menunjuk pembongkaran assignment
 yang sudah disaksikan. Penerimaan dan inspeksi tidak menghapus riwayat issue,

@@ -38,6 +38,7 @@ export function Modal({ title, onClose, children, footer, wide, layout = 'dialog
   const requestClose = () => { if (modalId === Math.max(...activeModals)) onClose() }
   const ancestors = useContext(ResourceAncestors)
   const [pageTitle] = useState(() => document.querySelector('main h1')?.textContent ?? '')
+  const [operational] = useState(() => document.querySelector('main')?.classList.contains('operational-content') ?? false)
   const trail = useMemo(() => [...ancestors, title], [ancestors, title])
   useLayoutEffect(() => {
     // A loading surface can be replaced in the same commit. Settle focus after
@@ -109,7 +110,7 @@ export function Modal({ title, onClose, children, footer, wide, layout = 'dialog
       }
       requestClose()
     }}>
-      <DialogSurface onSubmit={event => event.stopPropagation()} onClick={event => event.stopPropagation()} backdrop={layout === 'resource' ? { className: 'resource-form-backdrop' } : undefined} ref={surface} data-resource-layer={layout === 'resource' ? ancestors.length : undefined} style={layout === 'resource' ? { '--resource-layer-depth': Math.min(ancestors.length, 5) } as CSSProperties : undefined} className={`console-dialog ${className}${wide ? ' console-dialog-wide' : ''}${layout === 'resource' ? ' resource-form-dialog' : ''}`}>
+      <DialogSurface onSubmit={event => event.stopPropagation()} onClick={event => event.stopPropagation()} backdrop={layout === 'resource' ? { className: 'resource-form-backdrop' } : undefined} ref={surface} data-resource-layer={layout === 'resource' ? ancestors.length : undefined} style={layout === 'resource' ? { '--resource-layer-depth': Math.min(ancestors.length, 5) } as CSSProperties : undefined} className={`console-dialog ${className}${wide ? ' console-dialog-wide' : ''}${layout === 'resource' ? ' resource-form-dialog' : ''}${operational ? ' operational-dialog' : ''}`}>
         <DialogBody>
           {layout === 'resource' && <nav className="resource-layer-trail" aria-label="Alur formulir">
             {ancestors.length > 0 && <Button variant="subtle" icon={<ChevronLeft16Regular />} aria-label="Kembali ke panel sebelumnya" onClick={requestClose} />}

@@ -36,18 +36,31 @@ class WorkOrderApiService(
     private val manageWorkOrder: ManageWorkOrderUseCase,
     private val cutovers: InventoryTenantCutoverApi,
     private val intakes: ReferenceWorkIntakeService,
+    private val referenceOrders: com.karuhun.ftth.workorder.adapter.outbound.persistence.ReferenceWorkOrderStore,
+    private val customers: com.karuhun.ftth.customer.CustomerApi,
+    private val iam: com.karuhun.ftth.iam.IamApi,
 ) : WorkorderApi {
 
     override fun assignment(workOrderId: UUID, technicianId: UUID): WorkOrderAssignmentRef? {
+        val reference = referenceOrders.find(workOrderId)
         val workOrder = workOrderRepository.findById(workOrderId) ?: return null
         return if (workOrder.isAssignedTo(technicianId)) {
-            WorkOrderAssignmentRef(workOrder.tenantId, workOrder.id, workOrder.customerId, technicianId, workOrder.status.open, workOrder.areaId)
+            WorkOrderAssignmentRef(workOrder.tenantId, workOrder.id, workOrder.orderId, technicianId, workOrder.status.open, workOrder.areaId, reference?.assignmentGeneration)
         } else {
             null
         }
     }
 
     override fun scheduledAt(workOrderId: UUID): Instant? = workOrderRepository.findById(workOrderId)?.scheduledAt
+
+    override fun visitContext(workOrderId: UUID, lock: Boolean): com.karuhun.ftth.workorder.WorkOrderVisitContext? {
+        val reference = referenceOrders.find(workOrderId, lock)
+        val workOrder = workOrderRepository.findById(workOrderId) ?: return null
+        return com.karuhun.ftth.workorder.WorkOrderVisitContext(workOrder.tenantId, workOrder.code, workOrder.title,
+            workOrder.customerId?.let(customers::findCustomer)?.name, workOrder.areaId,
+            workOrder.areaId?.let { iam.areasByIds(setOf(it)).singleOrNull()?.name }, workOrder.scheduledAt,
+            workOrder.status.open, workOrder.assignees, reference?.assignmentGeneration)
+    }
 
     override fun openPsbByCustomer(): Map<UUID, WorkOrderRef> =
         workOrderRepository.findOpenByType(WorkOrderType.PSB)

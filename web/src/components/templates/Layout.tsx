@@ -1,6 +1,8 @@
 import { Navigation16Regular } from '@fluentui/react-icons'
 import * as NavIcons from '@/components/molecules/navigationIcons'
 import { useEffect, useRef } from 'react'
+import { useRequestActionCount } from '@/hooks/useRequestActionCount'
+import '@/operational.css'
 import { Text } from '@fluentui/react-components'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
@@ -73,9 +75,9 @@ const GROUPS: NavGroup[] = [
     items: [
       { to: '/incidents', label: 'Insiden', permission: 'incident.ticket.view', icon: NavIcons.Alert },
       // Papan dispatch (semua WO) di-gate izin dashboard = khusus operator; teknisi (yang
-      // cuma punya `order.view`+`order.field`) tak melihatnya, hanya "Tugas Saya" di bawah.
+      // cuma punya `order.view`+`order.field`) tak melihatnya, hanya "Work Order Saya" di bawah.
       { to: '/work-orders', label: 'Work Order', permission: 'workorder.dashboard.view', icon: NavIcons.WorkOrder },
-      { to: '/my-work-orders', label: 'Tugas Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.Inbox },
+      { to: '/my-work-orders', label: 'Work Order Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.Inbox },
       { to: '/my-materials', label: 'Material Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.PackageCheck },
       { to: '/my-visits', label: 'Kunjungan Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.Calendar },
       { to: '/b2b/clients', label: 'Client B2B', permission: 'b2b.client.view', icon: NavIcons.Users },
@@ -110,13 +112,37 @@ export function Layout() {
   const { can, hasPermission, isPlatformAdmin } = useCan()
   const { state: workflow } = useWarehouseWorkflow()
   const pages = workflow.status === 'ready' ? warehousePages(workflow.data.workflow, workflow.data.owner) : []
-  const groups: NavGroup[] = GROUPS.map(group => group.label === 'Gudang' ? { ...group, items: [
-    ...(pages.length ? [{ to: '/warehouse', label: 'Ringkasan Gudang', permission: workflow.status === 'ready' && workflow.data.owner ? null : pages.flatMap(page => [...page.permissions]), icon: NavIcons.PackageCheck, end: true, access: 'read' as const }] : []),
-    ...pages.map(page => ({ to: `/warehouse/${page.path}`, label: page.label, permission: 'ownerOnly' in page ? null : page.permissions, icon: NavIcons.warehouse[page.path], access: 'read' as const })),
-  ] } : group)
+  const reference = workflow.status === 'ready' && workflow.data.workflow === 'REFERENCE'
+  const requestCount = useRequestActionCount(reference)
+  const fieldItems = GROUPS.flatMap(group => group.label === 'Lapangan' ? group.items : [])
+  const operationalItems = GROUPS.flatMap(group => group.label === 'Operasional' ? group.items : [])
+  const inventoryPages = pages.filter(page => page.path !== 'requests' && page.path !== 'returns')
+  const inventoryItems = inventoryPages.flatMap<NavGroup['items'][number]>(page => page.path === 'catalog' && reference ? [
+    { to: '/warehouse/catalog?tab=locations', label: 'Gudang & Rak', permission: page.permissions, icon: NavIcons.Storage, access: 'read' as const },
+    { to: '/warehouse/catalog?tab=skus', label: 'Barang', permission: page.permissions, icon: NavIcons.Package, access: 'read' as const },
+    { to: '/warehouse/catalog?tab=suppliers', label: 'Pemasok', permission: page.permissions, icon: NavIcons.Users, access: 'read' as const },
+  ] : [{ to: '/warehouse/' + page.path, label: page.label, permission: 'ownerOnly' in page ? null : page.permissions, icon: NavIcons.warehouse[page.path], access: 'read' as const }])
+  const requestPage = pages.find(page => page.path === 'requests'), returnPage = pages.find(page => page.path === 'returns')
+  const groups: NavGroup[] = [
+    { label: null, items: [GROUPS[0].items[0], operationalItems[0]] },
+    { label: 'Gudang & Material', items: [
+      ...(hasPermission('warehouse.stock.view') || hasPermission('warehouse.request.view') || hasPermission('warehouse.request.own') || !reference && pages.length ? [{ to: '/warehouse', label: 'Dashboard Gudang', permission: pages.flatMap(page => [...page.permissions]), icon: NavIcons.PackageCheck, end: true, access: 'read' as const }] : []),
+      ...fieldItems.filter(item => item.to === '/my-materials'),
+      ...(returnPage ? [{ to: '/warehouse/returns', label: reference ? 'Retur Barang' : returnPage.label, permission: returnPage.permissions, icon: NavIcons.warehouse.returns, access: 'read' as const }] : []),
+      ...(requestPage ? [{ to: requestCount ? '/warehouse/requests?actions=true' : '/warehouse/requests', label: 'Request Material', permission: requestPage.permissions, icon: NavIcons.warehouse.requests, access: 'read' as const, badge: requestCount }] : []),
+      ...inventoryItems.filter(item => !['settings', 'transition', 'archive', 'provenance'].some(path => item.to === '/warehouse/' + path)),
+    ] },
+    ...GROUPS.filter(group => group.label === 'Pelanggan & layanan'),
+    { label: 'Work Order & Kunjungan', items: fieldItems.filter(item => ['/work-orders', '/my-work-orders', '/my-visits', '/incidents'].includes(item.to)).map(item => item.to === '/my-work-orders' ? { ...item, label: 'Work Order Saya' } : item) },
+    { label: 'Daily Report', items: [operationalItems[1]] },
+    { label: 'B2B', items: fieldItems.filter(item => item.to.startsWith('/b2b/')) },
+    { label: 'Setelan Gudang', items: inventoryItems.filter(item => ['settings', 'transition', 'archive', 'provenance'].some(path => item.to === '/warehouse/' + path)) },
+    ...GROUPS.filter(group => group.label === 'Jaringan'),
+    { label: 'Manajemen', items: [GROUPS[0].items[1], ...GROUPS.flatMap(group => group.label === 'Administrasi' ? group.items : [])] },
+  ]
   const pageLabels = {
     ...Object.fromEntries(pages.map(page => [`/warehouse/${page.path}`, page.label])),
-    '/b2b': 'Lapangan',
+    '/b2b': 'B2B',
     '/b2b/clients': 'Client B2B',
     '/b2b/reports': 'Rekap B2B',
     '/b2b/visits': 'Visit B2B',
@@ -126,6 +152,7 @@ export function Layout() {
   const { navLabel, navExpanded, navOpen, toggleNav, toggleNavFromSidebar, toggleButtonRef, closeNav, shellClass } = useAppShellNav()
 
   const flush = FLUSH_ROUTES.has(location.pathname)
+  const operational = location.pathname === '/' || ['/warehouse', '/work-orders', '/my-work-orders', '/my-materials', '/my-visits', '/daily-reports', '/kpi', '/b2b'].some(path => location.pathname === path || location.pathname.startsWith(path + '/'))
 
   /**
    * Dorong ke `/subscription` SEKALI saja saat kunci pertama kali terbaca. Sekali, bukan
@@ -150,9 +177,7 @@ export function Layout() {
     .join('')
 
   return (
-    <div className={shellClass}>
-      {/* Header Azure full-width: anak langsung .app (grid-area topbar) agar bar biru
-          membentang di atas sidebar & konten, bukan hanya kolom kanan. */}
+    <div className={shellClass + ' gudang-shell'}>
       <header className="topbar">
         <div className="row" style={{ gap: '0.5rem' }}>
           {/* Satu tombol, dua arti: menciutkan sidebar di layar lebar, membuka laci nav
@@ -221,7 +246,7 @@ export function Layout() {
       {navOpen && <button type="button" className="nav-scrim" aria-label="Tutup menu" onClick={closeNav} />}
 
       <aside className="sidebar">
-        <SidebarNav onToggle={toggleNavFromSidebar} expanded={navExpanded} compact groups={groups} can={can} hasPermission={hasPermission} storageKey="ftth.navGroups.tenant" />
+        <SidebarNav onToggle={toggleNavFromSidebar} expanded={navExpanded} groups={groups} can={can} hasPermission={hasPermission} storageKey="ftth.navGroups.tenant" />
       </aside>
 
       <div className="main">
@@ -257,7 +282,7 @@ export function Layout() {
             </Link>
           </div>
         )}
-        <main className={flush ? 'content content-flush' : 'content'}>
+        <main className={(flush ? 'content content-flush' : 'content') + (operational ? ' operational-content' : '')}>
           {!flush && (
             <div className="breadcrumb-bar">
               <Breadcrumbs labels={pageLabels} />

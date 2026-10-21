@@ -26,7 +26,7 @@ class WorkOrderMaterialContextAdapter(private val entityManager: EntityManager, 
         authority.fence.assertHeld()
         if (authority.platformAdmin || "workorder.order.field" !in authority.permissions) fail(WarehouseErrorCode.FORBIDDEN)
         entityManager.flush()
-        val material = snapshot(id, authority)
+        val material = snapshot(id, authority, assignedField = true)
         val completion = completions.get(id) ?: fail(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         if (completion.technicianId != authority.fence.identity.userId ||
             material.activeAssigneeIds != setOf(completion.technicianId)) fail(WarehouseErrorCode.FORBIDDEN)
@@ -119,7 +119,7 @@ class WorkOrderMaterialContextAdapter(private val entityManager: EntityManager, 
         return context
     }
 
-    private fun snapshot(id: UUID, current: CurrentAuthority): WorkOrderMaterialContext =
+    private fun snapshot(id: UUID, current: CurrentAuthority, assignedField: Boolean = false): WorkOrderMaterialContext =
         entityManager.unwrap(Session::class.java).doReturningWork { connection: Connection ->
             check(!connection.autoCommit)
             current.fence.assertHeld()
@@ -129,12 +129,14 @@ class WorkOrderMaterialContextAdapter(private val entityManager: EntityManager, 
                     if (!row.next()) fail(WarehouseErrorCode.NOT_FOUND)
                     val area = row.getObject("area_id", UUID::class.java)
                     val scope = current.areaScope
-                    if (scope is AuthorityScope.Restricted && area !in scope.ids) fail(WarehouseErrorCode.NOT_FOUND)
                     val roster = connection.prepareStatement("SELECT technician_id FROM work_order_assignee WHERE tenant_id=? AND work_order_id=?").use { statement ->
                         statement.setObject(1, TenantContext.tenantId()); statement.setObject(2, id)
                         statement.executeQuery().use { rows -> buildSet { while (rows.next()) add(rows.getObject(1, UUID::class.java)) } }
                     }
                     val activeRoster = users.usersByIds(roster).filter { it.active && it.technician }.map { it.id }.toSet()
+                    if (scope is AuthorityScope.Restricted && area !in scope.ids &&
+                        !(assignedField && activeRoster == setOf(current.fence.identity.userId) && "workorder.order.field" in current.permissions))
+                        fail(WarehouseErrorCode.NOT_FOUND)
                     val customer = row.getObject("customer_id", UUID::class.java)
                     val type = row.getString("type")
                     val action = when (type) {

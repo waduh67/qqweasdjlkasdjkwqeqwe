@@ -7,6 +7,7 @@ import java.util.UUID
 
 enum class VisitState { PLANNED, CHECKED_IN, ON_SITE, CHECKED_OUT, SUBMITTED, CONFLICT, CANCELLED }
 enum class AttendanceDecision { ACCEPTED, REVIEW_REQUIRED, REJECTED }
+enum class VisitPurpose { FULFILLMENT, WORK_ORDER }
 
 data class CommandMetadata(
     val tenantId: UUID,
@@ -36,7 +37,7 @@ data class VisitEvent(
 class Visit private constructor(
     val id: UUID,
     val tenantId: UUID,
-    val orderId: UUID,
+    val orderId: UUID?,
     val workOrderId: UUID,
     val technicianId: UUID,
     var state: VisitState,
@@ -44,6 +45,8 @@ class Visit private constructor(
     var assignmentActive: Boolean,
     var attendance: Attendance?,
     private val eventLog: MutableList<VisitEvent>,
+    val purpose: VisitPurpose,
+    val assignmentGeneration: Long?,
 ) {
     val events: List<VisitEvent> get() = eventLog.toList()
 
@@ -109,19 +112,22 @@ class Visit private constructor(
     }
 
     companion object {
-        fun plan(tenantId: UUID, orderId: UUID, workOrderId: UUID, technicianId: UUID, plannedAt: Instant): Visit =
-            Visit(UUID.randomUUID(), tenantId, orderId, workOrderId, technicianId, VisitState.PLANNED, 0, true, null, mutableListOf())
+        fun plan(tenantId: UUID, orderId: UUID?, workOrderId: UUID, technicianId: UUID, plannedAt: Instant,
+            purpose: VisitPurpose = VisitPurpose.FULFILLMENT, assignmentGeneration: Long? = null): Visit =
+            Visit(UUID.randomUUID(), tenantId, orderId, workOrderId, technicianId, VisitState.PLANNED, 0, true, null, mutableListOf(), purpose, assignmentGeneration)
 
         fun rehydrate(
             id: UUID,
             tenantId: UUID,
-            orderId: UUID,
+            orderId: UUID?,
             workOrderId: UUID,
             technicianId: UUID,
             state: VisitState,
             revision: Long,
             assignmentActive: Boolean,
             attendance: Attendance?,
-        ): Visit = Visit(id, tenantId, orderId, workOrderId, technicianId, state, revision, assignmentActive, attendance, mutableListOf())
+            purpose: VisitPurpose = VisitPurpose.FULFILLMENT,
+            assignmentGeneration: Long? = null,
+        ): Visit = Visit(id, tenantId, orderId, workOrderId, technicianId, state, revision, assignmentActive, attendance, mutableListOf(), purpose, assignmentGeneration)
     }
 }

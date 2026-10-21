@@ -19,8 +19,10 @@ class ReferenceRequestController(private val service: ReferenceRequestService, p
         @RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int) =
         fresh(stock.preview(skuId, technicianId, warehouseId, requestId, page, size))
     @GetMapping("/requests") fun list(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int,
-        @RequestParam(required = false) state: ReferenceRequestState?, @RequestParam(required = false) search: String?) =
-        fresh(service.list(page, size, state, search))
+        @RequestParam(required = false) state: ReferenceRequestState?, @RequestParam(required = false) search: String?,
+        @RequestParam(defaultValue = "false") actionOnly: Boolean) = fresh(service.list(page, size, state, search, actionOnly))
+    @GetMapping("/requests/action-count") fun actionCount() = fresh(service.actionCount())
+    @GetMapping("/requests/overview") fun overview() = fresh(service.overview())
     @GetMapping("/requests/{id}") fun detail(@PathVariable id: UUID) = fresh(service.detail(id))
     @PostMapping("/requests") fun submit(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =
         result(service.submit(WarehouseReceiptJson.decode(body, ReferenceRequestInput::class.java), key))

@@ -67,6 +67,24 @@ class B2BSql(private val connection: Connection, val tenant: UUID) {
         val days = query("SELECT visit_date FROM b2b_visit WHERE tenant_id=? AND client_id=? AND month=? AND counted",tenant,id,month) {
             it.getObject("visit_date", LocalDate::class.java)
         }
+        return summarize(id, month, today, value, days)
+    }
+    fun overview(month: LocalDate, today: LocalDate, all: Boolean, actor: UUID): B2BOverview {
+        val settings = query("""SELECT * FROM b2b_client_month WHERE tenant_id=? AND month=? AND active
+            AND (? OR technician_id=?) ORDER BY lower(name),client_id""", tenant, month, all, actor) {
+            it.uuid("client_id") to setting(it)
+        }
+        val days = query("""SELECT v.client_id,v.visit_date FROM b2b_visit v JOIN b2b_client_month m
+            ON m.tenant_id=v.tenant_id AND m.client_id=v.client_id AND m.month=v.month
+            WHERE v.tenant_id=? AND v.month=? AND v.counted AND m.active AND (? OR m.technician_id=?)""",
+            tenant, month, all, actor) { it.uuid("client_id") to it.getObject("visit_date", LocalDate::class.java) }
+            .groupBy({ it.first }, { it.second })
+        val clients = settings.map { (id, value) -> summarize(id, month, today, value, days[id].orEmpty()) }
+        return B2BOverview(month, clients.sumOf { it.setting.target }, clients.sumOf { it.counted },
+            clients.sumOf { it.remaining }, clients.sumOf { c -> c.weeks.count { it.missed } },
+            clients.sortedWith(compareByDescending<B2BMonth> { it.remaining }.thenBy { it.setting.name }).take(5))
+    }
+    private fun summarize(id: UUID, month: LocalDate, today: LocalDate, value: B2BSetting, days: List<LocalDate>): B2BMonth {
         val end = YearMonth.from(month).atEndOfMonth()
         var start = month
         val weeks = buildList {

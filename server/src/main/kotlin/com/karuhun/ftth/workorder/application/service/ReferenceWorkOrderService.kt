@@ -193,11 +193,15 @@ class ReferenceWorkOrderService(private val store: ReferenceWorkOrderStore, priv
         val order = workOrders.findById(id) ?: warehouseFailure(WarehouseErrorCode.NOT_FOUND)
         return ReferenceWorkOrderDetail(view, view.state == ReferenceWorkOrderState.PENDING && !Instant.now().isBefore(deadline), deadline, store.timeline(id), completions.get(id), order.subscriptionId != null)
     }
-    fun list(page: Int, size: Int, state: ReferenceWorkOrderState?, search: String?, overdue: Boolean): WarehousePage<ReferenceWorkOrderView> {
+    fun list(page: Int, size: Int, state: ReferenceWorkOrderState?, search: String?, overdue: Boolean,
+        scope: ReferenceWorkOrderScope? = null): WarehousePage<ReferenceWorkOrderView> {
         if (page < 0 || size !in 1..100 || search != null && search.length > 200) malformed()
         val access = readAccess()
         readPermission(access.current)
-        return store.list(page, size, access.current.areaScope, if (permits(access.current, "workorder.order.view")) null else access.current.fence.identity.userId,
+        val own = scope == ReferenceWorkOrderScope.SELF || !permits(access.current, "workorder.order.view")
+        if (own) permission(access.current, "workorder.order.field")
+        return store.list(page, size, if (own) AuthorityScope.Unrestricted else access.current.areaScope,
+            if (own) access.current.fence.identity.userId else null,
             state, search, overdue, settings.settings().overdueDays)
     }
     internal fun access(key: String): Access {
@@ -214,7 +218,8 @@ class ReferenceWorkOrderService(private val store: ReferenceWorkOrderStore, priv
     internal fun canonical(id: UUID?, input: Any) = WarehouseCanonicalPayload.parse(mapper.writeValueAsString(mapOf("id" to id, "input" to input)))
     internal fun authorized(view: ReferenceWorkOrderView, access: Access): ReferenceWorkOrderView {
         readPermission(access.current)
-        area(view.areaId, access.current)
+        val assignedField = view.technicianId == access.current.fence.identity.userId && permits(access.current, "workorder.order.field")
+        if (!assignedField) area(view.areaId, access.current)
         if (!permits(access.current, "workorder.order.view") && view.technicianId != access.current.fence.identity.userId) warehouseFailure(WarehouseErrorCode.NOT_FOUND)
         return view
     }

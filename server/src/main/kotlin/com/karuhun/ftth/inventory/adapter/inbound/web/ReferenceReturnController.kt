@@ -11,6 +11,9 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/v2/warehouse/returns")
 class ReferenceReturnController(private val service: ReferenceReturnService) {
+    @GetMapping("/destinations") fun destinations(@RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "25") size: Int, @RequestParam(required = false) search: String?) =
+        fresh(service.destinations(page, size, search))
     @GetMapping fun list(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int,
         @RequestParam(required = false) state: ReferenceReturnState?, @RequestParam(required = false) search: String?) = fresh(service.list(page, size, state, search))
     @GetMapping("/{id}") fun detail(@PathVariable id: UUID) = fresh(service.detail(id))

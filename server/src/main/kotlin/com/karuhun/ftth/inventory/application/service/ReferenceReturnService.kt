@@ -1,6 +1,10 @@
 package com.karuhun.ftth.inventory.application.service
 
 import com.karuhun.ftth.iam.IamApi
+import com.karuhun.ftth.common.security.AuthorityScope
+import com.karuhun.ftth.inventory.application.port.outbound.WarehouseMasterStore
+import com.karuhun.ftth.inventory.domain.model.LocationKind
+import com.karuhun.ftth.network.SiteReferenceApi
 import com.karuhun.ftth.inventory.*
 import com.karuhun.ftth.inventory.adapter.outbound.persistence.ReferenceReturnStore
 import com.karuhun.ftth.inventory.adapter.outbound.persistence.ReferenceWarehouseStore
@@ -14,13 +18,30 @@ import java.util.UUID
 @Transactional
 class ReferenceReturnService(private val accessService: ReferenceRequestService, private val store: ReferenceReturnStore,
     private val warehouse: ReferenceWarehouseService, private val stock: WarehouseTransferStock,
-    private val positions: ReferenceWarehouseStore, private val iam: IamApi) {
+    private val positions: ReferenceWarehouseStore, private val iam: IamApi, private val masters: WarehouseMasterStore,
+    private val sites: SiteReferenceApi) {
+
+    fun destinations(page: Int, size: Int, search: String?): WarehousePage<MasterSnapshot> {
+        if (page < 0 || size !in 1..100 || search != null && search.length > 200) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
+        val access = accessService.readAccess()
+        accessService.permission(access.current, "warehouse.return.own")
+        return masters.list(MasterKind.LOCATION, MasterFilter(page = page, size = size, search = search,
+            state = WarehouseMasterState.ACTIVE, locationKinds = setOf(LocationKind.WAREHOUSE)),
+            AuthorityScope.Unrestricted, AuthorityScope.Unrestricted, sites.visibleAreas(AuthorityScope.Unrestricted))
+    }
+
+    private fun destination(id: UUID): LocationSnapshot {
+        val location = masters.get(MasterKind.LOCATION, id, true) as LocationSnapshot
+        if (location.state != WarehouseMasterState.ACTIVE || location.kind != LocationKind.WAREHOUSE)
+            masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
+        return location
+    }
 
     fun submit(input: ReferenceReturnInput, key: String): WarehouseOperationReceipt {
         val access = accessService.access(key)
         accessService.permission(access.current, "warehouse.return.own")
         receiptText(input.reason, 1000)
-        val destination = accessService.warehouse(input.warehouseId, access)
+        val destination = destination(input.warehouseId)
         val canonical = accessService.canonical(null, input)
         replay("SUBMIT", key, canonical, access)?.let { return it }
         if (input.lines.size !in 1..100 || input.lines.distinctBy { it.stockIdentityId }.size != input.lines.size)
@@ -89,7 +110,7 @@ class ReferenceReturnService(private val accessService: ReferenceRequestService,
 
     private fun manages(access: ReferenceRequestService.Access) = access.current.platformAdmin || "warehouse.return.manage" in access.current.permissions
     private fun authorized(view: ReferenceReturnView, access: ReferenceRequestService.Access): ReferenceReturnView {
-        if (manages(access)) accessService.warehouse(view.warehouseId, access)
+        if (manages(access)) accessService.warehouse(view.warehouseId, access, returnDestination = true)
         else {
             accessService.permission(access.current, "warehouse.return.own")
             if (view.technicianId != access.current.fence.identity.userId) masterFailure(WarehouseErrorCode.NOT_FOUND)

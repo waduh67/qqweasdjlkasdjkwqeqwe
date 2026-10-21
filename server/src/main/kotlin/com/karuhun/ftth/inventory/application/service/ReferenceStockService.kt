@@ -60,6 +60,23 @@ class ReferenceStockService(private val authority: CurrentAuthorityApi, private 
         receiptPermission(current, "warehouse.stock.view")
         masters.lockTopology()
         val sku = masters.get(MasterKind.SKU, skuId) as SkuSnapshot
+        return Scope(current, sku, visibleLocations(current))
+    }
+
+    fun overview(): ReferenceStockOverview {
+        val current = authority.lockCurrent()
+        receiptPermission(current, "warehouse.stock.view")
+        masters.lockTopology()
+        val locations = visibleLocations(current)
+        val byId = locations.associateBy { it.id }
+        val warehouses = locations.filter { it.kind == LocationKind.WAREHOUSE }
+        val roots = locations.mapNotNull { location ->
+            warehouses.firstOrNull { belongs(location, it.id, byId) }?.let { location.id to it.id }
+        }.toMap()
+        return store.overview(roots)
+    }
+
+    private fun visibleLocations(current: CurrentAuthority): List<LocationSnapshot> {
         val locations = mutableListOf<LocationSnapshot>()
         val scope = if (current.platformAdmin) AuthorityScope.Unrestricted else scopes.currentUnderFence(current.fence)
         val areas = if (current.platformAdmin) AuthorityScope.Unrestricted else current.areaScope
@@ -70,7 +87,7 @@ class ReferenceStockService(private val authority: CurrentAuthorityApi, private 
             locations += batch.items.filterIsInstance<LocationSnapshot>()
             page++
         } while (page.toLong() * 100 < batch.totalElements)
-        return Scope(current, sku, locations)
+        return locations
     }
 
     private fun belongs(location: LocationSnapshot, warehouse: UUID, byId: Map<UUID, LocationSnapshot>): Boolean {

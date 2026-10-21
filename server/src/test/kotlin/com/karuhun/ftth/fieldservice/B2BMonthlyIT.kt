@@ -74,6 +74,33 @@ class B2BMonthlyIT {
             param("notes",notes); header("Authorization","Bearer ${actor.token}"); header("Idempotency-Key",key)
         }).andReturn().response
 
+    @Test fun `overview sums all monthly clients before limiting details and isolates technician and tenant`() {
+        val s = setup()
+        var first = ""
+        repeat(26) { index ->
+            val created = ok("POST", "/api/v1/b2b/clients", s.admin, body(s.ne.id, name = "Client $index"), 201)
+            if (index == 0) first = created.path("id").asString()
+        }
+        ok("POST", "/api/v1/b2b/clients", s.admin, body(s.other.id, target = 2), 201)
+        assertThat(visit(first, s.ne).status).isEqualTo(201)
+        val foreign = setup()
+        client(foreign, target = 9)
+
+        val admin = ok("GET", "/api/v1/b2b/overview?month=$month", s.admin)
+        val own = ok("GET", "/api/v1/b2b/overview?month=$month", s.ne)
+        val other = ok("GET", "/api/v1/b2b/overview?month=$month", s.other)
+
+        assertThat(admin.path("target").asInt()).isEqualTo(106)
+        assertThat(admin.path("counted").asInt()).isEqualTo(1)
+        assertThat(admin.path("remaining").asInt()).isEqualTo(105)
+        assertThat(admin.path("clients").size()).isEqualTo(5)
+        assertThat(own.path("target").asInt()).isEqualTo(104)
+        assertThat(own.path("remaining").asInt()).isEqualTo(103)
+        assertThat(own.path("clients").values().map { it.path("setting").path("technicianId").asString() }.toSet()).isEqualTo(setOf(s.ne.id))
+        assertThat(other.path("target").asInt()).isEqualTo(2)
+        assertThat(other.path("counted").asInt()).isZero()
+    }
+
     @Test fun `client target assignment and active edits are frozen until next month`() {
         val s=setup(); val created=client(s); val id=created.path("id").asString()
         assertThat(created.path("current").path("setting").path("target").asInt()).isEqualTo(4)

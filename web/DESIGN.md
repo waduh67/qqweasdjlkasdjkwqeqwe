@@ -1,5 +1,35 @@
 # NetOps Console Design System
 
+
+## Operational Gudang reference override
+
+The tenant shell and Gudang, WO, ordinary visits, Daily, B2B and KPI follow
+`/var/www/html/gudang/resources/css/app.css` and its CMS sidebar/dashboard.
+Customer, billing, network and monitoring page bodies retain current tokens.
+`.gudang-shell` owns navy navigation #161c28 (dark #080e1a), mint #00e29d
+active icons and tonal selection, with a neutral header. `.operational-content`
+uses canvas #f8f9fb, white cards, border #e2e8ed, ink #161c28, secondary
+#414b5c, muted #626d7b and AA interaction ink #007d58. Dark surfaces are
+#080e1a/#121824/#222c3d with light ink. Body uses local Hanken Grotesk and
+headings Space Grotesk, with system fallbacks. Cards have 16px radii,
+20–24px padding and 16px gaps; tabs are pills with tonal selected fill.
+Existing Fluent forms, exact quantities and resource review remain.
+
+Menu order follows tasks: Dashboard, KPI, Gudang or Material Saya and Retur,
+Request Material, Pelanggan, WO, Kunjungan Saya, Daily, B2B, then setup and
+management. Catalog links select Barang, Gudang & Rak or Pemasok by query tab.
+Permissions determine entries and actionable request counts, never account names.
+Counts refresh after successful commands and every minute while visible;
+failed reads show an unavailable indicator rather than a false zero.
+Ordinary visits display WO/customer/area, real session times, active/history,
+pagination and current-assignment actions. B2B stays separate. Dashboard totals
+use the entire authorized scope. KPI shows actual/target/percentage and keeps
+four equal weights; team viewers alone select another technician.
+At 375px content reflows; focus rings, textual states, 40px navigation targets
+and reduced-motion behavior remain. No accent edge stripes or new accessibility
+debt are accepted.
+
+
 ## 1. Atmosphere & Identity
 
 NetOps Console is a calm, dense operator workspace modeled on Fluent/Azure administration surfaces. Its signature is a flat command hierarchy: full-width data regions, restrained cards, one Azure-blue action accent, and explicit text-plus-dot operational states.

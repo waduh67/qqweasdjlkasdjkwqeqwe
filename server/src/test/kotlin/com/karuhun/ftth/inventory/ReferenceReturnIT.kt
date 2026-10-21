@@ -20,7 +20,7 @@ class ReferenceReturnIT : WarehouseMasterHttpFixture() {
         return mapper.readTree(response.contentAsString)
     }
 
-    private fun setup(): Setup {
+    private fun setup(technicianRole: String = "Teknisi NE"): Setup {
         val owner = tenant()
         val warehouse = create("locations", owner, """{"code":"WH","name":"Gudang","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString()
         val sku = create("skus", owner, """{"code":"CONNECTOR","name":"Konektor","tracking":"BULK","baseUnit":"EA"}""").path("id").asString()
@@ -43,8 +43,8 @@ class ReferenceReturnIT : WarehouseMasterHttpFixture() {
         }
         val (admin, adminId) = member("Admin")
         val (manager, _) = member("Manager")
-        val (technician, technicianId) = member("Teknisi NE")
-        val (other, _) = member("Teknisi FO")
+        val (technician, technicianId) = member(technicianRole)
+        val (other, _) = member(if (technicianRole == "Teknisi NE") "Teknisi FO" else "Teknisi NE")
         ok("POST", "/workflow/drain", owner, """{"expectedEpoch":0}""")
         val review = ok("GET", "/workflow/review", owner)
         ok("POST", "/workflow/activate", owner,
@@ -53,6 +53,45 @@ class ReferenceReturnIT : WarehouseMasterHttpFixture() {
     }
 
     private fun stock(setup: Setup, sku: String = setup.sku) = ok("GET", "/stock/$sku", setup.owner).path("positions")
+
+    @Test fun `own return destinations and submission do not require personal area or warehouse grants`() {
+        for (technicianRole in listOf("Teknisi NE", "Teknisi FO")) {
+            val s = setup(technicianRole)
+            val identity = issue(s)
+            val hidden = create("locations", s.owner, """{"code":"OTHER","name":"Gudang tujuan lain","kind":"WAREHOUSE","areaId":null,"issueEligible":false}""").path("id").asString()
+            assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/${s.adminId}/$hidden", s.owner,
+                """{"expectedRevision":0,"active":true}""").status).isEqualTo(200)
+            val role = mapper.readTree(request("GET", "/api/roles", s.owner).contentAsString).single { it.path("name").asString() == technicianRole }.path("id").asString()
+            assertThat(request("PUT", "/api/users/${s.technicianId}/access", s.owner,
+                """{"roleIds":["$role"],"areaIds":[]}""").status).isEqualTo(200)
+            assertThat(request("PUT", "/api/v1/warehouse/settings/scopes/${s.technicianId}/${s.warehouse}", s.owner,
+                """{"expectedRevision":1,"active":false}""").status).isEqualTo(200)
+            val destinations = ok("GET", "/returns/destinations", s.technician).path("items").toList().map { it.path("id").asString() }
+            assertThat(destinations).contains(s.warehouse, hidden)
+            val submitted = ok("POST", "/returns", s.technician, submission(s, identity, warehouse = hidden), status = 201)
+            assertThat(submitted.path("warehouseId").asString()).isEqualTo(hidden)
+            assertThat(stock(s).single().path("quantityBase").asString()).isEqualTo("9")
+            val id = submitted.path("id").asString()
+            assertThat(request("GET", "/api/v2/warehouse/returns/$id", s.other).status).isEqualTo(404)
+            assertThat(decide(s, id, key = UUID.randomUUID().toString()).path("state").asString()).isEqualTo("RECEIVED")
+            assertThat(stock(s).single { it.path("holderKind").asString() == "TECHNICIAN" }.path("quantityBase").asString()).isEqualTo("6")
+            assertThat(request("GET", "/api/v2/warehouse/returns/destinations", s.manager).status).isEqualTo(403)
+        }
+    }
+
+    @Test fun `foreign tenant warehouse is absent from destinations and cannot receive own return`() {
+        val s = setup()
+        val identity = issue(s)
+        val foreign = tenant()
+        val destination = create("locations", foreign, """{"code":"FOREIGN","name":"Gudang tenant lain","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString()
+
+        val destinations = ok("GET", "/returns/destinations", s.technician).path("items").map { it.path("id").asString() }
+        val response = request("POST", "/api/v2/warehouse/returns", s.technician, submission(s, identity, warehouse = destination))
+
+        assertThat(destinations).doesNotContain(destination)
+        assertThat(response.status).isEqualTo(404)
+        assertThat(ok("GET", "/returns", s.technician).path("totalElements").asLong()).isZero()
+    }
 
     private fun issue(setup: Setup, sku: String = setup.sku, unit: String = "EA", quantity: String = "9", serials: List<Map<String, String>> = emptyList()): String {
         ok("POST", "/receipts", setup.admin, mapper.writeValueAsString(mapOf("warehouseId" to setup.warehouse,

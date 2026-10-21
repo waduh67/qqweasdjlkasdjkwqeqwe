@@ -13,6 +13,7 @@ vi.mock('./ReferenceCatalogPage', () => ({ ReferenceCatalogPage: () => <h1>Refer
 vi.mock('./ReferenceStockPage', () => ({ ReferenceStockPage: () => <h1>Reference stock</h1> }))
 vi.mock('./ReferenceMovementsPage', () => ({ ReferenceReceiptsPage: () => <h1>Reference receipts</h1>, ReferenceTransfersPage: () => <h1>Reference transfers</h1> }))
 vi.mock('./ReferenceRequestsPage', () => ({ ReferenceRequestsPage: () => <h1>Reference requests</h1> }))
+vi.mock('../OperationalDashboard', () => ({ ReferenceWarehouseOverview: () => <h1>Dashboard Gudang</h1> }))
 vi.mock('./ReferenceReturnsPage', () => ({ ReferenceReturnsPage: () => <h1>Reference returns</h1> }))
 vi.mock('./ReferenceCountsPage', () => ({ ReferenceCountsPage: () => <h1>Reference counts</h1> }))
 vi.mock('./WarehouseCountsPage', () => ({ WarehouseCountsPage: () => <h1>Legacy counts</h1> }))
@@ -82,10 +83,10 @@ it.each(['LEGACY', 'DRAINING', 'REFERENCE'] as const)('keeps the shared archive 
   expect(screen.queryByText('Legacy receipts')).toBeNull()
 })
 
-it.each(['/warehouse', '/warehouse/requests'])('lets an own-only technician reach requests at %s', async path => {
+it.each([['/warehouse', 'Dashboard Gudang'], ['/warehouse/requests', 'Reference requests']])('lets an own-only technician reach the warehouse at %s', async (path, heading) => {
   read.mockResolvedValue(reference); access.permissions.add('warehouse.request.own')
   route(path)
-  await screen.findByRole('heading', { name: 'Reference requests' })
+  await screen.findByRole('heading', { name: heading })
 })
 
 it('denies owner settings to nonowners even with warehouse grants', async () => {

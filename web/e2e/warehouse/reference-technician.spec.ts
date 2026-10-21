@@ -6,7 +6,7 @@ import type { PlatformTenant } from '../../src/api/tenant'
 import { pageOf, record, uuid } from '../../src/api/warehouse/codec'
 import { location, sku } from '../../src/api/warehouse/models'
 import { referencePosition, referenceStock, referenceWorkOrder, workflow, workType } from '../../src/api/warehouse/reference'
-import { identity, login } from './helpers'
+import { identity, login, openWarehouseMenu } from './helpers'
 
 async function capture(page: Page, info: TestInfo, name: string) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy()
@@ -87,6 +87,38 @@ test('technician follows instructions, uploads named evidence and completes with
   const type = types.map(workType).find(row => row.name === 'Pasang Baru')
   if (!type) throw new Error('Default work type missing')
   const work = referenceWorkOrder(await command('/api/v2/work-orders', { typeId: type.id, title: 'Pasang layanan pelanggan', technicianId: assigned.user.id, areaId, description: 'Hubungi pelanggan, pasang konektor, cek sinyal, lalu dokumentasikan hasil.' }))
+  const second = members[1]
+  if (!second) throw new Error('Other technician missing')
+  const foWork = referenceWorkOrder(await command('/api/v2/work-orders', { typeId: type.id, title: 'Periksa jalur fiber optik', technicianId: second.user.id, areaId }))
+  for (const member of members) {
+    const role = roles.find(row => row.name === (member === assigned ? 'Teknisi NE' : 'Teknisi FO'))
+    if (!role) throw new Error('Technician role missing')
+    await command('/api/users/' + member.user.id + '/access', { roleIds: [role.id], areaIds: [] }, headers, 'PUT')
+    await command('/api/v1/warehouse/settings/scopes/' + member.user.id + '/' + warehouse.id, { expectedRevision: 1, active: false }, headers, 'PUT')
+    await login(page, member.account)
+    await openWarehouseMenu(page)
+    const navigation = page.getByRole('complementary')
+    await expect(navigation.getByRole('link', { name: 'Request Material', exact: true })).toBeVisible()
+    await expect(navigation.getByRole('link', { name: 'Retur Barang', exact: true })).toBeVisible()
+    await page.goto('/my-work-orders')
+    await expect(page.getByRole('heading', { name: 'Work Order Saya', exact: true })).toBeVisible()
+    await expect(page.getByRole('link', { name: (member === assigned ? work.code + ' · ' + work.title : foWork.code + ' · ' + foWork.title), exact: true })).toBeVisible()
+    await page.goto('/my-visits')
+    await expect(page.getByRole('heading', { name: member === assigned ? work.title : foWork.title, exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Check-in', exact: true }).click()
+    await page.getByRole('button', { name: 'Tiba di lokasi', exact: true }).click()
+    await page.getByRole('button', { name: 'Check-out', exact: true }).click()
+    await page.getByRole('button', { name: 'Kirim kunjungan', exact: true }).click()
+    await expect(page.getByText('Belum ada kunjungan aktif', { exact: true })).toBeVisible()
+    await page.getByRole('tab', { name: 'Riwayat', exact: true }).click()
+    await expect(page.getByRole('heading', { name: member === assigned ? work.title : foWork.title, exact: true })).toBeVisible()
+    await capture(page, info, member === assigned ? 'ne-ordinary-visit' : 'fo-ordinary-visit')
+    await page.goto('/warehouse/returns')
+    await page.getByRole('button', { name: 'Retur baru', exact: true }).click()
+    await page.getByRole('combobox', { name: 'Gudang tujuan retur', exact: true }).click()
+    await expect(page.getByRole('option', { name: warehouse.name + ' · ' + warehouse.code, exact: true })).toBeVisible()
+    await capture(page, info, member === assigned ? 'ne-return-destination' : 'fo-return-destination')
+  }
   expect((await page.request.get('/api/v2/warehouse/stock/' + material.id, { headers: assigned.headers })).status()).toBe(403)
   const own = pageOf(referencePosition)(await get('/api/v2/warehouse/my-materials', assigned.headers))
   expect(own.items.every(row => row.holderId === assigned.user.id)).toBeTruthy()
@@ -178,8 +210,6 @@ test('technician follows instructions, uploads named evidence and completes with
   expect(attempts[1]).toEqual(attempts[0])
   const remaining = pageOf(referencePosition)(await get('/api/v2/warehouse/my-materials', assigned.headers))
   expect(remaining.items[0]?.quantityBase).toBe('6')
-  const second = members[1]
-  if (!second) throw new Error('Other technician missing')
   const unaffected = pageOf(referencePosition)(await get('/api/v2/warehouse/my-materials', second.headers))
   expect(unaffected.items[0]?.quantityBase).toBe('9')
 })

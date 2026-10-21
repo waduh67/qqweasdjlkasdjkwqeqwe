@@ -28,6 +28,7 @@ import { useWarehouseWorkflow } from './WarehouseWorkflowContext'
 import { WarehouseTransitionPage } from './WarehouseTransitionPage'
 import { WarehouseArchivePage } from './WarehouseArchivePage'
 import { REFERENCE_WAREHOUSE_PAGES } from './navigation'
+import { ReferenceWarehouseOverview } from '../OperationalDashboard'
 
 const pages = {
   catalog: WarehouseCatalogPage, receipts: WarehouseReceiptsPage, approvals: WarehouseApprovalsPage,
@@ -51,7 +52,7 @@ function ReferenceRoutes() {
   const workflow = useWarehouseWorkflow(), owner = workflow.state.status === 'ready' && workflow.state.data.owner
   const first = [...REFERENCE_WAREHOUSE_PAGES, ...SHARED_WAREHOUSE_PAGES].find(page => 'ownerOnly' in page ? owner : page.permissions.some(hasPermission))
   return <Routes>
-    <Route index element={first ? <Navigate replace to={first.path} /> : <WarehouseDenied />} />
+    <Route index element={['warehouse.stock.view', 'warehouse.request.view', 'warehouse.request.own'].some(hasPermission) ? <ReferenceWarehouseOverview /> : first ? <Navigate replace to={first.path} /> : <WarehouseDenied />} />
     <Route path="catalog" element={<WarehouseGate permissions={['warehouse.catalog.view']}><ReferenceCatalogPage /></WarehouseGate>} />
     <Route path="stock" element={<WarehouseGate permissions={['warehouse.stock.view']}><ReferenceStockPage /></WarehouseGate>} />
     <Route path="receipts" element={<WarehouseGate permissions={['warehouse.stock.view']}><ReferenceReceiptsPage /></WarehouseGate>} />

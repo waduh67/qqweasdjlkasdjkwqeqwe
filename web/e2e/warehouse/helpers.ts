@@ -38,6 +38,11 @@ export async function signup(page: Page) {
 
 export async function login(page: Page, user: { email: string; password: string }) {
   if (!page.url().endsWith('/login')) await page.goto('/login')
+  const logout = page.getByRole('button', { name: 'Keluar', exact: true })
+  const email = page.getByLabel('Email')
+  await expect(email.or(logout)).toBeVisible()
+  if (await logout.isVisible()) await logout.click()
+  await expect(email).toBeVisible()
   await page.getByLabel('Email').fill(user.email)
   await page.getByLabel('Password').fill(user.password)
   const authenticated = page.waitForResponse(response => new URL(response.url()).pathname === '/api/auth/login' && response.request().method() === 'POST')
@@ -79,7 +84,7 @@ export async function createUser(page: Page, role: string, options: { areas?: st
 }
 
 export async function openWarehouseMenu(page: Page) {
-  const section = page.getByRole('complementary').getByRole('button', { name: 'Gudang', exact: true })
+  const section = page.getByRole('complementary').getByRole('button', { name: 'Gudang & Material', exact: true })
   const toggle = page.getByRole('banner').getByRole('button', { name: /sidebar|Buka menu|Tutup menu/ })
   const mobile = (page.viewportSize()?.width ?? 1280) <= 820
   // A drawer translated offscreen still satisfies isVisible(); use its actual open state.

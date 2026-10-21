@@ -9,6 +9,7 @@ import com.karuhun.ftth.iam.CurrentTenantOwnerApi
 import com.karuhun.ftth.inventory.*
 import com.karuhun.ftth.inventory.ReferenceOperationalSettings
 import com.karuhun.ftth.inventory.adapter.outbound.persistence.ReferenceRequestStore
+import com.karuhun.ftth.inventory.adapter.outbound.persistence.ReferenceRequestActions
 import com.karuhun.ftth.inventory.application.port.inbound.*
 import com.karuhun.ftth.inventory.application.port.outbound.WarehouseMasterStore
 import com.karuhun.ftth.inventory.domain.model.LocationKind
@@ -113,15 +114,24 @@ class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, p
         return ReferenceRequestDetail(view, store.timeline(id))
     }
 
-    fun list(page: Int, size: Int, state: ReferenceRequestState?, search: String?): WarehousePage<ReferenceRequestView> {
+    fun list(page: Int, size: Int, state: ReferenceRequestState?, search: String?, actionOnly: Boolean = false): WarehousePage<ReferenceRequestView> {
         if (page < 0 || size !in 1..100 || search != null && search.length > 200) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val access = readAccess()
         val all = permits(access.current, "warehouse.request.view")
         if (!all) permission(access.current, "warehouse.request.own")
         val warehouses = if (all) visibleWarehouses(access) else null
+        val actions = if (actionOnly) ReferenceRequestActions(
+            permits(access.current, "warehouse.request.review"), permits(access.current, "warehouse.request.approve"),
+            permits(access.current, "warehouse.request.receive"), permits(access.current, "warehouse.request.handover")) else null
         return store.list(page, size, state, search, if (all) null else access.current.fence.identity.userId,
-            if (all) warehouses else null, all)
+            if (all) warehouses else null, all, actions)
     }
+
+    fun actionCount(): ReferenceRequestActionCount = ReferenceRequestActionCount(list(0, 1, null, null, actionOnly = true).totalElements)
+
+    fun overview(): ReferenceRequestOverview = ReferenceRequestOverview(
+        ReferenceRequestState.entries.associateWith { list(0, 1, it, null).totalElements },
+        actionCount().count, list(0, 5, null, null).items)
 
     fun settings(): ReferenceOperationalSettings {
         val current = authority.lockCurrent()
@@ -169,10 +179,13 @@ class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, p
     internal fun editable(id: UUID, revision: Long, access: Access): ReferenceRequestView = authorized(store.get(id, true), access).also {
         if (it.revision != revision) masterFailure(WarehouseErrorCode.STALE_REVISION)
     }
-    internal fun warehouse(id: UUID, access: Access): LocationSnapshot {
+    internal fun warehouse(id: UUID, access: Access, returnDestination: Boolean = false): LocationSnapshot {
         val location = masters.get(MasterKind.LOCATION, id, true) as LocationSnapshot
-        catalog.authorizeLocation(location, access.current, access.scope)
-        if (location.state != WarehouseMasterState.ACTIVE || location.kind !in setOf(LocationKind.WAREHOUSE, LocationKind.BIN) || !location.issueEligible)
+        catalog.authorizeLocation(location, if (returnDestination && location.areaId == null)
+            access.current.copy(areaScope = AuthorityScope.Unrestricted) else access.current, access.scope)
+        if (location.state != WarehouseMasterState.ACTIVE ||
+            (if (returnDestination) location.kind != LocationKind.WAREHOUSE
+                else location.kind !in setOf(LocationKind.WAREHOUSE, LocationKind.BIN) || !location.issueEligible))
             masterFailure(WarehouseErrorCode.SOURCE_NOT_VERIFIED)
         return location
     }
@@ -213,3 +226,5 @@ class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, p
     internal fun quantity(value: String, unit: WarehouseBaseUnit): Long = com.karuhun.ftth.inventory.domain.model.StockQuantity.parseBase(value,
         com.karuhun.ftth.inventory.domain.model.StockUnit.valueOf(unit.name)).quantityBase
 }
+
+data class ReferenceRequestActionCount(val count: Long)
