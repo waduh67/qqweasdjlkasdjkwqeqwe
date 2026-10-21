@@ -10,24 +10,42 @@ import { Button, StatusBadge } from '@/components/atoms'
 import { PageHeader, Tabs } from '@/components/molecules'
 import { IconCustomers, IconInventory, IconMap, IconMonitor, IconWorkOrder, type IconProps } from '@/components/atoms/icons'
 import type { ComponentType } from 'react'
+import { ReferenceWarehouseOverview, WorkOrderOverview, DailyOverview, B2BOverview } from './OperationalDashboard'
+import { WarehouseOverviewPage } from './warehouse/WarehouseOverviewPage'
+import { WAREHOUSE_VIEW_PERMISSIONS } from './warehouse/navigation'
+import { useWarehouseWorkflow } from './warehouse/WarehouseWorkflowContext'
+import { WarehouseState } from '@/components/organisms/warehouse/WarehouseState'
+import { EmptyState } from '@/components/atoms'
 
 const KpiPanel = lazy(() => import('./field/KpiPanel').then(module => ({ default: module.KpiPanel })))
 
-/**
- * Ringkasan operasional, bukan lagi placeholder.
- *
- * Setiap kartu hanya dimuat bila penggunanya berizin — dashboard seorang
- * teknisi area akan berbeda dari admin tenant, dan itu memang seharusnya. Angka
- * yang paling menuntut perhatian (alarm kritis, collector membisu) ditaruh paling
- * atas dengan penanda status, bukan sekadar deret bilangan.
- */
+type DashboardTab = 'warehouse' | 'work' | 'daily' | 'b2b' | 'kpi' | 'monitoring'
 export function DashboardPage() {
   const { hasPermission } = useCan()
-  const [tab, setTab] = useState<'overview' | 'kpi'>('overview')
-  const visible = hasPermission('kpi.technician.view') || hasPermission('kpi.team.view')
-  if (!visible) return <DashboardOverview />
-  return <div className="stack"><Tabs idPrefix="dashboard" tabs={[{ key: 'overview', label: 'Ringkasan' }, { key: 'kpi', label: 'KPI Teknisi' }]} active={tab} onChange={setTab} />
-    <div role="tabpanel" id={'dashboard-panel-' + tab} aria-labelledby={'dashboard-tab-' + tab}>{tab === 'overview' ? <DashboardOverview /> : <div className="stack"><PageHeader title="KPI Teknisi" subtitle="Capaian bulanan teknisi NE dan FO." /><Suspense fallback={<p role="status">Memuat KPI teknisi…</p>}><KpiPanel /></Suspense></div>}</div>
+  const workflow = useWarehouseWorkflow()
+  const [selected, setSelected] = useState<DashboardTab | null>(null)
+  const candidates: { key: DashboardTab; label: string; permissions: readonly string[] }[] = [
+    { key: 'warehouse', label: 'Gudang', permissions: workflow.state.status === 'ready' && workflow.state.data.workflow === 'REFERENCE' ? ['warehouse.stock.view', 'warehouse.request.view', 'warehouse.request.own'] : WAREHOUSE_VIEW_PERMISSIONS },
+    { key: 'work', label: 'Work Order', permissions: ['workorder.dashboard.view', 'workorder.order.field'] },
+    { key: 'daily', label: 'Daily Report', permissions: ['field.report.view', 'field.report.all'] },
+    { key: 'b2b', label: 'Visit B2B', permissions: ['b2b.client.view', 'b2b.visit.view'] },
+    { key: 'kpi', label: 'KPI Teknisi', permissions: ['kpi.technician.view', 'kpi.team.view'] },
+    { key: 'monitoring', label: 'Layanan & Monitoring', permissions: ['monitoring.dashboard.view', 'network.olt.view', 'network.odp.view', 'customer.customer.view', 'gis.map.view'] },
+  ]
+  const tabs = candidates.filter(t => t.permissions.some(hasPermission))
+  const active = tabs.find(t => t.key === selected)?.key ?? tabs[0]?.key
+  if (!active) return <EmptyState title="Dashboard belum tersedia untuk role Anda" hint="Pilih pekerjaan yang tersedia melalui menu." />
+  let panel
+  switch (active) {
+    case 'warehouse': panel = <WarehouseState {...workflow}>{data => data.workflow === 'REFERENCE' ? <ReferenceWarehouseOverview /> : <WarehouseOverviewPage />}</WarehouseState>; break
+    case 'work': panel = <WarehouseState {...workflow}>{data => data.workflow === 'REFERENCE' ? <WorkOrderOverview /> : <div className="card"><Link to={hasPermission('workorder.dashboard.view') ? '/work-orders' : '/my-work-orders'}>Buka Work Order</Link></div>}</WarehouseState>; break
+    case 'daily': panel = <DailyOverview />; break
+    case 'b2b': panel = <B2BOverview />; break
+    case 'kpi': panel = <div className="stack"><PageHeader title="KPI Teknisi" subtitle="Capaian bulanan teknisi NE dan FO dibandingkan targetnya." /><Suspense fallback={<p role="status">Memuat KPI teknisi…</p>}><KpiPanel /></Suspense></div>; break
+    case 'monitoring': panel = <DashboardOverview />; break
+  }
+  return <div className="stack tenant-dashboard"><Tabs idPrefix="dashboard" tabs={tabs} active={active} onChange={setSelected} />
+    <div role="tabpanel" id={'dashboard-panel-' + active} aria-labelledby={'dashboard-tab-' + active}>{panel}</div>
   </div>
 }
 function DashboardOverview() {
@@ -64,7 +82,7 @@ function DashboardOverview() {
   return (
     <div className="stack tenant-dashboard">
       <PageHeader
-        title="Dashboard operasional"
+        title="Layanan & Monitoring"
         subtitle={<>{greeting}, {user?.name?.split(' ')[0]}. Berikut kondisi layanan {user?.tenantSlug}.</>}
       />
 
@@ -167,7 +185,7 @@ function Stat({
   accent?: 'crit' | 'warn'
 }) {
   return (
-    <div className={`stat ${accent === 'crit' ? 'crit-bar' : accent === 'warn' ? 'warn-bar' : 'accent-bar'}`}>
+    <div className="stat" data-tone={accent}>
       <div className="stat-label">{label}</div>
       <div className="stat-value">{value.toLocaleString('id-ID')}</div>
       {note && <div className="stat-note">{note}</div>}

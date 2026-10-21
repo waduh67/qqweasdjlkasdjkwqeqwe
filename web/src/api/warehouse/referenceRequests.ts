@@ -39,7 +39,8 @@ export function requestDetail(value: unknown) {
       actorName: text(event.actorName), notes: plainText(event.notes), movementId: nullable(event.movementId, uuid, 'movementId'), recordedAt: timestamp(event.recordedAt) }
   }) }
 }
-export const listReferenceRequests = (search = '', page = 0, state?: ReferenceRequestState) => query(root + '/requests' + parameters({ search, page, state }), pageOf(referenceRequest))
+export const listReferenceRequests = (search = '', page = 0, state?: ReferenceRequestState, actionOnly = false) => query(root + '/requests' + parameters({ search, page, state, actionOnly: actionOnly ? 'true' : undefined }), pageOf(referenceRequest))
+export const getRequestActionCount = () => query(root + '/requests/action-count', value => integer(record(value).count))
 export const getReferenceRequest = (id: string) => query(root + '/requests/' + uuid(id), requestDetail)
 export interface RequestLineInput { readonly baseUnit: 'EA' | 'MM'; readonly requestedBase: string; readonly skuId?: string; readonly proposedName?: string }
 export interface RequestSubmitInput { readonly kind: 'RESTOCK' | 'PROCUREMENT'; readonly reason: string; readonly lines: readonly RequestLineInput[]; readonly warehouseId?: string; readonly technicianId?: string }

@@ -1,8 +1,10 @@
 import { array, decimal, integer, nullable, oneOf, pageOf, plainText, record, text, timestamp, uuid, WarehouseDataError } from './codec'
 import { referenceCommand } from './reference'
 import { parameters, query } from './transport'
+import { location } from './models'
 
 const root = '/api/v2/warehouse/returns'
+export const returnDestinations = (search = '', page = 0) => query(root + '/destinations' + parameters({ search, page }), pageOf(location))
 export const RETURN_STATES = ['PENDING', 'RECEIVED', 'REJECTED'] as const
 export const RETURN_LABELS = { PENDING: 'Menunggu penerimaan', RECEIVED: 'Diterima gudang', REJECTED: 'Ditolak' } as const
 export function referenceReturn(value: unknown) {

@@ -1,7 +1,7 @@
 import { useCallback, useId, useState, type FormEvent } from 'react'
 import type { WarehouseLocation } from '@/api/warehouse/models'
-import { ownMaterials, referenceLocations, type ReferencePosition } from '@/api/warehouse/reference'
-import { submitReferenceReturn, decideReferenceReturn, type ReferenceReturn } from '@/api/warehouse/referenceReturns'
+import { ownMaterials, type ReferencePosition } from '@/api/warehouse/reference'
+import { submitReferenceReturn, decideReferenceReturn, returnDestinations, type ReferenceReturn } from '@/api/warehouse/referenceReturns'
 import { displayUnit, formatBaseQuantity } from '@/api/warehouse/quantity'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { useAuth } from '@/auth/useAuth'
@@ -46,8 +46,8 @@ export function ReferenceReturnEditor({ onClose, onSaved }: { readonly onClose: 
         {index > 0 && <Button type="button" onClick={() => setRows(current => current.filter(value => value.key !== row.key))}>Hapus material retur {index + 1}</Button>}
       </fieldset>)}
       <Button type="button" disabled={!first || rows.length >= 100} onClick={() => setRows(current => [...current, empty()])}>Tambah posisi material</Button>
-      <WarehousePicker label="Gudang tujuan retur" load={referenceLocations} value={warehouse} name={item => (item.name ?? item.code) + ' · ' + item.code}
-        eligible={item => item.state === 'ACTIVE' && item.issueEligible} onChange={setWarehouse} />
+      <WarehousePicker label="Gudang tujuan retur" load={returnDestinations} value={warehouse} name={item => (item.name ?? item.code) + ' · ' + item.code}
+        eligible={item => item.state === 'ACTIVE' && item.kind === 'WAREHOUSE'} onChange={setWarehouse} />
       <TextareaField label="Alasan retur" required maxLength={1000} value={reason} onChange={(_, data) => setReason(data.value)} />
       {error && <p role="alert" className="error">{error}</p>}
     </form>

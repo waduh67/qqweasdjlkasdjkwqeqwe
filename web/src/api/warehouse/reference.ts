@@ -85,8 +85,8 @@ export function referenceWorkDetail(value: unknown) {
     }) }
 }
 export type ReferenceWorkDetail = ReturnType<typeof referenceWorkDetail>
-export const listReferenceWork = (search = '', page = 0, state?: typeof WORK_STATES[number], overdue = false) =>
-  query(`/api/v2/work-orders${parameters({ search, page, state, overdue: overdue ? 'true' : undefined })}`, pageOf(referenceWorkOrder))
+export const listReferenceWork = (search = '', page = 0, state?: typeof WORK_STATES[number], overdue = false, scope?: 'SELF' | 'AREA') =>
+  query(`/api/v2/work-orders${parameters({ search, page, state, scope, overdue: overdue ? 'true' : undefined })}`, pageOf(referenceWorkOrder))
 export const getReferenceWork = (id: string) => query(`/api/v2/work-orders/${uuid(id)}`, referenceWorkDetail)
 export const referenceTypes = () => query('/api/v2/work-orders/types', value => array(value, workType))
 export const referencePhotos = (id: string) => query(`/api/v2/work-orders/${uuid(id)}/evidence`, value => array(value, referencePhoto))
@@ -96,7 +96,18 @@ function sessionCommand<T>(captured: WarehouseCommand<T>): WarehouseCommand<T> {
   return Object.freeze({ ...captured, execute() { check(); return captured.execute() } })
 }
 export function referenceCommand<T>(path: string, method: 'POST' | 'PUT' | 'DELETE', input: unknown, decode: Decoder<T>): WarehouseCommand<T> {
-  return sessionCommand(command(path, method, input, decode))
+  const captured = sessionCommand(command(path, method, input, decode))
+  if (path !== '/api/v2/warehouse/requests' && !path.startsWith('/api/v2/warehouse/requests/')) return captured
+  let pending: Promise<T> | null = null
+  return Object.freeze({ ...captured, execute() {
+    const send = captured.execute()
+    if (pending) return pending
+    pending = send.then(result => {
+      window.dispatchEvent(new Event('warehouse:requests-changed'))
+      return result
+    }).finally(() => { pending = null })
+    return pending
+  } })
 }
 export const referenceProgress = (id: string, revision: number, state: 'PENDING' | 'BLOCKED', notes: string) =>
   sessionCommand(command(`/api/v2/work-orders/${uuid(id)}/progress`, 'POST', { expectedRevision: revision, state, notes }, referenceWorkOrder))

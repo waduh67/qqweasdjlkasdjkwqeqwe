@@ -1,4 +1,7 @@
 import { useCallback, useState } from 'react'
+import { tokenStore } from '@/api/client'
+import { useAuth } from '@/auth/useAuth'
+import { useCan } from '@/auth/useCan'
 import { field, type KpiRow } from '@/api/field'
 import { KPI_CATEGORY_LABELS } from '@/api/warehouse/referenceWorkTypes'
 import { Button, EmptyState, SelectField, TextField } from '@/components/atoms'
@@ -15,15 +18,21 @@ import './field.css'
 export function scoreLabel(value: number) { return value.toLocaleString('id-ID', { maximumFractionDigits: 1 }) + '%' }
 export function KpiPage() { return <div className="stack"><PageHeader title="KPI Teknisi" subtitle="Capaian bulanan teknisi NE dan FO berdasarkan laporan dan pekerjaan yang tersimpan." /><KpiPanel /></div> }
 export function KpiPanel() {
+  const { user } = useAuth()
+  const scope = user?.tenantId + ':' + user?.id + ':' + user?.permissions.join(',') + ':' + tokenStore.getSessionVersion()
+  return <KpiContent key={scope} />
+}
+function KpiContent() {
+  const { hasPermission } = useCan(), teamView = hasPermission('kpi.team.view')
   const [month, setMonth] = useState(currentMonth), [team, setTeam] = useState(''), [technician, setTechnician] = useState(''), [detail, setDetail] = useState<KpiRow | null>(null)
   const validation = monthError(month)
-  const load = useCallback(() => validation ? Promise.reject(new FieldFilterError(validation)) : field.kpi(month, team, technician), [month, team, technician, validation])
+  const load = useCallback(() => validation ? Promise.reject(new FieldFilterError(validation)) : field.kpi(month, teamView ? team : '', teamView ? technician : ''), [month, team, technician, validation, teamView])
   const result = useWarehouseQuery(load)
   const technicians = useFieldTechnicians(result.state.status === 'ready' ? result.state.data.technicians : undefined)
   return <section className="stack" aria-label="KPI teknisi bulanan">
     <div className="row wrap"><TextField label="Bulan KPI" type="month" required min="2000-01" max={currentMonth()} value={month} validationState={validation ? 'error' : undefined} validationMessage={validation} onChange={(_, d) => { setMonth(d.value); setDetail(null) }} />
-      <SelectField label="Tim teknisi" value={team} onChange={(_, d) => { setTeam(d.value); setTechnician(''); setDetail(null) }}><option value="">Semua tim</option><option value="NE">Teknisi NE</option><option value="FO">Teknisi FO</option></SelectField>
-      <SelectField label="Teknisi" value={technician} onChange={(_, d) => { setTechnician(d.value); setDetail(null) }}><option value="">Semua teknisi dalam akses Anda</option>{technicians.filter(t => !team || t.team === team).map(t => <option key={t.id} value={t.id}>{t.name} · {t.team}</option>)}</SelectField>
+      {teamView && <><SelectField label="Tim teknisi" value={team} onChange={(_, d) => { setTeam(d.value); setTechnician(''); setDetail(null) }}><option value="">Semua tim</option><option value="NE">Teknisi NE</option><option value="FO">Teknisi FO</option></SelectField>
+      <SelectField label="Teknisi" value={technician} onChange={(_, d) => { setTechnician(d.value); setDetail(null) }}><option value="">Semua teknisi dalam akses Anda</option>{technicians.filter(t => !team || t.team === team).map(t => <option key={t.id} value={t.id}>{t.name} · {t.team}</option>)}</SelectField></>}
       <Button onClick={result.reload} disabled={!!validation}>Muat ulang KPI</Button></div>
     {validation ? <EmptyState title="Pilih bulan untuk melihat KPI" /> : <WarehouseState {...result}>{data => <>
       {data.calendarError && <p role="alert" className="error">Sinkron kalender: {data.calendarError}. Perhitungan menggunakan kalender tersimpan.</p>}
@@ -36,15 +45,18 @@ export function KpiPanel() {
       </div>
       <DataTable presentation="warehouse" rows={data.rows} rowKey={r => r.technician.id} empty="Tidak ada teknisi pada filter ini." columns={[
         { key: 'name', header: 'Teknisi', cell: r => r.technician.name, description: r => 'Teknisi ' + r.technician.team, onCellClick: setDetail },
-        { key: 'attendance', header: 'Kehadiran', cell: r => scoreLabel(r.metrics[0].percentage) },
-        { key: 'reports', header: 'Pagi / sore', cell: r => scoreLabel(r.metrics[1].percentage) },
-        { key: 'work', header: 'Visit / WO overdue', cell: r => scoreLabel(r.metrics[2].percentage) },
-        { key: 'points', header: 'Aktivasi / Poin WO', cell: r => scoreLabel(r.metrics[3].percentage) },
+        { key: 'attendance', header: 'Kehadiran', cell: r => <KpiMetric metric={r.metrics[0]} /> },
+        { key: 'reports', header: 'Pagi / sore', cell: r => <KpiMetric metric={r.metrics[1]} /> },
+        { key: 'work', header: 'Visit / WO overdue', cell: r => <KpiMetric metric={r.metrics[2]} /> },
+        { key: 'points', header: 'Aktivasi / Poin WO', cell: r => <KpiMetric metric={r.metrics[3]} /> },
         { key: 'average', header: 'KPI', cell: r => <Button onClick={() => setDetail(r)}>{scoreLabel(r.percentage)} · Detail</Button> },
       ]} />
     </>}</WarehouseState>}
     {detail && <KpiDetail row={detail} onClose={() => setDetail(null)} />}
   </section>
+}
+function KpiMetric({ metric }: { readonly metric: KpiRow['metrics'][number] }) {
+  return <div className="kpi-metric"><strong>{metric.actual} / {metric.target}</strong><small>Aktual / target · {scoreLabel(metric.percentage)}</small></div>
 }
 function KpiDetail({ row, onClose }: { readonly row: KpiRow; readonly onClose: () => void }) {
   return <Modal className="field-detail-dialog" title={'KPI · ' + row.technician.name} onClose={onClose} footer={<Button onClick={onClose}>Tutup</Button>}><div className="stack">

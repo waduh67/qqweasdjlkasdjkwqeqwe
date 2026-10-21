@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Checkbox } from '@fluentui/react-components'
-import { oneOf } from '@/api/warehouse/codec'
 import { listReferenceWork, WORK_STATES, type ReferenceWorkOrder } from '@/api/warehouse/reference'
 import { Button, EmptyState, SelectField, StatusBadge, TextField } from '@/components/atoms'
 import { PageHeader, Tabs } from '@/components/molecules'
@@ -28,10 +27,12 @@ export function ReferenceWorkList({ field = true }: { field?: boolean }) {
   const { can } = useCan(), location = useLocation(), navigate = useNavigate(), workflow = useWarehouseWorkflow()
   const [creating, setCreating] = useState(false), [seed, setSeed] = useState<WorkSeed | undefined>(), [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState(''), [page, setPage] = useState(0)
-  const [overdue, setOverdue] = useState(false)
-  const [queue, setQueue] = useState(!field)
-  const [state, setState] = useState<ReferenceWorkOrder['state'] | ''>('PENDING')
-  const load = useCallback(() => listReferenceWork(search.trim(), page, state || undefined, overdue), [search, page, state, overdue])
+  const [params, setParams] = useSearchParams()
+  const overdue = params.get('overdue') === 'true'
+  const state = params.has('state') ? WORK_STATES.find(value => value === params.get('state')) ?? '' : overdue ? '' : 'PENDING'
+  const queue = !field && params.get('view') !== 'assigned' && !params.has('state') && !overdue
+  function filter(key: string, value: string) { const next = new URLSearchParams(params); next.set(key, value); next.set('view', 'assigned'); setParams(next); setPage(0) }
+  const load = useCallback(() => listReferenceWork(search.trim(), page, state || undefined, overdue, field ? 'SELF' : 'AREA'), [search, page, state, overdue, field])
   const result = useWarehouseQuery(load, `${user?.id}:${user?.tenantId}`), base = field ? '/my-work-orders' : '/work-orders'
   useEffect(() => {
     if (field || location.state == null) return
@@ -41,20 +42,20 @@ export function ReferenceWorkList({ field = true }: { field?: boolean }) {
     } catch (caught) { setError(caught instanceof WorkDraftError ? caught.message : warehouseError(caught)) }
     navigate(location.pathname, { replace: true, state: null })
   }, [field, location.state, location.pathname, navigate, can])
-  return <div className="stack"><PageHeader title={field ? 'Tugas Saya' : 'Work Order'} subtitle={field ? 'Buka tugas, ikuti instruksi, lalu kirim foto dan material yang terpakai.' : 'Buat penugasan, pantau kendala, dan periksa hasil pekerjaan teknisi.'} actions={<>
+  return <div className="stack"><PageHeader title={field ? 'Work Order Saya' : 'Work Order'} subtitle={field ? 'Buka tugas, ikuti instruksi, lalu kirim foto dan material yang terpakai.' : 'Buat penugasan, pantau kendala, dan periksa hasil pekerjaan teknisi.'} actions={<>
     {(field || !queue) && <Button onClick={result.reload}>Muat ulang</Button>}{!field && can('workorder.order.create') && <Button variant="primary" onClick={() => { setSeed(undefined); setCreating(true) }}>Work order baru</Button>}
   </>} />
     {!field && workflow.state.status === 'ready' && workflow.state.data.owner && <Link to="/work-orders/types">Kelola jenis pekerjaan</Link>}
     {error && <p role="alert" className="error">{error}</p>}
-    {!field && <Tabs active={queue ? 'intake' : 'assigned'} tabs={[{ key: 'intake', label: 'Belum ditugaskan' }, { key: 'assigned', label: 'Sudah ditugaskan' }]} onChange={tab => setQueue(tab === 'intake')} />}
+    {!field && <Tabs active={queue ? 'intake' : 'assigned'} tabs={[{ key: 'intake', label: 'Belum ditugaskan' }, { key: 'assigned', label: 'Sudah ditugaskan' }]} onChange={tab => { const next = new URLSearchParams(); next.set('view', tab); setParams(next); setPage(0) }} />}
     {!field && queue ? <ReferenceWorkIntakeQueue /> : <>
     <div className="workspace-safety-grid">
       <TextField label="Cari tugas" value={search} placeholder="Nomor atau judul pekerjaan" onChange={(_, data) => { setSearch(data.value); setPage(0) }} />
-      <SelectField label="Status tugas" value={state} onChange={(_, data) => { setState(data.value === '' ? '' : oneOf(data.value, WORK_STATES)); setPage(0) }}>
+      <SelectField label="Status tugas" value={state} onChange={(_, data) => filter('state', data.value)}>
         <option value="">Semua status</option>{WORK_STATES.map(value => <option key={value} value={value}>{REFERENCE_WORK_LABELS[value]}</option>)}
       </SelectField>
     </div>
-    <Checkbox label="Hanya tugas terlambat" checked={overdue} onChange={(_, data) => { setOverdue(data.checked === true); setPage(0) }} />
+    <Checkbox label="Hanya tugas terlambat" checked={overdue} onChange={(_, data) => filter('overdue', data.checked === true ? 'true' : 'false')} />
     <WarehouseState {...result}>{data => <>
       <DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id} empty={<EmptyState title="Tidak ada tugas pada pilihan ini" hint="Coba status lain atau cari nomor pekerjaan. Tugas baru muncul setelah Anda ditugaskan." />} columns={[
         { key: 'task', header: 'Pekerjaan', cell: row => <Link to={base + '/' + row.id}>{row.code} · {row.title}</Link>, description: row => row.type.name },

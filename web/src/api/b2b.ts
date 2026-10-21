@@ -1,5 +1,5 @@
 import { api } from './client'
-import { captureCommandSession, command, parameters, type WarehouseCommand } from './warehouse/transport'
+import { captureCommandSession, command, parameters, query, type WarehouseCommand } from './warehouse/transport'
 import { array, boolean, integer, plainText, record, text, uuid } from './warehouse/codec'
 
 export interface B2BSetting { name: string; address: string; contact: string; technicianId: string; technicianName: string; target: number; active: boolean }
@@ -39,6 +39,10 @@ async function page<T>(path: string, decode: (value: unknown) => T): Promise<B2B
   return result
 }
 export const b2b = {
+  overview: (m: string) => query(base + '/overview' + parameters({ month: m }), value => {
+    const r = record(value)
+    return { month: text(r.month), target: integer(r.target), counted: integer(r.counted), remaining: integer(r.remaining), missedWeeks: integer(r.missedWeeks), clients: array(r.clients, month, 'clients', 5) }
+  }),
   clients: (q: string, n: number) => page(base + '/clients' + parameters({ q, page: n, size: 20 }), client),
   technicians: (q: string, n: number) => page(base + '/technicians' + parameters({ q, page: n, size: 20 }), v => { const r = record(v); return { id: uuid(r.id), name: text(r.name) } }),
   reports: (m: string, q: string, n: number) => page(base + '/reports' + parameters({ month: m, q, page: n, size: 20 }), month),
