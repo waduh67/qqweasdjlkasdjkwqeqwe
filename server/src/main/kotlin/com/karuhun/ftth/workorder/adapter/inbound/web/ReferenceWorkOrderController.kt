@@ -22,7 +22,8 @@ class ReferenceWorkOrderController(private val service: ReferenceWorkOrderServic
         result(service.dispatch(id, WarehouseReceiptJson.decode(body, ReferenceWorkDispatchInput::class.java), key))
     @GetMapping fun list(@RequestParam(defaultValue = "0") page: Int, @RequestParam(defaultValue = "25") size: Int,
         @RequestParam(required = false) state: ReferenceWorkOrderState?, @RequestParam(required = false) search: String?,
-        @RequestParam(defaultValue = "false") overdue: Boolean) = fresh(service.list(page, size, state, search, overdue))
+        @RequestParam(defaultValue = "false") overdue: Boolean, @RequestParam(required = false) scope: ReferenceWorkOrderScope?) =
+        fresh(service.list(page, size, state, search, overdue, scope))
     @GetMapping("/{id}") fun detail(@PathVariable id: UUID) = fresh(service.detail(id))
     @GetMapping("/types") fun types() = fresh(service.types())
     @PostMapping("/types") fun createType(@RequestHeader("Idempotency-Key") key: String, @RequestBody body: String) =

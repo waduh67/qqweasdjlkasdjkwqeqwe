@@ -29,7 +29,7 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(status)
         return mapper.readTree(response.contentAsString)
     }
-    private fun setup(): Setup {
+    private fun setup(fieldAreas: Boolean = true): Setup {
         val owner = tenant()
         fun member(name: String): Pair<String, String> {
             val role = mapper.readTree(request("GET", "/api/roles", owner).contentAsString).single { it.path("name").asString() == name }.path("id").asString()
@@ -39,7 +39,8 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
                 "password" to "secret12345", "roleIds" to listOf(role))))
             assertThat(created.status).withFailMessage(created.contentAsString).isEqualTo(201)
             val id = mapper.readTree(created.contentAsString).path("id").asString()
-            val grant = request("PUT", "/api/users/$id/access", owner, mapper.writeValueAsString(mapOf("roleIds" to listOf(role), "areaIds" to listOf(area(owner)))))
+            val grant = request("PUT", "/api/users/$id/access", owner, mapper.writeValueAsString(mapOf("roleIds" to listOf(role),
+                "areaIds" to if (!fieldAreas && name.startsWith("Teknisi")) emptyList<String>() else listOf(area(owner)))))
             assertThat(grant.status).withFailMessage(grant.contentAsString).isEqualTo(200)
             return login(slug, email) to id
         }
@@ -69,14 +70,14 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(status)
         return mapper.readTree(response.contentAsString)
     }
-    private fun issue(s: Setup, unit: String = "EA", tracking: String = "BULK", quantity: String = "9"): Pair<String, String> {
+    private fun issue(s: Setup, unit: String = "EA", tracking: String = "BULK", quantity: String = "9", technicianToken: String = s.tech): Pair<String, String> {
         val warehouse = create("locations", s.owner, """{"code":"WH-${UUID.randomUUID().toString().uppercase()}","name":"Gudang","kind":"WAREHOUSE","issueEligible":true}""").path("id").asString()
         val sku = create("skus", s.owner, """{"code":"SKU-${UUID.randomUUID().toString().uppercase()}","name":"Material kerja","tracking":"$tracking","baseUnit":"$unit"}""").path("id").asString()
         warehouseOk("POST", "/receipts", s, body = mapper.writeValueAsString(mapOf("warehouseId" to warehouse,
             "lines" to listOf(mapOf("skuId" to sku, "quantityBase" to quantity, "serials" to if (tracking == "SERIAL")
                 listOf(mapOf("serial" to "ONT-${UUID.randomUUID()}", "mac" to "02:AA:BB:CC:DD:01")) else emptyList<Map<String, String>>())))), status = 201)
         val identity = warehouseOk("GET", "/stock/$sku", s).path("positions").single().path("stockIdentityId").asString()
-        var view = warehouseOk("POST", "/requests", s, s.tech, mapper.writeValueAsString(mapOf("kind" to "RESTOCK", "reason" to "Persediaan kerja",
+        var view = warehouseOk("POST", "/requests", s, technicianToken, mapper.writeValueAsString(mapOf("kind" to "RESTOCK", "reason" to "Persediaan kerja",
             "lines" to listOf(mapOf("skuId" to sku, "baseUnit" to unit, "requestedBase" to quantity)))), 201)
         val id = view.path("id").asString()
         val line = view.path("lines")[0].path("id").asString()
@@ -109,6 +110,22 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
             start.countDown()
             pending.map { it.get(30, TimeUnit.SECONDS) }
         }
+
+    @Test fun `assigned NE and FO without area grants can read progress upload and complete their own work`() {
+        val s = setup(fieldAreas = false)
+        for ((token, technician) in listOf(s.tech to s.techId, s.second to s.secondId)) {
+            val material = issue(s, technicianToken = token)
+            val id = ok("POST", "", s.admin, body(s, technician), status = 201).path("id").asString()
+            assertThat(ok("GET", "?scope=SELF", token).path("items").toList().map { it.path("id").asString() }).contains(id)
+            assertThat(ok("GET", "/$id", token).path("workOrder").path("id").asString()).isEqualTo(id)
+            val progress = ok("POST", "/$id/progress", token, """{"expectedRevision":0,"state":"PENDING","notes":"Di lokasi"}""")
+            assertThat(progress.path("revision").asLong()).isEqualTo(1)
+            completePhotos(id, token, 1)
+            assertThat(ok("POST", "/$id/complete", token, completeBody(3, listOf(material.second to "1"))).path("state").asString()).isEqualTo("COMPLETED")
+            val other = if (token == s.tech) s.second else s.tech
+            assertThat(request("GET", "/api/v2/work-orders/$id", other).status).isEqualTo(404)
+        }
+    }
 
     @Test fun `concurrent completions replay once and competing orders cannot overspend stock`() {
         val s = setup()
@@ -363,15 +380,14 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         assertThat(ok("GET", "", s.second).path("totalElements").asLong()).isEqualTo(1)
         assertThat(ok("GET", "/$id", s.second).path("timeline")).hasSize(3)
     }
-    @Test fun `scope filtering precedes pagination and revocation hides records and retries`() {
+    @Test fun `scope filtering precedes pagination and permission revocation hides assigned records`() {
         val s = setup()
         create(s); create(s)
         assertThat(ok("GET", "?size=1", s.tech).path("totalElements").asLong()).isEqualTo(2)
         assertThat(ok("GET", "?page=2&size=1", s.tech).path("items")).isEmpty()
-        val role = mapper.readTree(request("GET", "/api/roles", s.owner).contentAsString).single { it.path("name").asString() == "Teknisi NE" }.path("id").asString()
-        val revoked = request("PUT", "/api/users/${s.techId}/access", s.owner, """{"roleIds":["$role"],"areaIds":[]}""")
+        val revoked = request("PUT", "/api/users/${s.techId}/access", s.owner, """{"roleIds":[],"areaIds":[]}""")
         assertThat(revoked.status).isEqualTo(200)
-        assertThat(ok("GET", "", s.tech).path("totalElements").asLong()).isZero()
+        assertThat(request("GET", "/api/v2/work-orders", s.tech).status).isEqualTo(403)
     }
     @Test fun `named photos are verified immutable and exact retry stores once`() {
         val s = setup()
