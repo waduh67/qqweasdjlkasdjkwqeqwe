@@ -1,4 +1,5 @@
 import { WarehouseListActions } from '@/components/organisms/warehouse/WarehouseListActions'
+import { Plus } from 'lucide-react'
 import { Disclosure } from '@/components/molecules/Disclosure'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { useId as useResourceFormId } from 'react'
@@ -37,18 +38,16 @@ export function WarehouseCountsPage() {
     if (params.has('countId')) id = uuid(params.get('countId'))
   } catch { return <div className="card stack" role="alert"><p>Alamat stock opname tidak dikenal.</p><Link to="/warehouse/counts">Kembali ke daftar stock opname</Link></div> }
   if (!can('inventory.count.view')) return <WarehouseDenied />
-  return <div className="stack"><PageHeader title="Stock Opname" />
+  return <div className="stack"><PageHeader title="Stock Opname" actions={!id && can('inventory.count.manage') ? <Button variant="primary" icon={<Plus size={16} />} onClick={() => setCreating(true)}>Tambah stock opname</Button> : undefined} />
     {creating && <WarehouseCountEditor onSaved={count => { setCreating(false); navigate(detailPath(count.id)) }} onClose={() => setCreating(false)} />}
     {id ? <><Link to="/warehouse/counts">Kembali ke daftar stock opname</Link><CountDetail key={id} id={id} /></>
-      : <><CountList onNew={() => setCreating(true)} /></>}
+      : <CountList />}
   </div>
 }
-function CountList({ onNew }: { onNew: () => void }) {
-  const { can } = useCan()
+function CountList() {
   const [filter, setFilter] = useState<CountFilter>({}), [page, setPage] = useState(0)
   const loader = useCallback(() => countWorkbench({ ...filter, page }), [filter, page]), result = useWarehouseQuery(loader)
-  return <><div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload}
-    create={can('inventory.count.manage') ? { label: 'Buat stock opname', onClick: onNew } : undefined} />
+  return <><div className="resource-list-controls"><WarehouseListActions onRefresh={result.reload} />
     <WarehouseCountFilters onApply={filter => { setFilter(filter); setPage(0) }} /></div>
     <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.count.id}
       empty={<EmptyState title="Belum ada stock opname untuk Anda" hint="Dokumen terlihat bagi pembuat dan penghitung yang ditugaskan dalam cakupan lokasi saat ini." />} columns={[

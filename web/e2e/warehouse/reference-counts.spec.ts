@@ -11,7 +11,7 @@ async function choose(page: Page, label: string, name: string) {
   await page.getByRole('option', { name, exact: true }).click()
 }
 async function load(page: Page, material: string, location: string) {
-  await page.getByRole('button', { name: 'Opname baru', exact: true }).click()
+  await page.getByRole('button', { name: 'Tambah stock opname', exact: true }).click()
   await choose(page, 'Barang opname', material)
   await choose(page, 'Lokasi opname', location)
   await page.getByRole('button', { name: 'Muat saldo opname', exact: true }).click()
@@ -66,7 +66,7 @@ for (const theme of ['light', 'dark']) {
     expect(attempts).toHaveLength(2); expect(attempts[1]).toEqual(attempts[0])
     expect(audit.snapshot.bookBase).toBe('82501'); expect(audit.physicalBase).toBe('70000'); expect(audit.differenceBase).toBe('-12501')
     expect(audit.movementIds).toHaveLength(1)
-    await expect(page.getByRole('button', { name: 'Opname baru', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Tambah stock opname', exact: true })).toHaveCount(0)
     await capture(page, info, 'saved-cable-audit')
     const stock = pageOf(referencePosition)(await fixture.get('/api/v2/warehouse/stock/' + material.id + '/positions?availableOnly=true', admin.headers))
     expect(stock.items.reduce((sum, item) => sum + BigInt(item.quantityBase), 0n)).toBe(70000n)

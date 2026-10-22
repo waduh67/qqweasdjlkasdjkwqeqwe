@@ -113,7 +113,7 @@ test('cancelled reassigned work retains sixty metres while an offline retried fo
   const beforeCount = await stock(page, fixture.cable.id, fixture.onu.id)
   const counter = await prepareCounter(page, fixture)
   await page.goto('/warehouse/counts')
-  await page.getByRole('button', { name: 'Buat stock opname', exact: true }).click()
+  await page.getByRole('button', { name: 'Tambah stock opname', exact: true }).click()
   const positionsRead = page.waitForResponse(r => new URL(r.url()).pathname === '/api/v1/warehouse/counts/positions' && new URL(r.url()).searchParams.get('locationId') === fixture.bin.id)
   await selectNamed(page, 'Lokasi stock opname', fixture.bin.label)
   const positions = await (await positionsRead).json()

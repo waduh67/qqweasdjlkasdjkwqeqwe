@@ -56,7 +56,9 @@ it('creates reviewed assignments using quantity-free positions and current named
     if (path.includes('/counters?')) return response(page([{ id: id.counter, name: 'Penghitung A' }]))
     return read(path)
   }); vi.stubGlobal('fetch', fetch); show('/warehouse/counts')
-  fireEvent.click(screen.getByRole('button', { name: 'Buat stock opname' }))
+  const create = screen.getByRole('button', { name: 'Tambah stock opname' })
+  expect(create.closest('.page-header-actions')?.parentElement?.querySelector('h1')?.textContent).toBe('Stock Opname')
+  fireEvent.click(create)
   await waitFor(() => expect(screen.getByRole('combobox', { name: 'Lokasi stock opname' })).not.toHaveProperty('disabled', true))
   await selectControl(screen.getByRole('combobox', { name: 'Lokasi stock opname' }), { target: { value: id.location } })
   fireEvent.change(screen.getByRole('textbox', { name: 'Alasan stock opname' }), { target: { value: 'Pemeriksaan akhir bulan' } })
@@ -71,6 +73,14 @@ it('creates reviewed assignments using quantity-free positions and current named
   const writes = fetch.mock.calls.filter(([, init]) => init?.method === 'POST')
   expect(writes).toHaveLength(1); expect(JSON.parse(String(writes[0][1]?.body))).toEqual({ locationId: id.location, partialLocation: true, reason: 'Pemeriksaan akhir bulan', entries: [{ balanceId: id.balance, counterId: id.counter }] })
   expect(fetch.mock.calls.some(([path]) => path.includes('/stock') || path.includes('/lots') || path.startsWith('/api/users'))).toBe(false)
+})
+it('keeps the count list readable without exposing creation to view-only roles', async () => {
+  mocks.permissions.delete('inventory.count.manage')
+  vi.stubGlobal('fetch', vi.fn(async () => response(page([]))))
+  show('/warehouse/counts')
+  await screen.findByText('Belum ada stock opname untuk Anda')
+  expect(screen.queryByRole('button', { name: 'Tambah stock opname' })).toBeNull()
+  expect(screen.queryByRole('dialog')).toBeNull()
 })
 it('records exact blind measured metres only for the assigned counter and cannot overwrite the fact', async () => {
   mocks.user.id = id.counter; let current = countFixture('COUNTING', 1), facts: CountFact[] = []
