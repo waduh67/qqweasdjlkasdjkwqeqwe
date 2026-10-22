@@ -11,7 +11,7 @@ test('admin creates B2B client and assigned NE reports private monthly visits', 
   await page.getByRole('button', { name: 'Keluar', exact: true }).click()
   await login(page, admin)
   await page.goto('/b2b/clients')
-  await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: 'Lapangan', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: 'B2B', exact: true }).click()
   await expect(page).toHaveURL(/\/b2b\/clients$/)
   const clientsRoute = '**/api/v1/b2b/clients?*'
   await page.route(clientsRoute, route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'Layanan client B2B tidak tersedia.' }) }))
@@ -28,6 +28,9 @@ test('admin creates B2B client and assigned NE reports private monthly visits', 
   await page.getByRole('button', { name: 'Berikutnya: Kunjungan', exact: true }).click()
   await page.getByRole('spinbutton', { name: 'Target visit per bulan', exact: true }).fill('4')
   await page.getByRole('button', { name: 'Pilih', exact: true }).click()
+  await page.getByRole('button', { name: 'Berikutnya: Koneksi', exact: true }).click()
+  await page.getByRole('button', { name: 'Berikutnya: IP public', exact: true }).click()
+  await page.getByRole('button', { name: 'Berikutnya: Tunnel', exact: true }).click()
   await page.getByRole('button', { name: 'Tinjau + buat', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Tinjau client B2B', exact: true })).toBeVisible()
   const saved = page.waitForResponse(r => new URL(r.url()).pathname === '/api/v1/b2b/clients' && r.request().method() === 'POST')
@@ -37,7 +40,7 @@ test('admin creates B2B client and assigned NE reports private monthly visits', 
   await page.getByRole('button', { name: 'Keluar', exact: true }).click()
   await login(page, engineer)
   await page.goto('/b2b/visits')
-  await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: 'Lapangan', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Breadcrumb' }).getByRole('button', { name: 'B2B', exact: true }).click()
   await expect(page).toHaveURL(/\/b2b\/visits$/)
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64')
   for (const notes of ['Periksa koneksi kantor', 'Pemeriksaan tambahan']) {

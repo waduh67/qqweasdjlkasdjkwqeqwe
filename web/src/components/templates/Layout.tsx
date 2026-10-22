@@ -48,6 +48,8 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Jaringan',
     items: [
+      { to: '/network-ips', label: 'Manajemen IP', permission: 'network.ip.view', access: 'read', icon: NavIcons.Route },
+      { to: '/network-vendors', label: 'Vendor Jaringan', permission: 'network.ip.view', access: 'read', icon: NavIcons.Users },
       { to: '/map', label: 'Peta Jaringan', permission: 'gis.map.view', icon: NavIcons.Map },
       { to: '/inventory', label: 'Aset jaringan', permission: 'network.odp.view', icon: NavIcons.Storage },
       { to: '/bras', label: 'BRAS & RADIUS', permission: 'bng.nas.view', icon: NavIcons.Gauge },
@@ -140,6 +142,8 @@ export function Layout() {
     { label: 'Manajemen', items: [GROUPS[0].items[1], ...GROUPS.flatMap(group => group.label === 'Administrasi' ? group.items : [])] },
   ]
   const pageLabels = {
+    '/network-ips': 'Manajemen IP',
+    '/network-vendors': 'Vendor Jaringan',
     ...Object.fromEntries(pages.map(page => [`/warehouse/${page.path}`, page.label])),
     '/b2b': 'B2B',
     '/b2b/clients': 'Client B2B',

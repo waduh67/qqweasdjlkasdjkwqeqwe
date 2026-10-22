@@ -107,6 +107,8 @@ object PermissionCatalog {
         perm("inventory.location.view", "Lihat gudang dan bin")
         perm("b2b.client.view", "Lihat client dan rekap B2B")
         perm("b2b.client.manage", "Kelola client B2B")
+        perm("network.ip.view", "Lihat vendor, inventaris IP dan alokasi pelanggan")
+        perm("network.ip.manage", "Kelola vendor dan inventaris IP publik")
         perm("b2b.visit.view", "Lihat penugasan dan visit B2B sendiri")
         perm("b2b.visit.report", "Laporkan visit B2B sebagai Teknisi NE")
         perm("kpi.technician.view", "Lihat KPI teknisi sendiri dan kalender kerja")

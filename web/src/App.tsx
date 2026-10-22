@@ -36,6 +36,8 @@ import { ReferenceWorkDetailPage } from './pages/workorder/ReferenceWorkDetailPa
 import { ReferenceWorkTypesPage } from './pages/workorder/ReferenceWorkTypesPage'
 import { MyVisitsPage } from './pages/MyVisitsPage'
 const B2BClientsPage = lazy(() => import('./pages/b2b/B2BClientsPage').then(m => ({ default: m.B2BClientsPage })))
+const PublicIpPage = lazy(() => import('./pages/network-inventory/PublicIpPage').then(m => ({ default: m.PublicIpPage })))
+const NetworkVendorsPage = lazy(() => import('./pages/network-inventory/NetworkVendorsPage').then(m => ({ default: m.NetworkVendorsPage })))
 const B2BVisitsPage = lazy(() => import('./pages/b2b/B2BVisitsPage').then(m => ({ default: m.B2BVisitsPage })))
 const KpiPage = lazy(() => import('./pages/field/KpiPanel').then(m => ({ default: m.KpiPage })))
 const DailyReportsPage = lazy(() => import('./pages/field/DailyReportsPage').then(m => ({ default: m.DailyReportsPage })))
@@ -399,6 +401,8 @@ function OperatorApp() {
             <Route path="my-visits" element={<RequirePermission access="read" permission="workorder.order.field"><MyVisitsPage /></RequirePermission>} />
             <Route path="b2b" element={<B2BIndexRoute />} />
             <Route path="b2b/clients" element={<RequirePermission permission="b2b.client.view"><B2BClientsPage /></RequirePermission>} />
+            <Route path="network-ips" element={<RequirePermission access="read" permission="network.ip.view"><PublicIpPage /></RequirePermission>} />
+            <Route path="network-vendors" element={<RequirePermission access="read" permission="network.ip.view"><NetworkVendorsPage /></RequirePermission>} />
             <Route path="b2b/reports" element={<RequirePermission permission="b2b.client.view"><B2BVisitsPage admin /></RequirePermission>} />
             <Route path="b2b/visits" element={<RequirePermission permission="b2b.visit.view"><B2BVisitsPage /></RequirePermission>} />
             <Route

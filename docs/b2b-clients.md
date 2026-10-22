@@ -2,6 +2,8 @@
 
 Admin membuka **B2B → Client B2B** (`/b2b/clients`), memilih **Tambah client B2B**, mengisi nama, alamat, kontak/PIC, target 1–31 visit per bulan, status, dan Teknisi NE. Pilihan teknisi hanya memuat akun aktif dengan role bawaan Teknisi NE tanpa role lain, serta bukan owner atau admin platform. Formulir selalu ditinjau sebelum disimpan.
 
+Pengguna dengan izin jaringan mendapat langkah **Koneksi**, **IP public**, dan **Tunnel** setelah Pelanggan dan Kunjungan. Daftarkan vendor dan IP melalui **Jaringan → Vendor Jaringan / Manajemen IP** terlebih dahulu. Form menyimpan PIC, nomor HP, mainlink/backup, infrastruktur dan ID pelanggan provider, beberapa alokasi IP, subnet/gateway/DNS, tunnel, dan catatan. Rincian: [Manajemen IP](network-ip-management.md).
+
 Teknisi NE membuka **B2B → Visit B2B** (`/b2b/visits`). Daftar hanya memuat penugasan teknisi tersebut pada bulan yang dipilih. **Laporkan visit** tersedia untuk client aktif pada bulan berjalan. Catatan wajib diisi, maksimal 5.000 karakter, disertai 1–5 foto JPEG/PNG asli, maksimal 5 MiB per foto dan 25 juta piksel per gambar. Hari operasional mengikuti Asia/Jakarta. Foto hanya dibaca melalui endpoint terautentikasi oleh admin yang memiliki izin atau pelapor.
 
 Admin membuka **B2B → Rekap B2B** (`/b2b/reports`) untuk melihat jumlah visit dihitung, target, sisa, minggu tanpa visit, riwayat, dan foto. Klik nama client untuk rincian minggu atau **Buka** pada bukti untuk catatan dan foto. Pencarian client memfilter rekap; riwayat tetap mencakup semua client pada bulan tersebut.
@@ -11,7 +13,7 @@ Tab **Visit B2B** pada Dashboard menampilkan target, visit tercatat, sisa target
 ## Aturan bulan dan riwayat
 
 - Client baru berlaku pada bulan dibuat. Nama, alamat, kontak, penugasan, target, dan status disalin ke snapshot bulan tersebut.
-- Perubahan client berlaku bulan berikutnya. Snapshot dan penugasan bulan berjalan tetap; teknisi baru mendapat tugas mulai bulan berikutnya. Bulan yang terlewat tetap dibuat berdasarkan pengaturan yang berlaku saat itu.
+- Perubahan nama, alamat, kontak, penugasan, target dan status berlaku bulan berikutnya. Snapshot dan penugasan bulan berjalan tetap; teknisi baru mendapat tugas mulai bulan berikutnya. Bulan yang terlewat tetap dibuat berdasarkan pengaturan yang berlaku saat itu. **Data jaringan dan alokasi IP langsung berlaku saat disimpan**, tanpa mengubah riwayat kunjungan.
 - Satu client hanya menghitung satu visit per hari. Laporan tambahan pada hari yang sama disimpan dengan label **Tambahan**. Target bersifat bulanan; tidak ada kuota mingguan.
 - Minggu berjalan Senin–Minggu dan dipotong pada batas bulan. Minggu aktif tanpa visit baru ditandai setelah berakhir. Client nonaktif tidak menghasilkan minggu terlewat.
 - Bulan rekap mendatang ditolak. Filter bulan riwayat visit berdiri sendiri; bulan mendatang diterima dengan hasil kosong tanpa membuat snapshot. Bulan sebelum client dibuat tidak berisi client tersebut. Bulan kosong atau tidak valid menampilkan validasi pada field.
@@ -43,7 +45,7 @@ Semua endpoint berawal `/api/v1/b2b`, memerlukan sesi tenant dan izin saat ini. 
 | `POST /clients/{id}/visits` | Multipart `notes`, `photos` berulang; kunci UUID wajib |
 | `GET /visits/{visit}/photos/{id}` | Bukti privat, `private, no-store`, `nosniff` |
 
-Input client: `name`, `address`, `contact`, `technicianId`, `target`, `active`, `expectedRevision`. Revisi client baru harus nol. Pagination memakai page mulai nol dan size 1–200. Foto disimpan dengan prefix tenant dan diverifikasi SHA-256 sebelum commit; rollback menghapus objek hanya jika metadata masih cocok. Batas multipart aplikasi 26 MB untuk menampung lima foto 5 MiB beserta overhead. Reverse proxy deployment juga harus menerima ukuran request tersebut.
+Input client: `name`, `address`, `contact`, `technicianId`, `target`, `active`, `expectedRevision`, serta `network` opsional. Network diabaikan jika tidak dikirim; perubahan network membutuhkan `network.ip.manage` selain izin kelola client. Response menyertakan network hanya untuk pemegang `network.ip.view`. Revisi client baru harus nol. Pagination memakai page mulai nol dan size 1–200. Foto disimpan dengan prefix tenant dan diverifikasi SHA-256 sebelum commit; rollback menghapus objek hanya jika metadata masih cocok. Batas multipart aplikasi 26 MB untuk menampung lima foto 5 MiB beserta overhead. Reverse proxy deployment juga harus menerima ukuran request tersebut.
 
 ## Verifikasi
 
