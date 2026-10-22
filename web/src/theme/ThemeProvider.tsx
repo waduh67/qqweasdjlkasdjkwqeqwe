@@ -2,25 +2,23 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
 import { FluentProvider } from '@fluentui/react-components'
+import { useLocation } from 'react-router-dom'
 import { azureDark, azureLight } from './azureTheme'
+import { gudangDark, gudangLight, isInternalPath } from './gudangTheme'
+import '@/operational.css'
+import '@/internal-controls.css'
 
-/**
- * Sumber kebenaran TUNGGAL untuk tema. Menyimpan pilihan di `localStorage` dan
- * menstempel `data-theme` pada <html> (dipakai token index.css lama selama migrasi),
- * SEKALIGUS memberi tahu `FluentProvider` agar seluruh komponen Fluent ikut ganti
- * antara `azureLight`/`azureDark`. `ThemeToggle` cukup memanggil `toggle()` dari sini.
- */
 const KEY = 'ftth.theme'
 
 export type Theme = 'light' | 'dark'
 
-type ThemeCtx = { theme: Theme; setTheme: (t: Theme) => void; toggle: () => void }
+type ThemeCtx = { readonly theme: Theme; readonly internal: boolean; readonly setTheme: (t: Theme) => void; readonly toggle: () => void }
 
 const Ctx = createContext<ThemeCtx | null>(null)
 
@@ -32,8 +30,14 @@ function initialTheme(): Theme {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(initialTheme)
+  const { pathname } = useLocation()
+  const internal = isInternalPath(pathname)
+  useLayoutEffect(() => {
+    document.documentElement.setAttribute('data-console', internal ? 'internal' : 'public')
+    return () => { document.documentElement.removeAttribute('data-console') }
+  }, [internal])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem(KEY, theme)
   }, [theme])
@@ -41,12 +45,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = useCallback((t: Theme) => setThemeState(t), [])
   const toggle = useCallback(() => setThemeState((t) => (t === 'dark' ? 'light' : 'dark')), [])
 
-  const value = useMemo<ThemeCtx>(() => ({ theme, setTheme, toggle }), [theme, setTheme, toggle])
+  const value = useMemo<ThemeCtx>(() => ({ theme, internal, setTheme, toggle }), [theme, internal, setTheme, toggle])
+  const fluentTheme = internal ? (theme === 'dark' ? gudangDark : gudangLight) : (theme === 'dark' ? azureDark : azureLight)
 
   return (
     <Ctx.Provider value={value}>
       <FluentProvider
-        theme={theme === 'dark' ? azureDark : azureLight}
+        theme={fluentTheme}
+        className={internal ? 'internal-theme' : undefined}
         style={{ minHeight: '100vh', background: 'transparent' }}
       >
         {children}
@@ -59,4 +65,8 @@ export function useTheme(): ThemeCtx {
   const ctx = useContext(Ctx)
   if (!ctx) throw new Error('useTheme harus dipakai di dalam <ThemeProvider>')
   return ctx
+}
+
+export function useInternalTheme(): boolean {
+  return useContext(Ctx)?.internal ?? false
 }

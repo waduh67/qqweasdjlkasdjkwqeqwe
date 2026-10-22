@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 /**
- * Kepala halaman ala Azure: judul + subjudul di kiri, slot aksi (CommandBar) di
+ * Kepala halaman: judul + subjudul di kiri, slot aksi (CommandBar) di
  * kanan. Menggantikan pola `<h1 class="page-title">` + `<p class="page-sub">` yang
  * di-hardcode tiap halaman, sekaligus menyediakan tempat baku untuk toolbar aksi.
  */

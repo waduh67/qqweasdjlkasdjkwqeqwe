@@ -33,7 +33,7 @@
 .nav-badge.error { background: #fcd34d; }
 .nav-badge.loading { background: #293344; color: #bac4d3; }
 
-.operational-content, .operational-dialog {
+.internal-theme, :root[data-console='internal'], .operational-content, .operational-dialog {
   --plane: #f8f9fb;
   --surface: #ffffff;
   --surface-2: #f2f4f6;
@@ -56,7 +56,7 @@
   --colorCompoundBrandForeground1: var(--accent);
   --colorCompoundBrandForeground1Hover: var(--accent-hover);
   --colorCompoundBrandForeground1Pressed: var(--accent-hover);
-  --radius: 16px;
+  --radius: 24px;
   --radius-lg: 24px;
   color: var(--text);
   font-family: 'Hanken Grotesk', system-ui, sans-serif;
@@ -68,7 +68,7 @@
 }
 .operational-dialog.fui-DialogSurface { background: var(--surface); }
 :is(.operational-content, .operational-dialog) :is(.fui-Text, .fui-Button, .fui-Input, .fui-Select, .fui-Textarea, .fui-Tab) { font-family: inherit; }
-:is(.operational-content, .operational-dialog) .fui-Button { --colorBrandBackground: var(--accent); --colorBrandBackgroundHover: var(--accent-hover); --colorBrandBackgroundPressed: var(--accent-hover); --colorNeutralForegroundOnBrand: var(--accent-ink); --colorBrandForeground1: var(--accent); --colorBrandForeground2: var(--accent); --colorBrandStroke1: var(--accent); }
+:is(.operational-content, .operational-dialog) .fui-Button { --colorBrandBackground: var(--primary); --colorBrandBackgroundHover: var(--primary-hover); --colorBrandBackgroundPressed: var(--primary-pressed); --colorNeutralForegroundOnBrand: var(--primary-ink); }
 :is(.operational-content, .operational-dialog) :is(.fui-Input, .fui-Select, .fui-Textarea) { --colorCompoundBrandStroke: var(--accent); --colorCompoundBrandStrokeHover: var(--accent-hover); --colorCompoundBrandStrokePressed: var(--accent-hover); }
 :is(.operational-content, .operational-dialog) :is(h1, h2, h3, .page-title, .fui-DialogTitle) { font-family: 'Space Grotesk', system-ui, sans-serif; }
 .operational-content .card:not(.pad-0):not(.table-card) { padding: 20px; }
@@ -102,7 +102,7 @@
 .operational-bar-fill { height: 100%; background: #00e29d; border-radius: inherit; }
 
 :root[data-theme='dark'] .gudang-shell { --sidebar-bg: #080e1a; }
-:root[data-theme='dark'] :is(.operational-content, .operational-dialog) { --plane: #080e1a; --surface: #121824; --surface-2: #161c28; --surface-hover: #242f44; --border: #222c3d; --border-strong: #626d7b; --text: #f8f9fb; --text-2: #c4ccd8; --muted: #a5afbd; --accent: #00e29d; --accent-hover: #6bf1c5; --accent-ink: #080e1a; --accent-soft: #183f33; --focus-ring: #00e29d; }
+:root[data-theme='dark']:is([data-console='internal']), :root[data-theme='dark'] :is(.internal-theme, .operational-content, .operational-dialog) { --plane: #080e1a; --surface: #121824; --surface-2: #161c28; --surface-hover: #242f44; --border: #222c3d; --border-strong: #626d7b; --text: #f8f9fb; --text-2: #c4ccd8; --muted: #a5afbd; --accent: #00e29d; --accent-hover: #6bf1c5; --accent-ink: #080e1a; --accent-soft: #183f33; --focus-ring: #00e29d; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .gudang-shell { --sidebar-bg: #080e1a; }
   :root:not([data-theme='light']) :is(.operational-content, .operational-dialog) { --plane: #080e1a; --surface: #121824; --surface-2: #161c28; --surface-hover: #242f44; --border: #222c3d; --border-strong: #626d7b; --text: #f8f9fb; --text-2: #c4ccd8; --muted: #a5afbd; --accent: #00e29d; --accent-hover: #6bf1c5; --accent-ink: #080e1a; --accent-soft: #183f33; --focus-ring: #00e29d; }

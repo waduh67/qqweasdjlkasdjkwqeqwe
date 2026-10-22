@@ -1,0 +1,92 @@
+:root[data-console='internal'] {
+  --console-font-family: 'Hanken Grotesk', system-ui, sans-serif;
+  --primary: #161c28;
+  --primary-hover: #293344;
+  --primary-pressed: #080e1a;
+  --primary-ink: #ffffff;
+  --radius-sm: 8px;
+}
+:root[data-console='internal'][data-theme='dark'] {
+  --primary: #00e29d;
+  --primary-hover: #6bf1c5;
+  --primary-pressed: #00c88b;
+  --primary-ink: #080e1a;
+}
+:root[data-console='internal'] .fui-Button {
+  min-height: 40px;
+  border-radius: 9999px;
+  padding: 8px 16px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+:root[data-console='internal'] .fui-Button:has(> .fui-Button__icon:only-child) {
+  min-width: 40px;
+  padding: 8px;
+}
+:root[data-console='internal'] .app-button-default:enabled { border-color: var(--border-strong); }
+:root[data-console='internal'] .azure-commandbar {
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+:root[data-console='internal'] .azure-commandbar .cmd-primary:enabled {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-ink);
+}
+:root[data-console='internal'] .azure-commandbar .cmd-primary:enabled:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+:root[data-console='internal'] .azure-commandbar .cmd-primary:enabled:active { background: var(--primary-pressed); }
+:root[data-console='internal'] .azure-commandbar .cmd-btn { border-radius: 9999px; padding: 8px 16px; font-weight: 600; }
+:root[data-console='internal'] .command-secondary { gap: 8px; }
+:root[data-console='internal'] .page-header { align-items: center; gap: 16px; }
+:root[data-console='internal'] .page-header-text { flex: 1; min-width: min(240px, 100%); }
+:root[data-console='internal'] .page-header-actions { margin-left: auto; max-width: 100%; flex-wrap: wrap; }
+:root[data-console='internal'] .page-header-actions .azure-commandbar { justify-content: flex-end; }
+:root[data-console='internal'] :is(.fui-Input, .fui-Select, .fui-Combobox, .fui-Dropdown, .fui-Textarea) {
+  min-height: 40px;
+  border-radius: 14px;
+  font-size: 14px;
+}
+:root[data-console='internal'] .fui-Textarea { min-height: 80px; }
+:root[data-console='internal'] .fui-Select__select { min-height: 38px; padding-block: 8px; }
+:root[data-console='internal'] .fui-Field__label { font-size: 14px; font-weight: 600; }
+:root[data-console='internal'] .app-control:not(:has(:disabled, [aria-invalid='true'])) { border-color: var(--border-strong); }
+:root[data-console='internal'] .app-control.app-control:focus-within { outline-color: var(--focus-ring); }
+:root[data-console='internal'] .card { border-radius: 24px; }
+:root[data-console='internal'] .card.table-card { border-radius: 24px; box-shadow: none; }
+:root[data-console='internal'] .data-table-grid .fui-DataGridRow { min-height: 40px; }
+:root[data-console='internal'] .data-table-grid :is(.fui-DataGridCell, .fui-DataGridHeaderCell) {
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+:root[data-console='internal'] .table-card .data-table-grid .fui-DataGridRow { border-bottom-color: var(--border); }
+:root[data-console='internal'] .data-table-grid .fui-DataGridRow[aria-selected='true'] { background: var(--accent-soft); }
+:root[data-console='internal'] :is(.fui-DialogSurface, .fui-MenuPopover, .fui-PopoverSurface, .fui-Toast) {
+  border-color: var(--border);
+  border-radius: 24px;
+  color: var(--text);
+  background: var(--surface);
+}
+:root[data-console='internal'] .azure-blade { background: var(--surface); color: var(--text); }
+:root[data-console='internal'] :is(.fui-DrawerHeaderTitle, .fui-DialogTitle) { font-family: 'Space Grotesk', system-ui, sans-serif; }
+:root[data-console='internal'] :is(.app-tabs, .resource-form-tabs) { gap: 4px; }
+:root[data-console='internal'] :is(.app-tabs, .resource-form-tabs) .fui-Tab { min-height: 40px; padding: 8px 16px; }
+:root[data-console='internal'] .resource-form-dialog .console-dialog-heading { flex-shrink: 0; }
+:root[data-console='internal'] .resource-form-dialog .fui-DialogActions { position: static; flex: 0 0 auto; }
+:root[data-console='internal'] .resource-form-content { padding-bottom: 24px; }
+:root[data-console='internal'] .operational-content.content-flush { padding: 0; }
+@media (max-width: 720px) {
+  :root[data-console='internal'] .page-header-actions { width: 100%; margin-left: 0; }
+  :root[data-console='internal'] .page-header-actions .azure-commandbar { justify-content: flex-start; }
+  :root[data-console='internal'] .toolbar { gap: 12px; }
+}
+@media (forced-colors: active) {
+  :root[data-console='internal'] .app-control.app-control:focus-within { outline-color: Highlight; }
+}
