@@ -1,12 +1,13 @@
 import { useCallback, useState } from 'react'
 import { networkInventory } from '@/api/networkInventory'
-import type { PublicIp, PublicIpInput } from '@/api/networkModels'
+import type { NetworkVendor, PublicIp, PublicIpInput } from '@/api/networkModels'
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { useCan } from '@/auth/useCan'
-import { Badge, Button, SelectField, TextareaField, TextField } from '@/components/atoms'
+import { Badge, Button, TextareaField, TextField } from '@/components/atoms'
 import { PageHeader } from '@/components/molecules'
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
 import { DataTable } from '@/components/organisms/DataTable'
+import { FilterBar, FilterPicker, FilterSearch, FilterSelect } from '@/components/organisms/ResourceFilters'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
 import { B2BPagination, errorText, LoadError, useB2BPage } from '../b2b/shared'
@@ -31,10 +32,15 @@ function IpForm({ ip, writable, onClose, onDone }: { ip: PublicIp | null; writab
 }
 export function PublicIpPage() {
   const { can } = useCan(), writable = can('network.ip.manage')
-  const [q, setQ] = useState(''), [page, setPage] = useState(0), [status, setStatus] = useState<'' | 'AVAILABLE' | 'ALLOCATED'>(''), [vendorId, setVendorId] = useState<string | null>(null)
+  const [q, setQ] = useState(''), [page, setPage] = useState(0), [status, setStatus] = useState<'' | 'AVAILABLE' | 'ALLOCATED'>(''), [vendor, setVendor] = useState<NetworkVendor | null>(null)
   const [form, setForm] = useState<{ ip: PublicIp | null } | null>(null), [deleting, setDeleting] = useState<PublicIp | null>(null), [client, setClient] = useState<{ id: string; name: string } | null>(null)
   const [busy, setBusy] = useState(false), [error, setError] = useState('')
+  const vendorId = vendor?.id
   const load = useCallback(() => networkInventory.ips({ q, page, ...(status ? { status } : {}), ...(vendorId ? { vendorId } : {}) }), [q, page, status, vendorId]), state = useB2BPage(load)
+  const loadVendors = useCallback(async (q: string, page: number) => {
+    const { content, ...pagination } = await networkInventory.vendors({ q, page })
+    return { ...pagination, items: content }
+  }, [])
   const remove = async () => {
     if (!deleting || busy || !writable) return
     setBusy(true); setError('')
@@ -42,7 +48,10 @@ export function PublicIpPage() {
   }
   return <div className="stack">
     <PageHeader title="Manajemen IP" subtitle="Lihat IP yang tersedia, terpakai oleh pelanggan, dan provider asalnya." actions={writable && <Button variant="primary" onClick={() => setForm({ ip: null })}>Tambah IP public</Button>} />
-    <div className="card stack"><TextField label="Cari IP / pelanggan" value={q} maxLength={200} onChange={(_, d) => { setQ(d.value); setPage(0) }} /><SelectField label="Filter status IP" value={status} onChange={(_, d) => { if (d.value === '' || d.value === 'AVAILABLE' || d.value === 'ALLOCATED') { setStatus(d.value); setPage(0) } }}><option value="">Semua IP</option><option value="AVAILABLE">Tersedia</option><option value="ALLOCATED">Terpakai</option></SelectField><VendorField label="Filter vendor" emptyLabel="Semua vendor" value={vendorId} onChange={v => { setVendorId(v); setPage(0) }} /></div>
+    <FilterBar label="Filter IP public" search={<FilterSearch label="Cari IP / pelanggan" value={q} onChange={q => { setQ(q); setPage(0) }} />}>
+      <FilterSelect label="Status IP" value={status} onChange={value => { if (value === '' || value === 'AVAILABLE' || value === 'ALLOCATED') { setStatus(value); setPage(0) } }}><option value="">Semua IP</option><option value="AVAILABLE">Tersedia</option><option value="ALLOCATED">Terpakai</option></FilterSelect>
+      <FilterPicker label="Vendor" load={loadVendors} value={vendor} name={vendor => vendor.name + (vendor.active ? '' : ' (nonaktif)')} onChange={vendor => { setVendor(vendor); setPage(0) }} />
+    </FilterBar>
     <LoadError error={state.error} reload={state.reload} />
     <DataTable presentation="warehouse" aria-label="Daftar IP public" loading={state.loading} rows={state.data?.content ?? []} rowKey={ip => ip.id} empty={state.error ? <></> : 'Belum ada IP yang sesuai. Daftarkan IP public untuk mengalokasikannya ke client B2B.'} columns={[{ key: 'address', header: 'IP public', cell: ip => ip.address, description: ip => ip.subnet || undefined, onCellClick: ip => setForm({ ip }) }, { key: 'vendor', header: 'Vendor', cell: ip => ip.vendorName || 'Infrastruktur sendiri' }, { key: 'status', header: 'Status', cell: ip => <Badge>{ip.clientId ? 'Terpakai' : 'Tersedia'}</Badge> }, { key: 'client', header: 'Pelanggan', cell: ip => ip.clientId ? <Button onClick={() => { if (ip.clientId) setClient({ id: ip.clientId, name: ip.clientName || 'Client B2B' }) }}>{ip.clientName || 'Client B2B'}</Button> : 'Belum dialokasikan' }, { key: 'gateway', header: 'Gateway', cell: ip => ip.gateway || '—' }]} rowActions={ip => [{ key: 'open', label: 'Buka IP', onClick: () => setForm({ ip }) }, ...(writable && !ip.clientId ? [{ key: 'delete', label: 'Hapus IP', onClick: () => { setError(''); setDeleting(ip) } }] : [])]} />
     <B2BPagination data={state.data} onChange={setPage} />

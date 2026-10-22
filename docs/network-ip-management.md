@@ -2,8 +2,8 @@
 
 ## Alur penggunaan
 
-1. Buka **Jaringan → Vendor Jaringan** (`/network-vendors`). Tambahkan nama provider, kontak, catatan dan status. Vendor aktif tersedia di dropdown mainlink, backup dan IP. Vendor nonaktif yang sudah dipakai tetap dapat dilihat dan dipertahankan.
-2. Buka **Jaringan → Manajemen IP** (`/network-ips`). Daftarkan setiap alamat IPv4 beserta subnet, gateway, vendor dan catatan. Tabel menampilkan **Tersedia** atau **Terpakai**, nama pelanggan dan provider. Cari berdasarkan IP/nama pelanggan atau filter status dan vendor; daftar memakai pagination.
+1. Buka **B2B → Vendor Jaringan** (`/network-vendors`). Tambahkan nama provider, kontak, catatan dan status. Vendor aktif tersedia di dropdown mainlink, backup dan IP. Vendor nonaktif yang sudah dipakai tetap dapat dilihat dan dipertahankan.
+2. Buka **B2B → Manajemen IP** (`/network-ips`). Daftarkan setiap alamat IPv4 beserta subnet, gateway, vendor dan catatan. Tabel menampilkan **Tersedia** atau **Terpakai**, nama pelanggan dan provider. Cari berdasarkan IP/nama pelanggan atau filter status dan vendor; daftar memakai pagination.
 3. Buka **B2B → Client B2B**, pilih Tambah atau Buka client. Isi Pelanggan dan Kunjungan, lalu **Koneksi**: nama PIC, nomor HP, bandwidth mainlink/backup dalam Mbps, infrastruktur sendiri/mitra, last mile, vendor dan ID pelanggan pada provider. Infrastruktur mitra wajib mempunyai vendor mainlink.
 4. Pada **IP public**, pilih satu atau beberapa IP tersedia, maksimal 64. Pilihan tetap tersimpan ketika mencari, berpindah halaman atau langkah. Lengkapi subnet/gateway dan maksimal delapan DNS IPv4 yang dipisahkan koma.
 5. Pada **Tunnel**, isi dial, username, password baru, remote/local address dan catatan. Password tersimpan disembunyikan; isian kosong mempertahankannya. Pilih **Hapus password tersimpan** untuk menghapus. Tinjau seluruh data sebelum Simpan.

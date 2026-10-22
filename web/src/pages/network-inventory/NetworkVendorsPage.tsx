@@ -7,6 +7,7 @@ import { Badge, Button, SelectField, TextareaField, TextField } from '@/componen
 import { PageHeader } from '@/components/molecules'
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
 import { DataTable } from '@/components/organisms/DataTable'
+import { FilterBar, FilterSearch, FilterSelect } from '@/components/organisms/ResourceFilters'
 import { ResourceForm } from '@/components/organisms/ResourceForm'
 import { WarehouseCommandDialog } from '@/components/organisms/warehouse/WarehouseCommandDialog'
 import { B2BPagination, errorText, LoadError, useB2BPage } from '../b2b/shared'
@@ -39,7 +40,9 @@ export function NetworkVendorsPage() {
   }
   return <div className="stack">
     <PageHeader title="Vendor Jaringan" subtitle="Master provider mainlink, backup, dan IP public pelanggan." actions={writable && <Button variant="primary" onClick={() => setForm({ vendor: null })}>Tambah vendor</Button>} />
-    <div className="card stack"><TextField label="Cari vendor" maxLength={200} value={q} onChange={(_, d) => { setQ(d.value); setPage(0) }} /><SelectField label="Filter status vendor" value={active} onChange={(_, d) => { setActive(d.value); setPage(0) }}><option value="all">Semua status</option><option value="active">Aktif</option><option value="inactive">Nonaktif</option></SelectField></div>
+    <FilterBar label="Filter vendor jaringan" search={<FilterSearch label="Cari vendor" value={q} onChange={q => { setQ(q); setPage(0) }} />}>
+      <FilterSelect label="Status vendor" value={active} defaultValue="all" onChange={value => { setActive(value); setPage(0) }}><option value="all">Semua status</option><option value="active">Aktif</option><option value="inactive">Nonaktif</option></FilterSelect>
+    </FilterBar>
     <LoadError error={state.error} reload={state.reload} />
     <DataTable presentation="warehouse" aria-label="Vendor jaringan" loading={state.loading} rows={state.data?.content ?? []} rowKey={v => v.id} empty={state.error ? <></> : 'Belum ada vendor yang sesuai.'} columns={[{ key: 'name', header: 'Vendor', cell: v => v.name, description: v => v.contact, onCellClick: v => setForm({ vendor: v }) }, { key: 'status', header: 'Status', cell: v => <Badge>{v.active ? 'Aktif' : 'Nonaktif'}</Badge> }, { key: 'notes', header: 'Catatan', cell: v => v.notes || '—' }]} rowActions={v => [{ key: 'open', label: 'Buka vendor', onClick: () => setForm({ vendor: v }) }, ...(writable ? [{ key: 'delete', label: 'Hapus vendor', onClick: () => { setError(''); setDeleting(v) } }] : [])]} />
     <B2BPagination data={state.data} onChange={setPage} />

@@ -35,6 +35,12 @@ Menu order follows tasks: Dashboard, KPI, Gudang or Material Saya and Retur,
 Request Material, Pelanggan, WO, Kunjungan Saya, Daily, B2B, then setup and
 management. Catalog links select Barang, Gudang & Rak or Pemasok by query tab.
 Permissions determine entries and actionable request counts, never account names.
+Client B2B, Manajemen IP, Vendor Jaringan, Rekap B2B and Visit B2B share the
+B2B navigation group, in that order. Network inventory lists use the shared
+`FilterBar`, `FilterSearch`, `FilterSelect` and `FilterPicker` primitives: one
+compact row on wide screens that wraps within the content width on phones.
+Vendor search and pagination stay inside the picker popover; the list toolbar
+does not repeat the vendor search as a separate form field.
 Counts refresh after successful commands and every minute while visible;
 failed reads show an unavailable indicator rather than a false zero.
 Ordinary visits display WO/customer/area, real session times, active/history,
