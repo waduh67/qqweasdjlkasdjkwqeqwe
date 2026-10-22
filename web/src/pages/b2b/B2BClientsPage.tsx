@@ -10,12 +10,18 @@ import { WarehouseCommandDialog } from '@/components/organisms/warehouse/Warehou
 import type { WarehouseCommand } from '@/api/warehouse/transport'
 import { ConfirmDialog } from '@/components/molecules/ConfirmDialog'
 import { B2BPagination, errorText, LoadError, useB2BPage } from './shared'
+import { emptyNetwork, type NetworkInput, type PublicIp } from '@/api/networkModels'
+import { ClientNetworkFields } from './ClientNetworkFields'
+import { NetworkSummary } from '../network-inventory/shared'
 
 function SettingSummary({ value }: { value: B2BSetting }) {
   return <dl className="resource-review-summary"><dt>Client</dt><dd>{value.name}</dd><dt>Alamat</dt><dd>{value.address}</dd><dt>Kontak / PIC</dt><dd>{value.contact}</dd><dt>Teknisi NE</dt><dd>{value.technicianName}</dd><dt>Target</dt><dd>{value.target} visit / bulan</dd><dt>Status</dt><dd>{value.active ? 'Aktif' : 'Nonaktif'}</dd></dl>
 }
 function ClientForm({ client, onClose, onDone }: { client: B2BClient | null; onClose: () => void; onDone: () => void }) {
   const { can } = useCan(), writable = can('b2b.client.manage')
+  const networkWritable = writable && can('network.ip.manage'), networkVisible = can('network.ip.view')
+  const [networkInput, setNetworkInput] = useState<NetworkInput>(() => ({ details: client?.network?.details ?? emptyNetwork, publicIpIds: client?.network?.publicIps.map(ip => ip.id) ?? [], tunnelPassword: null, clearTunnelPassword: false }))
+  const [ips, setIps] = useState<readonly PublicIp[]>(client?.network?.publicIps ?? [])
   const [input, setInput] = useState<B2BInput>(() => client ? { name: client.next.name, address: client.next.address, contact: client.next.contact, technicianId: client.next.technicianId, target: client.next.target, active: client.next.active, expectedRevision: client.revision } : { name: '', address: '', contact: '', technicianId: '', target: 4, active: true, expectedRevision: 0 })
   const [selectedName, setSelectedName] = useState(client?.next.technicianName ?? '')
   const [q, setQ] = useState(''), [n, setN] = useState(0)
@@ -26,13 +32,13 @@ function ClientForm({ client, onClose, onDone }: { client: B2BClient | null; onC
   const toReview = () => {
     if (!writable) return
     if (!input.technicianId) { setError('Pilih Teknisi NE aktif.'); return }
-    setError(''); setReview(b2b.save(client?.id, { ...input, name: input.name.trim(), address: input.address.trim(), contact: input.contact.trim() }))
+    setError(''); setReview(b2b.save(client?.id, { ...input, name: input.name.trim(), address: input.address.trim(), contact: input.contact.trim(), ...(networkWritable ? { network: { ...networkInput, publicIpIds: ips.map(ip => ip.id) } } : {}) }))
   }
-  return <ResourceForm steps={[{ key: 'client', label: 'Pelanggan' }, { key: 'visits', label: 'Kunjungan' }]} title={client ? 'Client B2B · ' + client.current.setting.name : 'Tambah client B2B'} editing={!!client} readOnly={!writable} onClose={onClose} onBack={() => setReview(null)} onReview={toReview} reviewAction={writable}
-    review={review && <WarehouseCommandDialog embedded title="Tinjau client B2B" command={review} disabled={!writable} summary={<><p>{client ? 'Perubahan berlaku bulan berikutnya.' : 'Client ditambahkan pada bulan ini.'}</p><SettingSummary value={{ ...input, technicianName: selectedName }} /></>} onDone={onDone} onClose={() => setReview(null)} />}>
+  return <ResourceForm steps={[{ key: 'client', label: 'Pelanggan' }, { key: 'visits', label: 'Kunjungan' }, ...(networkVisible ? [{ key: 'network', label: 'Koneksi' }, { key: 'technical', label: 'IP public' }, { key: 'tunnel', label: 'Tunnel' }] : [])]} title={client ? 'Client B2B · ' + client.current.setting.name : 'Tambah client B2B'} editing={!!client} readOnly={!writable} onClose={onClose} onBack={() => setReview(null)} onReview={toReview} reviewAction={writable}
+    review={review && <WarehouseCommandDialog embedded title="Tinjau client B2B" command={review} disabled={!writable} summary={<><p>{client ? 'Pengaturan kunjungan berlaku bulan berikutnya. Data jaringan dan alokasi IP langsung berlaku saat disimpan.' : 'Client dan alokasi IP ditambahkan pada bulan ini.'}</p><SettingSummary value={{ ...input, technicianName: selectedName }} />{networkVisible && <NetworkSummary details={networkInput.details} ips={ips} passwordState={networkInput.clearTunnelPassword ? 'Akan dihapus' : networkInput.tunnelPassword ? 'Akan diganti (disembunyikan)' : client?.network?.tunnelPasswordSet ? 'Tetap tersimpan (disembunyikan)' : 'Belum diisi'} />}</>} onDone={onDone} onClose={() => setReview(null)} />}>
     <div className="stack">
       {client && <details><summary>Data bulan ini · tetap tersimpan</summary><SettingSummary value={client.current.setting} /></details>}
-      <p className="muted">{client ? 'Pengaturan di bawah berlaku bulan berikutnya. Target dan penugasan bulan ini tetap.' : 'Tentukan Teknisi NE dan target bulanan. Satu hari menghitung satu visit.'}</p>
+      <p className="muted">{client ? 'Nama, alamat, kontak, target dan penugasan berlaku bulan berikutnya. Data jaringan dan alokasi IP langsung berlaku.' : 'Tentukan Teknisi NE, target bulanan, dan koneksi pelanggan. Satu hari menghitung satu visit.'}</p>
       <form className="stack" onSubmit={e => { e.preventDefault(); toReview() }}>
         <ResourceStep step="client"><TextField label="Nama client" required minLength={2} maxLength={200} value={input.name} disabled={!writable} onChange={(_, d) => update('name', d.value)} />
         <TextareaField label="Alamat" required maxLength={2000} value={input.address} disabled={!writable} onChange={(_, d) => update('address', d.value)} />
@@ -45,6 +51,7 @@ function ClientForm({ client, onClose, onDone }: { client: B2BClient | null; onC
           <DataTable presentation="warehouse" loading={technicians.loading} rows={technicians.data?.content ?? []} rowKey={r => r.id} columns={[{ key: 'name', header: 'Teknisi NE aktif', cell: r => r.name }, { key: 'select', header: 'Penugasan', cell: r => <Button aria-pressed={r.id === input.technicianId} onClick={() => { update('technicianId', r.id); setSelectedName(r.name) }}>{r.id === input.technicianId ? 'Terpilih' : 'Pilih'}</Button> }]} empty={technicians.error ? <></> : 'Tidak ada Teknisi NE aktif yang sesuai.'} />
           <B2BPagination data={technicians.data} onChange={setN} /></>}
         </ResourceStep>
+        {networkVisible && <ClientNetworkFields value={networkInput} ips={ips} onChange={setNetworkInput} onIpsChange={setIps} writable={networkWritable} passwordSet={client?.network?.tunnelPasswordSet ?? false} />}
         {error && <p role="alert" className="error">{error}</p>}
       </form>
     </div>
@@ -61,7 +68,7 @@ export function B2BClientsPage() {
     setBusy(true)
     try { await b2b.delete(deleting); setDeleting(null); state.reload() } catch (e) { setMutationError(errorText(e)) } finally { setBusy(false) }
   }
-  return <div className="stack"><PageHeader title="Client B2B" subtitle="Kelola client, penugasan Teknisi NE, dan target visit bulanan." actions={can('b2b.client.manage') && <Button variant="primary" onClick={() => setForm({ client: null })}>Tambah client B2B</Button>} />
+  return <div className="stack"><PageHeader title="Client B2B" subtitle="Kelola koneksi pelanggan, alokasi IP, penugasan Teknisi NE, dan target visit bulanan." actions={can('b2b.client.manage') && <Button variant="primary" onClick={() => setForm({ client: null })}>Tambah client B2B</Button>} />
     <TextField label="Cari client B2B" value={q} onChange={(_, d) => { setQ(d.value); setN(0) }} />
     <LoadError error={state.error} reload={state.reload} />{mutationError && <p role="alert" className="error">{mutationError}</p>}
     <DataTable presentation="warehouse" rows={state.data?.content ?? []} rowKey={r => r.id} loading={state.loading} empty={state.error ? <></> : 'Belum ada client B2B. Tambahkan client untuk menjadwalkan visit.'}
