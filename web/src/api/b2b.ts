@@ -1,13 +1,14 @@
 import { api } from './client'
 import { captureCommandSession, command, parameters, query, type WarehouseCommand } from './warehouse/transport'
-import { array, boolean, integer, plainText, record, text, uuid } from './warehouse/codec'
+import { array, boolean, integer, nullable, plainText, record, text, uuid } from './warehouse/codec'
+import { decodeClientNetwork, type ClientNetwork, type NetworkInput } from './networkModels'
 
 export interface B2BSetting { name: string; address: string; contact: string; technicianId: string; technicianName: string; target: number; active: boolean }
 export interface B2BMonth { clientId: string; month: string; setting: B2BSetting; counted: number; remaining: number; weeks: { start: string; end: string; counted: number; missed: boolean }[] }
-export interface B2BClient { id: string; revision: number; createdMonth: string; current: B2BMonth; next: B2BSetting }
+export interface B2BClient { id: string; revision: number; createdMonth: string; current: B2BMonth; next: B2BSetting; network?: ClientNetwork | null }
 export interface B2BVisit { id: string; clientId: string; clientName: string; visitDate: string; counted: boolean; notes: string; reporterName: string; createdAt: string; photos: { id: string; contentType: string; sizeBytes: number }[] }
 export interface B2BPage<T> { content: T[]; page: number; size: number; totalElements: number }
-export interface B2BInput { name: string; address: string; contact: string; technicianId: string; target: number; active: boolean; expectedRevision: number }
+export interface B2BInput { name: string; address: string; contact: string; technicianId: string; target: number; active: boolean; expectedRevision: number; network?: NetworkInput | null }
 export interface B2BTechnician { id: string; name: string }
 const base = '/api/v1/b2b'
 function setting(value: unknown): B2BSetting {
@@ -24,7 +25,7 @@ function month(value: unknown): B2BMonth {
 }
 function client(value: unknown): B2BClient {
   const r = record(value)
-  return { id: uuid(r.id), revision: integer(r.revision), createdMonth: text(r.createdMonth), current: month(r.current), next: setting(r.next) }
+  return { id: uuid(r.id), revision: integer(r.revision), createdMonth: text(r.createdMonth), current: month(r.current), next: setting(r.next), ...(r.network === undefined ? {} : { network: nullable(r.network, decodeClientNetwork, 'network') }) }
 }
 function visit(value: unknown): B2BVisit {
   const r = record(value)
