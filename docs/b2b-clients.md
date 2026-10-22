@@ -2,7 +2,7 @@
 
 Admin membuka **B2B → Client B2B** (`/b2b/clients`), memilih **Tambah client B2B**, mengisi nama, alamat, kontak/PIC, target 1–31 visit per bulan, status, dan Teknisi NE. Pilihan teknisi hanya memuat akun aktif dengan role bawaan Teknisi NE tanpa role lain, serta bukan owner atau admin platform. Formulir selalu ditinjau sebelum disimpan.
 
-Pengguna dengan izin jaringan mendapat langkah **Koneksi**, **IP public**, dan **Tunnel** setelah Pelanggan dan Kunjungan. Daftarkan vendor dan IP melalui **Jaringan → Vendor Jaringan / Manajemen IP** terlebih dahulu. Form menyimpan PIC, nomor HP, mainlink/backup, infrastruktur dan ID pelanggan provider, beberapa alokasi IP, subnet/gateway/DNS, tunnel, dan catatan. Rincian: [Manajemen IP](network-ip-management.md).
+Pengguna dengan izin jaringan mendapat langkah **Koneksi**, **IP public**, dan **Tunnel** setelah Pelanggan dan Kunjungan. Daftarkan vendor dan IP melalui **B2B → Vendor Jaringan / Manajemen IP** terlebih dahulu. Form menyimpan PIC, nomor HP, mainlink/backup, infrastruktur dan ID pelanggan provider, beberapa alokasi IP, subnet/gateway/DNS, tunnel, dan catatan. Rincian: [Manajemen IP](network-ip-management.md).
 
 Teknisi NE membuka **B2B → Visit B2B** (`/b2b/visits`). Daftar hanya memuat penugasan teknisi tersebut pada bulan yang dipilih. **Laporkan visit** tersedia untuk client aktif pada bulan berjalan. Catatan wajib diisi, maksimal 5.000 karakter, disertai 1–5 foto JPEG/PNG asli, maksimal 5 MiB per foto dan 25 juta piksel per gambar. Hari operasional mengikuti Asia/Jakarta. Foto hanya dibaca melalui endpoint terautentikasi oleh admin yang memiliki izin atau pelapor.
 

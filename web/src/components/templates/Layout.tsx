@@ -48,8 +48,6 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Jaringan',
     items: [
-      { to: '/network-ips', label: 'Manajemen IP', permission: 'network.ip.view', access: 'read', icon: NavIcons.Route },
-      { to: '/network-vendors', label: 'Vendor Jaringan', permission: 'network.ip.view', access: 'read', icon: NavIcons.Users },
       { to: '/map', label: 'Peta Jaringan', permission: 'gis.map.view', icon: NavIcons.Map },
       { to: '/inventory', label: 'Aset jaringan', permission: 'network.odp.view', icon: NavIcons.Storage },
       { to: '/bras', label: 'BRAS & RADIUS', permission: 'bng.nas.view', icon: NavIcons.Gauge },
@@ -81,7 +79,14 @@ const GROUPS: NavGroup[] = [
       { to: '/my-work-orders', label: 'Work Order Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.Inbox },
       { to: '/my-materials', label: 'Material Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.PackageCheck },
       { to: '/my-visits', label: 'Kunjungan Saya', permission: 'workorder.order.field', access: 'read', icon: NavIcons.Calendar },
+    ],
+  },
+  {
+    label: 'B2B',
+    items: [
       { to: '/b2b/clients', label: 'Client B2B', permission: 'b2b.client.view', icon: NavIcons.Users },
+      { to: '/network-ips', label: 'Manajemen IP', permission: 'network.ip.view', access: 'read', icon: NavIcons.Route },
+      { to: '/network-vendors', label: 'Vendor Jaringan', permission: 'network.ip.view', access: 'read', icon: NavIcons.Users },
       { to: '/b2b/reports', label: 'Rekap B2B', permission: 'b2b.client.view', icon: NavIcons.Chart },
       { to: '/b2b/visits', label: 'Visit B2B', permission: 'b2b.visit.view', icon: NavIcons.Calendar },
     ],
@@ -136,7 +141,7 @@ export function Layout() {
     ...GROUPS.filter(group => group.label === 'Pelanggan & layanan'),
     { label: 'Work Order & Kunjungan', items: fieldItems.filter(item => ['/work-orders', '/my-work-orders', '/my-visits', '/incidents'].includes(item.to)).map(item => item.to === '/my-work-orders' ? { ...item, label: 'Work Order Saya' } : item) },
     { label: 'Daily Report', items: [operationalItems[1]] },
-    { label: 'B2B', items: fieldItems.filter(item => item.to.startsWith('/b2b/')) },
+    ...GROUPS.filter(group => group.label === 'B2B'),
     { label: 'Setelan Gudang', items: inventoryItems.filter(item => ['settings', 'transition', 'archive', 'provenance'].some(path => item.to === '/warehouse/' + path)) },
     ...GROUPS.filter(group => group.label === 'Jaringan'),
     { label: 'Manajemen', items: [GROUPS[0].items[1], ...GROUPS.flatMap(group => group.label === 'Administrasi' ? group.items : [])] },
