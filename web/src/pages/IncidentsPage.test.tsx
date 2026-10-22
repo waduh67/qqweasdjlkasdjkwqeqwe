@@ -54,7 +54,7 @@ it('reviews a nested message before sending and returns to the same incident', a
   vi.mocked(api.post).mockResolvedValue({ sentCount: 1, skippedCount: 0 })
   const { user, close } = open()
   await user.click(await screen.findByRole('button', { name: 'Beritahu pelanggan' }))
-  const form = within(screen.getByRole('dialog', { name: 'Beritahu pelanggan' }))
+  const form = within(await screen.findByRole('dialog', { name: 'Beritahu pelanggan' }))
   await user.clear(form.getByRole('textbox', { name: 'Pesan' }))
   await user.type(form.getByRole('textbox', { name: 'Pesan' }), 'Tim teknis sedang memeriksa jaringan.')
   await user.click(form.getByRole('tab', { name: 'Tinjau + kirim' }))
