@@ -342,10 +342,8 @@ export function VpnPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <PageHeader title="Akun VPN" />
-
-      <CommandBar primary={canManage ? { key: 'create', label: 'Buat akun VPN', icon: <IconPlus size={16} />, onClick: () => setCreating(true) } : undefined}
-        actions={[{ key: 'refresh', label: 'Segarkan', onClick: () => void reload() }]} />
+      <PageHeader title="Akun VPN" actions={<CommandBar primary={canManage ? { key: 'create', label: 'Buat akun VPN', icon: <IconPlus size={16} />, onClick: () => setCreating(true) } : undefined}
+        actions={[{ key: 'refresh', label: 'Segarkan', onClick: () => void reload() }]} />} />
       <Blade open={creating} title="Buat akun VPN" onClose={() => !busy && setCreating(false)}
         creation={{ ...creation, busy, prepare: generate, summary: <CreationSummary rows={[["Label", label || 'Otomatis'], ["Server dan alamat VPN", 'Otomatis']]} /> }}
         footer={<Button variant="primary" disabled={busy} onClick={generate}>{busy ? 'Membuat…' : 'Buat akun VPN'}</Button>}>

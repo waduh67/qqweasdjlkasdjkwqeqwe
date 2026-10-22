@@ -98,10 +98,8 @@ export function AreasPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <PageHeader title="Area / Wilayah" />
-
-      <CommandBar primary={can('iam.area.create') ? { key: 'create', label: 'Tambah area', onClick: () => setCreating(true) } : undefined}
-        actions={[{ key: 'refresh', label: 'Segarkan', onClick: () => void reload() }]} />
+      <PageHeader title="Area / Wilayah" actions={<CommandBar primary={can('iam.area.create') ? { key: 'create', label: 'Tambah area', onClick: () => setCreating(true) } : undefined}
+        actions={[{ key: 'refresh', label: 'Segarkan', onClick: () => void reload() }]} />} />
       <Blade open={creating} title="Tambah area" onClose={() => setCreating(false)}
         creation={{ ...creation, prepare: saveArea, summary: <CreationSummary rows={[["Kode", code], ["Nama", name]]} /> }}
         footer={<Button variant="primary" disabled={creation.busy} onClick={saveArea}>Simpan</Button>}>

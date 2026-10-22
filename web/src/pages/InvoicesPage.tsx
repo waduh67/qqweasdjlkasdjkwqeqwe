@@ -603,8 +603,7 @@ export function InvoicesPage() {
 
   return (
     <div className="stack" style={{ gap: '1.25rem' }}>
-      <PageHeader title="Tagihan" subtitle="Daftar tagihan seluruh pelanggan — terbitkan, catat pembayaran, atau batalkan." />
-      <CommandBar primary={primary} />
+      <PageHeader title="Tagihan" subtitle="Daftar tagihan seluruh pelanggan — terbitkan, catat pembayaran, atau batalkan." actions={<CommandBar primary={primary} />} />
 
       {!loadError && !loading && <div className="row" style={{ gap: '1rem', flexWrap: 'wrap' }}>
         <SummaryCard

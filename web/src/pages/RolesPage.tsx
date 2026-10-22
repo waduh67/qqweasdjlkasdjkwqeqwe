@@ -153,8 +153,7 @@ export function RolesPage() {
 
   return (
     <div className="stack">
-      <PageHeader title="Role & Izin" />
-      <CommandBar primary={primary} />
+      <PageHeader title="Role & Izin" actions={<CommandBar primary={primary} />} />
 
       {error && <Text as="p" className="error">{error}</Text>}
 
