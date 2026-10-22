@@ -102,7 +102,7 @@ class B2BSql(private val connection: Connection, val tenant: UUID) {
         val row=query("SELECT revision,created_month FROM b2b_client WHERE tenant_id=? AND id=?",tenant,id) {
             it.getLong("revision") to it.getObject("created_month",LocalDate::class.java)
         }.singleOrNull() ?: throw NotFoundException("Client B2B tidak ditemukan")
-        return B2BClientView(id,row.first,row.second,month(id,currentMonth,today),setting(id,currentMonth.plusMonths(1)))
+        return B2BClientView(id,row.first,row.second,month(id,currentMonth,today),setting(id,currentMonth.plusMonths(1)),network(id))
     }
     fun saveSetting(id: UUID, effective: LocalDate, input: B2BClientInput) {
         update("""INSERT INTO b2b_client_setting(tenant_id,client_id,effective_month,name,address,contact,technician_id,target,active)

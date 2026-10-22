@@ -175,6 +175,31 @@ class TenantDefaultsIT {
     }
 
     @Test
+    fun network_ip_backfill_grants_default_roles_once() {
+        val (tenant, _) = tenant()
+        within(tenant) {
+            jdbc.update("DELETE FROM iam_default_role_feature WHERE tenant_id=? AND feature='NETWORK_IP_V1'", tenant)
+            listOf("ADMIN", "MANAGER", "TECHNICIAN_NE", "TECHNICIAN_FO").forEach { key ->
+                val role = requireNotNull(roles.findByDefaultKey(key))
+                role.replacePermissions(emptySet())
+                roles.save(role)
+            }
+            provisioner.ensureOperationalRoles(tenant)
+            fun codes(key: String) = permissions.findAllByIds(requireNotNull(roles.findByDefaultKey(key)).permissionIds).map { it.code.value }
+            assertThat(codes("ADMIN")).containsExactlyInAnyOrder("network.ip.view", "network.ip.manage")
+            assertThat(codes("MANAGER")).containsExactly("network.ip.view")
+            assertThat(codes("TECHNICIAN_NE")).containsExactly("network.ip.view")
+            assertThat(codes("TECHNICIAN_FO")).isEmpty()
+            val admin = requireNotNull(roles.findByDefaultKey("ADMIN"))
+            admin.replacePermissions(emptySet())
+            roles.save(admin)
+            provisioner.ensureOperationalRoles(tenant)
+            assertThat(codes("ADMIN")).isEmpty()
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM iam_default_role_feature WHERE tenant_id=? AND feature='NETWORK_IP_V1'", Long::class.java, tenant)).isEqualTo(3)
+        }
+    }
+
+    @Test
     fun `identitas owner tenant lain tidak terbaca`() {
         val (first, _) = tenant()
         val (second, _) = tenant()

@@ -7,14 +7,14 @@ import java.time.ZoneId
 import java.util.UUID
 
 data class B2BClientInput(val name: String, val address: String, val contact: String, val technicianId: UUID,
-    val target: Int, val active: Boolean = true, val expectedRevision: Long = 0)
+    val target: Int, val active: Boolean = true, val expectedRevision: Long = 0, val network: B2BNetworkInput? = null)
 data class B2BSetting(val name: String, val address: String, val contact: String, val technicianId: UUID,
     val technicianName: String, val target: Int, val active: Boolean)
 data class B2BWeek(val start: LocalDate, val end: LocalDate, val counted: Int, val missed: Boolean)
 data class B2BMonth(val clientId: UUID, val month: LocalDate, val setting: B2BSetting, val counted: Int,
     val remaining: Int, val weeks: List<B2BWeek>)
 data class B2BClientView(val id: UUID, val revision: Long, val createdMonth: LocalDate,
-    val current: B2BMonth, val next: B2BSetting)
+    val current: B2BMonth, val next: B2BSetting, val network: B2BNetworkView? = null)
 data class B2BPhotoView(val id: UUID, val contentType: String, val sizeBytes: Long)
 data class B2BVisitView(val id: UUID, val clientId: UUID, val clientName: String, val visitDate: LocalDate,
     val counted: Boolean, val notes: String, val reporterName: String, val createdAt: Instant, val photos: List<B2BPhotoView>)

@@ -33,7 +33,8 @@ import javax.imageio.ImageIO
 @Transactional
 class B2BService(private val store: B2BStore, private val authority: CurrentAuthorityApi,
     private val iam: IamApi, private val engineers: NeTechnicianApi, private val clock: B2BOperationalClock,
-    private val storage: ObjectStorage, private val readOnly: ObjectProvider<ReadOnlyLockGuard>) {
+    private val storage: ObjectStorage, private val readOnly: ObjectProvider<ReadOnlyLockGuard>,
+    private val network: B2BNetworkService) {
     private val mapper = jacksonObjectMapper()
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -42,28 +43,34 @@ class B2BService(private val store: B2BStore, private val authority: CurrentAuth
         return engineers.searchNetworkEngineers(query.take(200),page)
     }
     fun clients(query: String, page: PageRequest): Page<B2BClientView> {
-        admin(access(),false)
+        val actor=access(); admin(actor,false)
         val today=clock.today()
         return store.use { sql ->
             sql.lock(); sql.prepare(today.withDayOfMonth(1))
             val ids=sql.page("""SELECT c.id FROM b2b_client c JOIN b2b_client_month m ON m.tenant_id=c.tenant_id AND m.client_id=c.id
                 WHERE c.tenant_id=? AND m.month=? AND lower(m.name) LIKE ? ORDER BY lower(m.name),c.id""",
                 page,sql.tenant,today.withDayOfMonth(1),"%${query.trim().lowercase().take(200)}%") { it.uuid("id") }
-            ids.map { sql.client(it,today) }
+            ids.map { visibleClient(sql.client(it,today),actor) }
         }
     }
     fun save(id: UUID?, input: B2BClientInput, key: UUID): B2BClientView {
         val actor=access(); admin(actor,true)
-        val normalized=validate(input)
-        val canonical=mapper.writeValueAsString(mapOf("id" to id,"input" to normalized))
+        if(input.network!=null) requirePermission(actor,"network.ip.manage",true)
+        val normalized=validate(input).copy(network=input.network?.let(network::normalize))
+        val canonicalInput = if (normalized.network == null) mapOf("name" to normalized.name, "address" to normalized.address,
+            "contact" to normalized.contact, "technicianId" to normalized.technicianId, "target" to normalized.target,
+            "active" to normalized.active, "expectedRevision" to normalized.expectedRevision) else normalized
+        val canonical=mapper.writeValueAsString(mapOf("id" to id,"input" to canonicalInput))
+        val canonicalHash="sha256:"+sha256(canonical.toByteArray(Charsets.UTF_8))
         val today=clock.today(); val month=today.withDayOfMonth(1)
         return store.use { sql ->
             sql.lock()
             sql.query("SELECT actor_id,canonical,result::text FROM b2b_client_command WHERE tenant_id=? AND operation_key=?",sql.tenant,key) {
                 Triple(it.uuid("actor_id"),it.getString("canonical"),it.getString("result"))
             }.singleOrNull()?.let {
-                if(it.first!=actor.fence.identity.userId || it.second!=canonical) throw ConflictException("Kunci pengiriman sudah dipakai untuk perubahan lain")
-                return@use mapper.readValue(it.third,B2BClientView::class.java)
+                if(it.first!=actor.fence.identity.userId || (it.second!=canonicalHash && (normalized.network!=null || it.second!=canonical)))
+                    throw ConflictException("Kunci pengiriman sudah dipakai untuk perubahan lain")
+                return@use visibleClient(mapper.readValue(it.third,B2BClientView::class.java),actor)
             }
             val technician=iam.findUser(normalized.technicianId)
             if(technician?.active!=true || !technician.pureNetworkEngineer) throw ValidationException("Pilih Teknisi NE aktif tanpa role lain")
@@ -80,10 +87,11 @@ class B2BService(private val store: B2BStore, private val authority: CurrentAuth
                 sql.saveSetting(target,month.plusMonths(1),normalized)
                 sql.update("UPDATE b2b_client SET revision=revision+1 WHERE tenant_id=? AND id=?",sql.tenant,target)
             }
+            normalized.network?.let { network.save(sql,target,it) }
             val result=sql.client(target,today)
             sql.update("INSERT INTO b2b_client_command(tenant_id,operation_key,actor_id,canonical,result) VALUES (?,?,?,?,?::jsonb)",
-                sql.tenant,key,actor.fence.identity.userId,canonical,mapper.writeValueAsString(result))
-            result
+                sql.tenant,key,actor.fence.identity.userId,canonicalHash,mapper.writeValueAsString(result))
+            visibleClient(result,actor)
         }
     }
     fun delete(id: UUID, revision: Long) {
@@ -179,6 +187,8 @@ class B2BService(private val store: B2BStore, private val authority: CurrentAuth
         }
     }
     private fun access(): CurrentAuthority = authority.lockCurrent().also { it.fence.assertHeld() }
+    private fun visibleClient(value: B2BClientView, actor: CurrentAuthority): B2BClientView =
+        if(actor.platformAdmin || "network.ip.view" in actor.permissions) value else value.copy(network=null)
     private fun admin(actor: CurrentAuthority, write: Boolean) {
         requirePermission(actor,if(write) "b2b.client.manage" else "b2b.client.view",write)
     }
