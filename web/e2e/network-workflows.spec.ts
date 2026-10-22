@@ -46,6 +46,18 @@ async function compactControls(page: Page) {
   expect(Math.abs(filters!.x - bar!.x)).toBeLessThanOrEqual(2)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 }
+async function headerControls(page: Page) {
+  const header = page.locator('.page-header')
+  const title = await header.getByRole('heading', { name: 'BRAS & RADIUS', exact: true }).boundingBox()
+  const bar = await header.getByRole('toolbar').boundingBox()
+  const filters = await page.locator('.resource-filter-bar:visible').first().boundingBox()
+  expect(title).not.toBeNull(); expect(bar).not.toBeNull(); expect(filters).not.toBeNull()
+  await expect(header.getByRole('button', { name: 'Tambah BRAS', exact: true })).toBeVisible()
+  expect(filters!.y).toBeGreaterThanOrEqual(bar!.y + bar!.height)
+  if (page.viewportSize()!.width > 720) expect(Math.abs(title!.y + title!.height / 2 - bar!.y - bar!.height / 2)).toBeLessThanOrEqual(2)
+  else expect(bar!.y).toBeGreaterThanOrEqual(title!.y + title!.height)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+}
 for (const width of [375, 1280]) {
   test(`VPN credentials, configuration downloads and retained list at ${width}px`, async ({ page }, testInfo) => {
     const { writes, errors } = await setup(page)
@@ -92,7 +104,7 @@ for (const width of [375, 1280]) {
     await page.setViewportSize({ width, height: 900 })
     await page.goto('/bras')
     await expect(page.getByText('BRAS Tebet', { exact: true })).toBeVisible()
-    await compactControls(page)
+    await headerControls(page)
     await page.screenshot({ path: testInfo.outputPath('bras-list.png'), fullPage: true })
     await page.getByRole('button', { name: 'Tambah BRAS', exact: true }).click()
     const panel = page.getByRole('dialog', { name: 'Tambah BRAS', exact: true })

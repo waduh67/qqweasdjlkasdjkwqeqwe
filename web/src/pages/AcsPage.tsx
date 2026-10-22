@@ -75,14 +75,13 @@ function AcsWorkspace() {
     finally { setUpdating(false) }
   }
   return <div className="network-page">
-    <PageHeader title="ACS / TR-069" />
+    <PageHeader title="ACS / TR-069" actions={active === 'overview' || active === 'settings' ? <CommandBar actions={[
+      { key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, onClick: refresh },
+      ...(active === 'overview' && canManage ? [{ key: 'update', label: 'Perbarui perangkat online', icon: <Radio size={16} />, disabled: updating, onClick: () => void updateDevices() }] : []),
+      ...(active === 'overview' ? [{ key: 'health', label: 'Periksa koneksi', icon: <Activity size={16} />, disabled: checking, onClick: () => void checkHealth(true) }] : []),
+    ]} /> : undefined} />
     <Tabs idPrefix="acs" tabs={tabs} active={active} onChange={next => { setTab(next); setVisited(current => current.includes(next) ? current : [...current, next]) }} />
     <section role="tabpanel" id="acs-panel-overview" aria-labelledby="acs-tab-overview" hidden={active !== 'overview'} className="network-panel">
-      <CommandBar actions={[
-        { key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, onClick: refresh },
-        ...(canManage ? [{ key: 'update', label: 'Perbarui perangkat online', icon: <Radio size={16} />, disabled: updating, onClick: () => void updateDevices() }] : []),
-        { key: 'health', label: 'Periksa koneksi', icon: <Activity size={16} />, disabled: checking, onClick: () => void checkHealth(true) },
-      ]} />
       {updateResult && <p role="status" className="network-note">{updateResult}</p>}
       {canDevices && (statsFailed ? <LoadError message="Ringkasan perangkat gagal dimuat." retry={refresh} /> : <AcsMetrics stats={stats} />)}
       {serverFailed ? <LoadError message="Informasi server gagal dimuat." retry={refresh} /> : <ServerInfo info={info} health={health} stats={canDevices ? stats : null} />}
@@ -91,7 +90,6 @@ function AcsWorkspace() {
       <DevicesTab canCustomer={can('customer.customer.view')} revision={revision} />
     </section>}
     {visited.includes('settings') && <section role="tabpanel" id="acs-panel-settings" aria-labelledby="acs-tab-settings" hidden={active !== 'settings'} className="network-panel">
-      <CommandBar actions={[{ key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, onClick: refresh }]} />
       <OntAcsSettingsCard server={{ info, failed: serverFailed }} layout="section" />
     </section>}
     {canDevices && visited.includes('activity') && <section role="tabpanel" id="acs-panel-activity" aria-labelledby="acs-tab-activity" hidden={active !== 'activity'} className="network-panel"><ActivityLog /></section>}

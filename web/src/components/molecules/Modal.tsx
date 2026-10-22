@@ -4,6 +4,7 @@ import { useActivateModal } from '@fluentui/react-tabster'
 import { Button } from '@/components/atoms'
 import { IconClose } from '@/components/atoms/icons'
 import { ChevronLeft16Regular, ChevronRight12Regular } from '@fluentui/react-icons'
+import { useInternalTheme } from '@/theme/ThemeProvider'
 
 let modalSequence = 0
 const activeModals = new Set<number>()
@@ -38,7 +39,7 @@ export function Modal({ title, onClose, children, footer, wide, layout = 'dialog
   const requestClose = () => { if (modalId === Math.max(...activeModals)) onClose() }
   const ancestors = useContext(ResourceAncestors)
   const [pageTitle] = useState(() => document.querySelector('main h1')?.textContent ?? '')
-  const [operational] = useState(() => document.querySelector('main')?.classList.contains('operational-content') ?? false)
+  const operational = useInternalTheme()
   const trail = useMemo(() => [...ancestors, title], [ancestors, title])
   useLayoutEffect(() => {
     // A loading surface can be replaced in the same commit. Settle focus after

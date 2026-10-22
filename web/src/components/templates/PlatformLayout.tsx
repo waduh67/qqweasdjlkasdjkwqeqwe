@@ -71,9 +71,7 @@ export function PlatformLayout() {
     .join('')
 
   return (
-    <div className={shellClass}>
-      {/* Header Azure full-width: anak langsung .app (grid-area topbar) agar bar biru
-          membentang di atas sidebar & konten, bukan hanya kolom kanan. */}
+    <div className={shellClass + ' gudang-shell'}>
       <header className="topbar">
         <div className="row" style={{ gap: '0.5rem' }}>
           <Button
@@ -118,7 +116,7 @@ export function PlatformLayout() {
       </aside>
 
       <div className="main">
-        <main className="content">
+        <main className="content operational-content">
           <div className="breadcrumb-bar">
             <Breadcrumbs />
           </div>

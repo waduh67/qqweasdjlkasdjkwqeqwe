@@ -400,11 +400,9 @@ export function CustomersPage() {
         title="Pelanggan"
         icon={<IconCustomers size={32} />}
         subtitle="Kelola pelanggan, langganan, dan perangkat yang terpasang."
+        actions={<CommandBar primary={primary} actions={actions} />}
       />
 
-      {/* Impor/ekspor massal menyatu di area Pelanggan (dulu menu sidebar tersendiri). Ekspor
-          digating izin BACA (bisa untuk operator view-only); impor digating izin buat pelanggan. */}
-      <CommandBar primary={primary} actions={actions} />
 
       {psbResult && <ExpressPsbResultCard {...psbResult} onDismiss={() => setPsbResult(null)} />}
 

@@ -154,8 +154,8 @@ export function TenantsPage() {
         subtitle="Kelola organisasi pelanggan, akses admin, dan status langganannya."
         actions={
           can('platform.tenant.create') && (
-            <Button variant="primary" onClick={() => openDraft({ ...EMPTY })}>
-              <IconPlus size={15} /> Tambah tenant
+            <Button variant="primary" icon={<IconPlus size={16} />} onClick={() => openDraft({ ...EMPTY })}>
+              Tambah tenant
             </Button>
           )
         }

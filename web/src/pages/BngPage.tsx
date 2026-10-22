@@ -77,11 +77,10 @@ function BrasWorkspace() {
     { key: 'status', header: 'Status', sortValue: nas => nas.enabled ? 1 : 0, cell: nas => nas.enabled ? 'Aktif' : 'Nonaktif' },
   ]
   return <div className="network-page">
-    <PageHeader title="BRAS & RADIUS" />
+    <PageHeader title="BRAS & RADIUS" actions={<CommandBar primary={canManage ? { key: 'create', label: 'Tambah BRAS', icon: <Plus size={16} />, onClick: () => setEditor({ nas: null }) } : undefined}
+      actions={[{ key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, disabled: loading, onClick: () => { void reload(); void loadRadius() } }]} />} />
     <div className="network-panel">
       <div className="resource-list-controls">
-        <CommandBar primary={canManage ? { key: 'create', label: 'Tambah BRAS', icon: <Plus size={16} />, onClick: () => setEditor({ nas: null }) } : undefined}
-          actions={[{ key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, disabled: loading, onClick: () => { void reload(); void loadRadius() } }]} />
         <FilterBar label="Filter BRAS" search={<FilterSearch label="Cari BRAS" value={query} onChange={setQuery} />}>
           <FilterSelect label="Vendor" value={vendor} onChange={value => setVendor(value as NasVendor | '')}>
             <option value="">Semua</option>{NAS_VENDORS.map(value => <option key={value} value={value}>{NAS_VENDOR_LABEL[value]}</option>)}

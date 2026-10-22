@@ -230,13 +230,12 @@ export function UsersPage() {
 
   return (
     <div className="stack" style={{ gap: '1rem' }}>
-      <PageHeader title="Pengguna" />
+      <PageHeader title="Pengguna" actions={<CommandBar primary={primary} actions={actions} />} />
       {notice && <p role="status" className="form-note">{notice}</p>}
       {passwordUser && <PasswordPanel key={passwordUser.id} title="Reset password" name={passwordUser.name} email={passwordUser.email}
         onClose={() => setPasswordUser(null)} onSave={password => resetUserPassword(passwordUser.id, password)}
         onSaved={() => { setNotice('Password pengguna direset.'); setPasswordUser(null) }} />}
 
-      <CommandBar primary={primary} actions={actions} />
 
       {error && <Text as="p" className="error">{error}</Text>}
 

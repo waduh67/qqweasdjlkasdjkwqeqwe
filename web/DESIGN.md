@@ -1,17 +1,33 @@
 # NetOps Console Design System
 
 
-## Operational Gudang reference override
+## Internal Gudang standard
 
-The tenant shell and Gudang, WO, ordinary visits, Daily, B2B and KPI follow
+All authenticated tenant and platform pages follow
 `/var/www/html/gudang/resources/css/app.css` and its CMS sidebar/dashboard.
-Customer, billing, network and monitoring page bodies retain current tokens.
+This standard includes customer, billing, network, monitoring, IAM, infrastructure,
+and every internal dialog, drawer, menu and toast. Login, signup, customer and
+hotspot portals, public invoices and payment return pages keep their public theme.
+Route-aware Fluent and CSS tokens share this boundary, including portaled surfaces.
+Primary actions use navy #161c28 with white ink in light mode and mint #00e29d
+with navy ink in dark mode. Hover uses #293344/light and #6bf1c5/dark; pressed
+uses #080e1a/light and #00c88b/dark. Links and focus use AA green #007d58/light.
+Shared buttons have a 40px target, 14px semibold label, 16px inline padding and
+pill radius. Form controls use 14px text, 40px minimum height and 14px radius.
+Cards and table frames use 24px radii, neutral borders and 20px padding (tables
+remain flush). Tables use 40px minimum rows, 12px cell padding, tonal selection,
+and retain sorting, selection and labelled mobile records. Header actions sit
+opposite the title on desktop and wrap below it on phones. Toolbars wrap with
+8px gaps; tabs use pills. Existing map/split-panel and resource scroll owners stay.
+Both count workflows use the shared plus icon and “Tambah stock opname” action
+in the page header, gated by their existing manage permission; refresh stays
+secondary. Reference adjustments and legacy blind counts remain separate.
 `.gudang-shell` owns navy navigation #161c28 (dark #080e1a), mint #00e29d
 active icons and tonal selection, with a neutral header. `.operational-content`
 uses canvas #f8f9fb, white cards, border #e2e8ed, ink #161c28, secondary
 #414b5c, muted #626d7b and AA interaction ink #007d58. Dark surfaces are
 #080e1a/#121824/#222c3d with light ink. Body uses local Hanken Grotesk and
-headings Space Grotesk, with system fallbacks. Cards have 16px radii,
+headings Space Grotesk, with system fallbacks. Cards have 24px radii,
 20–24px padding and 16px gaps; tabs are pills with tonal selected fill.
 Existing Fluent forms, exact quantities and resource review remain.
 
@@ -32,20 +48,19 @@ debt are accepted.
 
 ## 1. Atmosphere & Identity
 
-NetOps Console is a calm, dense operator workspace modeled on Fluent/Azure administration surfaces. Its signature is a flat command hierarchy: full-width data regions, restrained cards, one Azure-blue action accent, and explicit text-plus-dot operational states.
+The internal contract above governs tokens and controls on tenant and platform pages. Public screens retain their existing theme. Cards and table frames use 24px radii, body text uses local Hanken Grotesk, headings use local Space Grotesk, and primary actions use navy in light mode and mint in dark mode. Existing resource behavior and specialized layout rules below still apply.
 
 ## 2. Color
 
-All colors come from `src/index.css`: `--plane`, `--surface`, `--surface-2`, `--surface-hover`, `--border`, `--border-strong`, `--text`, `--text-2`, `--muted`, `--accent`, `--accent-hover`, `--accent-ink`, `--accent-soft`, `--focus-ring`, `--good`, `--warning`, `--serious`, `--critical`, and `--danger`. Light and dark values are defined together. Status color must always be paired with a text label or icon.
+Internal colors are defined in `operational.css`, `internal-controls.css` and `theme/gudangTheme.ts`: navy #161c28 or mint #00e29d primary actions, AA green #007d58 light links and focus, canvas #f8f9fb/#080e1a, surface #ffffff/#121824 and neutral border #e2e8ed/#222c3d. Status colors retain their semantic tokens and textual labels.
 
 ## 3. Typography
 
-- Primary: the existing Fluent/Plus Jakarta Sans application stack.
-- Page title: `.page-title`, 28px/36px, weight 600, tight tracking.
-- Section title: Fluent `Text` size 400, semibold.
-- Body: Fluent size 300.
-- Secondary and metadata: Fluent size 200 with `.muted` where appropriate.
-- Device IDs and hashes use normal text with `overflow-wrap: anywhere`; no competing monospace family is introduced.
+- Primary and numeric text: local Hanken Grotesk with system fallbacks.
+- Headings: local Space Grotesk.
+- Page title: 28px/36px at 600; section title: 20px/28px at 600.
+- Body: 14px/20px; metadata can keep its existing density.
+- IDs and hashes wrap where needed.
 
 ## 4. Spacing & Layout
 
@@ -262,8 +277,7 @@ Use the existing mixed Fluent strategy: thin semantic borders plus `--shadow-sm`
   or new visual dependencies are introduced.
 
 - Keep the existing flat tables, command bars, Fluent fields, `Modal`, `ConfirmDialog`,
-  `Badge`, `EmptyState`, and page stacks. Put warehouse operations in a separate
-  `Gudang & Logistik` navigation group; field custody belongs under `Material Saya`.
+  `Badge`, `EmptyState`, and page stacks. Warehouse operations follow the task-based Gudang menu order above; field custody belongs under `Material Saya`.
 - Quantity fields show the unit in their label. Cable is entered in metres with at
   most three decimal places; decimal comma or point is accepted without thousands
   separators. Whole items reject fractions. Convert with integer arithmetic and

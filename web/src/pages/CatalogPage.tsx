@@ -349,9 +349,9 @@ export function CatalogPage() {
       <PageHeader
         title="Paket Internet"
         subtitle=""
+        actions={<CommandBar primary={primary} actions={actions} />}
       />
 
-      <CommandBar primary={primary} actions={actions} />
 
       <Blade
         creation={{ ...creation, steps: [{ key: 'identity', label: 'Identitas' }, { key: 'speed', label: 'Kecepatan' }, { key: 'burst', label: 'Burst' }, { key: 'fup', label: 'FUP' }, { key: 'services', label: 'Layanan' }, { key: 'billing', label: 'Tagihan' }], busy: saving, prepare: () => void save(), summary: <CreationSummary rows={[['Nama paket', draft?.name], ['Harga', draft?.price], ['Unduh / unggah (Mbps)', `${draft?.downMbps} / ${draft?.upMbps}`], ['Jenis layanan', draft?.serviceTypes.map(service => SERVICE_TYPE_LABEL[service]).join(', ')], ['Profil kecepatan', preview], ['Profil FUP', fupPreview]]} /> }}

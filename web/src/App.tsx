@@ -155,8 +155,8 @@ function RequirePlatformAdmin({ children }: { children: ReactNode }) {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <BrowserRouter>
+    <BrowserRouter>
+      <ThemeProvider>
         <ToastProvider>
           <DialogProvider>
             {/* Realm pelanggan (`/portal/*`) di-mount TERPISAH dari konsol operator: provider,
@@ -172,8 +172,8 @@ export default function App() {
             </Routes>
           </DialogProvider>
         </ToastProvider>
-      </BrowserRouter>
-    </ThemeProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   )
 }
 

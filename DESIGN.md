@@ -1,17 +1,33 @@
 # FTTH NetOps Console Design System
 
 
-## Operational Gudang reference override
+## Internal Gudang standard
 
-The tenant shell and Gudang, WO, ordinary visits, Daily, B2B and KPI follow
+All authenticated tenant and platform pages follow
 `/var/www/html/gudang/resources/css/app.css` and its CMS sidebar/dashboard.
-Customer, billing, network and monitoring page bodies retain current tokens.
+This standard includes customer, billing, network, monitoring, IAM, infrastructure,
+and every internal dialog, drawer, menu and toast. Login, signup, customer and
+hotspot portals, public invoices and payment return pages keep their public theme.
+Route-aware Fluent and CSS tokens share this boundary, including portaled surfaces.
+Primary actions use navy #161c28 with white ink in light mode and mint #00e29d
+with navy ink in dark mode. Hover uses #293344/light and #6bf1c5/dark; pressed
+uses #080e1a/light and #00c88b/dark. Links and focus use AA green #007d58/light.
+Shared buttons have a 40px target, 14px semibold label, 16px inline padding and
+pill radius. Form controls use 14px text, 40px minimum height and 14px radius.
+Cards and table frames use 24px radii, neutral borders and 20px padding (tables
+remain flush). Tables use 40px minimum rows, 12px cell padding, tonal selection,
+and retain sorting, selection and labelled mobile records. Header actions sit
+opposite the title on desktop and wrap below it on phones. Toolbars wrap with
+8px gaps; tabs use pills. Existing map/split-panel and resource scroll owners stay.
+Both count workflows use the shared plus icon and “Tambah stock opname” action
+in the page header, gated by their existing manage permission; refresh stays
+secondary. Reference adjustments and legacy blind counts remain separate.
 `.gudang-shell` owns navy navigation #161c28 (dark #080e1a), mint #00e29d
 active icons and tonal selection, with a neutral header. `.operational-content`
 uses canvas #f8f9fb, white cards, border #e2e8ed, ink #161c28, secondary
 #414b5c, muted #626d7b and AA interaction ink #007d58. Dark surfaces are
 #080e1a/#121824/#222c3d with light ink. Body uses local Hanken Grotesk and
-headings Space Grotesk, with system fallbacks. Cards have 16px radii,
+headings Space Grotesk, with system fallbacks. Cards have 24px radii,
 20–24px padding and 16px gaps; tabs are pills with tonal selected fill.
 Existing Fluent forms, exact quantities and resource review remain.
 
@@ -32,33 +48,15 @@ debt are accepted.
 
 ## 1. Atmosphere & Identity
 
-FTTH NetOps Console is a compact operational console: clear, accountable, and calm under pressure. Its signature is Fluent/Azure-like administrative density, with white or charcoal surfaces, restrained blue action emphasis, thin separators, and modest elevation rather than decorative treatment.
+The internal contract above governs tokens and controls on tenant and platform pages. Public screens retain their existing theme. Cards and table frames use 24px radii, body text uses local Hanken Grotesk, headings use local Space Grotesk, and primary actions use navy in light mode and mint in dark mode. Existing resource behavior and specialized layout rules below still apply.
 
 ## 2. Color
 
-### Palette
-
-| Role | Token | Light | Dark | Usage |
-|---|---|---|---|---|
-| Canvas | `--plane` | `#F8F9FA` | `#1B1A19` | Page background |
-| Surface | `--surface` | `#FFFFFF` | `#201F1E` | Cards and controls |
-| Raised surface | `--surface-2` | `#F3F4F6` | `#292827` | Secondary panels |
-| Text | `--text` | `#1B1A19` | `#FFFFFF` | Primary copy |
-| Secondary text | `--text-2` | `#484644` | `#D2D0CE` | Supporting copy |
-| Muted text | `--muted` | `#605E5C` | `#A19F9D` | Hints and metadata |
-| Border | `--border` | `rgba(0,0,0,.06)` | `rgba(255,255,255,.09)` | Card and field separation |
-| Accent | `--accent` | `#0078D4` | `#2899F5` | Primary actions, links, focus |
-| Accent hover | `--accent-hover` | `#106EBE` | `#62ABF5` | Interactive hover state |
-| Success | `--good` | `#10B981` | `#34D399` | Successful and healthy states |
-| Warning | `--warning` | `#F59E0B` | `#FBBF24` | Cautions and pending states |
-| Serious | `--serious` | `#F97316` | `#FB923C` | Elevated caution |
-| Critical | `--critical` | `#EF4444` | `#F87171` | Errors and destructive states |
-
-Use the accent only for interaction and focus, never as decoration. Status always combines color with text or an icon.
+Internal colors are defined in `operational.css`, `internal-controls.css` and `theme/gudangTheme.ts`: navy #161c28 or mint #00e29d primary actions, AA green #007d58 light links and focus, canvas #f8f9fb/#080e1a, surface #ffffff/#121824 and neutral border #e2e8ed/#222c3d. Status colors retain their semantic tokens and textual labels.
 
 ## 3. Typography
 
-The primary stack is `Segoe UI, system-ui, -apple-system, BlinkMacSystemFont, Roboto, Helvetica Neue, sans-serif`; numeric data uses the Fluent numeric stack. The base is 14px with a 20px line height. Page headings are 28px/36px at 600, section headings 20px/28px at 600, card headings 16px/22px at 600, body copy 14px/20px at 400, and captions use Fluent `caption1`. Text below 14px is reserved for existing metadata only.
+Body and numeric text use local Hanken Grotesk with system fallbacks; headings use local Space Grotesk. Body copy is 14px/20px, page headings 28px/36px at 600, section headings 20px/28px at 600 and card headings 16px/22px at 600. Existing metadata may remain smaller.
 
 ## 4. Spacing & Layout
 
@@ -102,7 +100,7 @@ Interactive feedback is restrained: opacity and transform only, typically 120–
 
 ## 7. Depth & Surface
 
-The system uses a mixed border-and-subtle-shadow strategy. Standard cards use a 1px `--border`, `--radius` (4px), and `--shadow-sm`; higher-priority overlay surfaces may use `--shadow-md` or `--shadow-lg`. Tables intentionally stay flat with square corners and no shadow to preserve a dense administrative hierarchy.
+Cards use neutral borders and 24px radii. Table frames share that radius with flush rows and no shadow. Overlays retain their existing elevation and resource scroll ownership.
 
 ## 8. Accessibility Constraints & Accepted Debt
 
@@ -119,4 +117,4 @@ The system uses a mixed border-and-subtle-shadow strategy. Standard cards use a 
 | Item | Location | Why accepted | Owner / Exit |
 |---|---|---|---|
 | Screen-specific inline layout styles | Existing page and organism components | Existing Fluent composition mixes shared CSS primitives with one-off inline layout values. | Consolidate only when a repeated pattern emerges. |
-| Some legacy text and component spacing vary slightly from the 4px rhythm | Existing screens | Preserving established operator screens avoids a visual redesign outside this task. | Address during a dedicated visual-system consolidation. |
+| Some legacy text and component spacing vary slightly from the 4px rhythm | Existing screens | Specialized layouts retain their existing geometry while shared controls follow the internal contract. | Address during a dedicated visual-system consolidation. |

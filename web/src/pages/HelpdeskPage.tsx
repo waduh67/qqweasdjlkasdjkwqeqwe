@@ -75,7 +75,7 @@ export function HelpdeskPage() {
     <section className="helpdesk-panel" role="tabpanel" id={`helpdesk-panel-${tab}`} aria-labelledby={`helpdesk-tab-${tab}`}>
       {tab === 'tickets' ? <>
         <div className="resource-list-controls">
-          <CommandBar primary={{ key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, disabled: loading, onClick: refresh }} />
+          <CommandBar actions={[{ key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, disabled: loading, onClick: refresh }]} />
           <FilterBar label="Filter tiket" search={<FilterSearch label="Cari tiket" value={filters.query} onChange={query => filter({ query })} />}>
             <FilterSelect label="Antrean" value={filters.queue} onChange={queue => filter({ queue: queue as Queue })}>
               <option value="">Semua</option><option value="mine">Tugas saya</option><option value="unassigned">Belum ditugaskan</option><option value="overdue">Melewati SLA</option>
@@ -94,7 +94,7 @@ export function HelpdeskPage() {
           <Pagination page={filters.page} size={SIZE} total={total} busy={loading} onChange={page => setFilters(value => ({ ...value, page }))} />
         </>}
       </> : <>
-        <CommandBar primary={{ key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, onClick: refresh }} />
+        <CommandBar actions={[{ key: 'refresh', label: 'Segarkan', icon: <RefreshCw size={16} />, onClick: refresh }]} />
         {summaryError ? <LoadError message="Ringkasan tiket belum berhasil dimuat." retry={refresh} /> : <dl className="helpdesk-metrics" aria-label="Ringkasan seluruh tiket">
           {([{ key: 'open', label: 'Baru', status: 'OPEN' }, { key: 'inProgress', label: 'Ditangani', status: 'IN_PROGRESS' },
             { key: 'resolved', label: 'Menunggu konfirmasi', status: 'RESOLVED' }, { key: 'unassigned', label: 'Belum ditugaskan', queue: 'unassigned' },

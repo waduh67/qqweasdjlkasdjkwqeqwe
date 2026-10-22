@@ -13,7 +13,7 @@ export async function prepareCounter(page: Page, fixture: NumericJourney) {
 
 export async function startBlindCount(page: Page, location: { id: string; label: string }, counter: { name: string }) {
   await page.goto('/warehouse/counts')
-  await page.getByRole('button', { name: 'Buat stock opname', exact: true }).click()
+  await page.getByRole('button', { name: 'Tambah stock opname', exact: true }).click()
   await selectNamed(page, 'Lokasi stock opname', location.label)
   await page.getByRole('textbox', { name: 'Alasan stock opname', exact: true }).fill('Hitung fisik kabel tanpa melihat saldo buku')
   const control = page.getByRole('combobox', { name: 'Barang dihitung 1', exact: true })

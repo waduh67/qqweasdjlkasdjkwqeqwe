@@ -2,7 +2,6 @@ import { Navigation16Regular } from '@fluentui/react-icons'
 import * as NavIcons from '@/components/molecules/navigationIcons'
 import { useEffect, useRef } from 'react'
 import { useRequestActionCount } from '@/hooks/useRequestActionCount'
-import '@/operational.css'
 import { Text } from '@fluentui/react-components'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
@@ -152,7 +151,6 @@ export function Layout() {
   const { navLabel, navExpanded, navOpen, toggleNav, toggleNavFromSidebar, toggleButtonRef, closeNav, shellClass } = useAppShellNav()
 
   const flush = FLUSH_ROUTES.has(location.pathname)
-  const operational = location.pathname === '/' || ['/warehouse', '/work-orders', '/my-work-orders', '/my-materials', '/my-visits', '/daily-reports', '/kpi', '/b2b'].some(path => location.pathname === path || location.pathname.startsWith(path + '/'))
 
   /**
    * Dorong ke `/subscription` SEKALI saja saat kunci pertama kali terbaca. Sekali, bukan
@@ -282,7 +280,7 @@ export function Layout() {
             </Link>
           </div>
         )}
-        <main className={(flush ? 'content content-flush' : 'content') + (operational ? ' operational-content' : '')}>
+        <main className={(flush ? 'content content-flush' : 'content') + ' operational-content'}>
           {!flush && (
             <div className="breadcrumb-bar">
               <Breadcrumbs labels={pageLabels} />

@@ -1,3 +1,40 @@
+# Unified internal Gudang UI QA (2026-10-22)
+
+Tenant and platform consoles now share the Gudang font, navy/mint primary actions,
+pill buttons, rounded fields and table frames. Creation actions sit in page headers,
+including both stock opname workflows. Route-aware Fluent tokens also style portaled
+dialogs, menus and notifications. Public surfaces retain their existing theme.
+
+The local production build was captured at 375 and 1440 pixels in light and dark:
+customers, catalog, users, roles, invoices, areas, VPN, BRAS, hotspot, ACS, helpdesk,
+platform tenants/users/roles/VPN/RADIUS, and stock opname. The 68 route captures
+and four stock editor captures are in the private, ignored evidence directory
+.omo/runtime/unified-gudang-qa/, with snapshots and geometry in matrix.json.
+All 72 captures were inspected through six contact sheets; stock editors were also
+opened at full size. No document overflow, clipped header action or mismatched
+primary button was found in this matrix. Empty data is synthetic; these captures
+do not prove populated tables or backend behavior.
+
+Customer and network browser checks passed (24 tests). Platform infrastructure
+checks passed (20 tests across 375/768/1280/1920), preserving draft, password,
+review, failed-write and exact-save assertions. The mobile PSB check exposed an
+absolute footer covering the last coordinate action when buttons wrapped. An
+in-flow footer now reserves its actual height; the existing click assertion passes
+without forcing interaction. Shared theme and count tests cover public boundaries,
+light/dark tokens, header placement, exact creation payload and view-only access.
+
+Build and warehouse E2E typecheck passed. The final frontend suite passed after
+the footer correction (178 files, 1030 tests, one worker). Oxlint passed with 18
+existing warnings. The accent-stripe check passed
+for 24 changed source files. No complete accessibility or performance conformance
+claim is made. Existing specialized map layouts, compact typography and public
+theme debt remain as documented in DESIGN.md.
+
+Self-review covered route/theme boundaries, portal inheritance, responsive footer
+flow, permission gates, staged changes and direct test assertions. No actionable
+finding remains in the changed behavior. Production verification is recorded in
+the release PR after activation.
+
 # Resource layers and sidebar QA
 
 The resource workflow preserves the page beneath creation/edit panels and supports nested master creation. Sidebar groups persist independently across navigation and refresh. Release details are in `docs/ui-ux/AZURE-RESOURCE-LAYERS.md`.

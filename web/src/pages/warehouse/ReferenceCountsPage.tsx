@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { Plus } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { getReferenceCount, listReferenceCounts } from '@/api/warehouse/referenceCounts'
 import { useCan } from '@/auth/useCan'
@@ -15,9 +16,9 @@ export function ReferenceCountsPage() {
   const [params, setParams] = useSearchParams(), id = params.get('id'), { can } = useCan(), [page, setPage] = useState(0), [creating, setCreating] = useState(false)
   const load = useCallback(() => listReferenceCounts(page), [page]), result = useWarehouseQuery(load)
   return <div className="stack"><PageHeader title="Stock Opname" subtitle="Bandingkan saldo buku dengan hitungan fisik dan simpan penyesuaian yang dapat ditelusuri."
-    actions={!id && can('warehouse.count.manage') ? <Button variant="primary" onClick={() => setCreating(true)}>Opname baru</Button> : undefined} />
+    actions={!id && can('warehouse.count.manage') ? <Button variant="primary" icon={<Plus size={16} />} onClick={() => setCreating(true)}>Tambah stock opname</Button> : undefined} />
     {id ? <ReferenceCountDetail key={id} id={id} onBack={() => setParams({})} /> : <>
-      <Button onClick={result.reload}>Muat ulang opname</Button>
+      <div className="row wrap"><Button onClick={result.reload}>Muat ulang opname</Button></div>
       <WarehouseState {...result}>{data => <><DataTable presentation="warehouse" rows={data.items} rowKey={row => row.id}
         empty={<EmptyState title="Belum ada opname" hint="Pilih barang dan lokasi, muat saldo buku, lalu catat hasil hitungan fisik." />} columns={[
           { key: 'material', header: 'Material', cell: row => row.snapshot.skuName, description: row => row.snapshot.locationName },
