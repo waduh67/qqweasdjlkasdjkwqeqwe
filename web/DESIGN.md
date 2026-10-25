@@ -1,35 +1,36 @@
 # NetOps Console Design System
 
 
-## Internal Gudang standard
+## Internal Azure / Fluent standard
 
-All authenticated tenant and platform pages follow
-`/var/www/html/gudang/resources/css/app.css` and its CMS sidebar/dashboard.
+All authenticated tenant and platform pages use the existing Azure / Fluent
+theme in `theme/azureTheme.ts`, `index.css`, `navigation.css` and `controls.css`.
 This standard includes customer, billing, network, monitoring, IAM, infrastructure,
 and every internal dialog, drawer, menu and toast. Login, signup, customer and
 hotspot portals, public invoices and payment return pages keep their public theme.
-Route-aware Fluent and CSS tokens share this boundary, including portaled surfaces.
-Primary actions use navy #161c28 with white ink in light mode and mint #00e29d
-with navy ink in dark mode. Hover uses #293344/light and #6bf1c5/dark; pressed
-uses #080e1a/light and #00c88b/dark. Links and focus use AA green #007d58/light.
-Shared buttons have a 40px target, 14px semibold label, 16px inline padding and
-pill radius. Form controls use 14px text, 40px minimum height and 14px radius.
-Cards and table frames use 24px radii, neutral borders and 20px padding (tables
-remain flush). Tables use 40px minimum rows, 12px cell padding, tonal selection,
-and retain sorting, selection and labelled mobile records. Header actions sit
+Fluent uses the same Azure light/dark theme across routes and portaled surfaces;
+the internal route boundary retains its dialog and resource scroll behavior.
+Primary controls, links and focus use the Azure brand ramp centered on #0078d4.
+The internal topbar uses --console-header-bg #0078d4 in both themes with white ink.
+Light navigation is white with neutral
+selection and blue icons; dark navigation uses Fluent charcoal and blue accents.
+Shared compact controls use 13px text and 2px Fluent radii (4px large, 6px XL).
+Desktop buttons have a 24px minimum height and 16px inline padding; touch
+controls keep a 40px minimum target. Cards use the existing 8px radius, neutral
+borders and 20px padding (tables remain flush). Tables use 32px minimum rows,
+4px vertical and 12px horizontal cell padding, tonal selection, and retain
+sorting, selection and labelled mobile records. Header actions sit
 opposite the title on desktop and wrap below it on phones. Toolbars wrap with
-8px gaps; tabs use pills. Existing map/split-panel and resource scroll owners stay.
+8px gaps; tabs use the existing Fluent states. Existing map/split-panel and resource scroll owners stay.
 Both count workflows use the shared plus icon and “Tambah stock opname” action
 in the page header, gated by their existing manage permission; refresh stays
 secondary. Reference adjustments and legacy blind counts remain separate.
-`.gudang-shell` owns navy navigation #161c28 (dark #080e1a), mint #00e29d
-active icons and tonal selection, with a neutral header. `.operational-content`
-uses canvas #f8f9fb, white cards, border #e2e8ed, ink #161c28, secondary
-#414b5c, muted #626d7b and AA interaction ink #007d58. Dark surfaces are
-#080e1a/#121824/#222c3d with light ink. Body uses local Hanken Grotesk and
-headings Space Grotesk, with system fallbacks. Cards have 24px radii,
-20–24px padding and 16px gaps; tabs are pills with tonal selected fill.
-Existing Fluent forms, exact quantities and resource review remain.
+`.operational-content` inherits the shared canvas, surface, text and accent
+tokens. Light canvas is #f8f9fa, cards #ffffff, border #e4e8ed and ink #1b1a19.
+Dark canvas/cards are #1b1a19/#201f1e with light ink and #2899f5 CSS accents.
+Body, headings and numeric text use `--console-font-family`: Azure UI / Segoe UI
+with the existing system fallbacks. Operational layouts, exact quantities and
+resource review use these shared tokens.
 
 Menu order follows tasks: Dashboard, KPI, Gudang or Material Saya and Retur,
 Request Material, Pelanggan, WO, Kunjungan Saya, Daily, B2B, then setup and
@@ -54,18 +55,17 @@ debt are accepted.
 
 ## 1. Atmosphere & Identity
 
-The internal contract above governs tokens and controls on tenant and platform pages. Public screens retain their existing theme. Cards and table frames use 24px radii, body text uses local Hanken Grotesk, headings use local Space Grotesk, and primary actions use navy in light mode and mint in dark mode. Existing resource behavior and specialized layout rules below still apply.
+The internal contract above governs tokens and controls on tenant and platform pages. The blue header, light or dark neutral navigation, compact Fluent controls and Segoe typography restore the Azure console appearance. Existing resource behavior and specialized layout rules below still apply.
 
 ## 2. Color
 
-Internal colors are defined in `operational.css`, `internal-controls.css` and `theme/gudangTheme.ts`: navy #161c28 or mint #00e29d primary actions, AA green #007d58 light links and focus, canvas #f8f9fb/#080e1a, surface #ffffff/#121824 and neutral border #e2e8ed/#222c3d. Status colors retain their semantic tokens and textual labels.
+Shared colors are defined in `index.css` and `theme/azureTheme.ts`: Azure Blue #0078d4 and its Fluent brand ramp, canvas #f8f9fa/#1b1a19, surface #ffffff/#201f1e and neutral borders. Operational pages inherit these tokens instead of overriding the brand. Status colors retain their semantic tokens and textual labels.
 
 ## 3. Typography
 
-- Primary and numeric text: local Hanken Grotesk with system fallbacks.
-- Headings: local Space Grotesk.
+- Primary, heading and numeric text: `--console-font-family` (Azure UI / Segoe UI, then system fallbacks).
 - Page title: 28px/36px at 600; section title: 20px/28px at 600.
-- Body: 14px/20px; metadata can keep its existing density.
+- Body and compact controls: 13px/20px; metadata can keep its existing density.
 - IDs and hashes wrap where needed.
 
 ## 4. Spacing & Layout

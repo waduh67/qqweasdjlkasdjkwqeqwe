@@ -10,7 +10,7 @@ import {
 import { FluentProvider } from '@fluentui/react-components'
 import { useLocation } from 'react-router-dom'
 import { azureDark, azureLight } from './azureTheme'
-import { gudangDark, gudangLight, isInternalPath } from './gudangTheme'
+import { isInternalPath } from './internalRoutes'
 import '@/operational.css'
 import '@/internal-controls.css'
 
@@ -46,7 +46,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const toggle = useCallback(() => setThemeState((t) => (t === 'dark' ? 'light' : 'dark')), [])
 
   const value = useMemo<ThemeCtx>(() => ({ theme, internal, setTheme, toggle }), [theme, internal, setTheme, toggle])
-  const fluentTheme = internal ? (theme === 'dark' ? gudangDark : gudangLight) : (theme === 'dark' ? azureDark : azureLight)
+  const fluentTheme = theme === 'dark' ? azureDark : azureLight
 
   return (
     <Ctx.Provider value={value}>

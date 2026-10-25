@@ -184,7 +184,7 @@ export function Layout() {
     .join('')
 
   return (
-    <div className={shellClass + ' gudang-shell'}>
+    <div className={shellClass}>
       <header className="topbar">
         <div className="row" style={{ gap: '0.5rem' }}>
           {/* Satu tombol, dua arti: menciutkan sidebar di layar lebar, membuka laci nav
