@@ -39,8 +39,12 @@ class CurrentAuthorityPersistence(
         val platform = actor.first
         val owner = query("SELECT EXISTS(SELECT FROM iam_tenant_owner WHERE tenant_id=? AND user_id=?)",
             user.tenantId, user.userId) { it.getBoolean(1) }.single()
-        val roles = query("""SELECT role.id FROM user_role link JOIN role ON role.id=link.role_id
-            WHERE link.user_id=? AND role.tenant_id=?""", user.userId, user.tenantId) { it.getObject(1, UUID::class.java) }.toSet()
+        val roleRows = query("""SELECT role.id,role.default_key FROM user_role link JOIN role ON role.id=link.role_id
+            WHERE link.user_id=? AND role.tenant_id=?""", user.userId, user.tenantId) {
+            it.getObject(1, UUID::class.java) to it.getString(2)
+        }
+        val roles = roleRows.map { it.first }.toSet()
+        val admin = roleRows.any { it.second == "ADMIN" }
         val permissions = if (owner && !platform) query("SELECT code FROM permission WHERE active AND NOT platform_only") { it.getString(1) }.toSet()
         else query("""SELECT DISTINCT permission.code FROM user_role link
             JOIN role ON role.id=link.role_id AND role.tenant_id=?
@@ -61,7 +65,7 @@ class CurrentAuthorityPersistence(
             }
         }
         return CurrentAuthority(fence, roles, permissions,
-            if (platform || owner) AuthorityScope.Unrestricted else AuthorityScope.Restricted(areas), platform)
+            if (platform || owner || (admin && areas.isEmpty())) AuthorityScope.Unrestricted else AuthorityScope.Restricted(areas), platform)
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

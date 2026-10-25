@@ -71,7 +71,7 @@ export function PlatformLayout() {
     .join('')
 
   return (
-    <div className={shellClass + ' gudang-shell'}>
+    <div className={shellClass}>
       <header className="topbar">
         <div className="row" style={{ gap: '0.5rem' }}>
           <Button

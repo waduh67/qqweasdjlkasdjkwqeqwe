@@ -29,7 +29,7 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(status)
         return mapper.readTree(response.contentAsString)
     }
-    private fun setup(fieldAreas: Boolean = true): Setup {
+    private fun setup(fieldAreas: Boolean = true, adminAreas: Boolean = true): Setup {
         val owner = tenant()
         fun member(name: String): Pair<String, String> {
             val role = mapper.readTree(request("GET", "/api/roles", owner).contentAsString).single { it.path("name").asString() == name }.path("id").asString()
@@ -40,7 +40,8 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
             assertThat(created.status).withFailMessage(created.contentAsString).isEqualTo(201)
             val id = mapper.readTree(created.contentAsString).path("id").asString()
             val grant = request("PUT", "/api/users/$id/access", owner, mapper.writeValueAsString(mapOf("roleIds" to listOf(role),
-                "areaIds" to if (!fieldAreas && name.startsWith("Teknisi")) emptyList<String>() else listOf(area(owner)))))
+                "areaIds" to if ((!fieldAreas && name.startsWith("Teknisi")) || (!adminAreas && name == "Admin"))
+                    emptyList<String>() else listOf(area(owner)))))
             assertThat(grant.status).withFailMessage(grant.contentAsString).isEqualTo(200)
             return login(slug, email) to id
         }
@@ -59,6 +60,22 @@ class ReferenceWorkOrderIT : WarehouseMasterHttpFixture() {
     }
     private fun body(setup: Setup, technician: String = setup.techId) = """{"typeId":"${setup.type}","title":"Pasang pelanggan","technicianId":"$technician","areaId":"${area(setup.owner)}","description":"Datang sesuai jadwal"}"""
     private fun create(setup: Setup) = ok("POST", "", setup.admin, body(setup), status = 201)
+
+    @Test fun `admin without assigned areas creates and edits work in an area added after login`() {
+        val s = setup(fieldAreas = false, adminAreas = false)
+        val response = request("POST", "/api/areas", s.owner, """{"code":"NEW","name":"New area"}""")
+        assertThat(response.status).isEqualTo(201)
+        val newArea = mapper.readTree(response.contentAsString).path("id").asString()
+        val work = ok("POST", "", s.admin, body(s).replace(area(s.owner), newArea), status = 201)
+        val id = work.path("id").asString()
+        assertThat(ok("GET", "/$id", s.admin).path("workOrder").path("areaId").asString()).isEqualTo(newArea)
+        val updated = ok("PUT", "/$id", s.admin, mapper.writeValueAsString(mapOf(
+            "expectedRevision" to 0, "title" to "Pindah area", "description" to "Lokasi diperbarui",
+            "priority" to "NORMAL", "areaId" to area(s.owner))))
+        assertThat(updated.path("areaId").asString()).isEqualTo(area(s.owner))
+        assertThat(updated.path("revision").asLong()).isEqualTo(1)
+        assertThat(ok("GET", "/$id", s.tech).path("workOrder").path("areaId").asString()).isEqualTo(area(s.owner))
+    }
     private val png = java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=")
     private fun upload(id: String, token: String, revision: Long, slot: String = "Bukti Pasang", bytes: ByteArray = png,
         key: String = UUID.randomUUID().toString(), contentType: String = "image/png") = mvc.perform(
