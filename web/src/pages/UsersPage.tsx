@@ -106,7 +106,7 @@ export function UsersPage() {
     user.roleIds.map((id) => roles.find((r) => r.id === id)?.name ?? '?').join(', ')
   const areaCodes = (user: User) =>
     user.areaIds.length === 0
-      ? 'semua'
+      ? 'Tidak ditentukan'
       : user.areaIds.map((id) => areas.find((a) => a.id === id)?.code ?? '?').join(', ')
 
   const columns: Column<User>[] = [
@@ -368,7 +368,8 @@ function RoleAreaPicker({
         ))}
       </div>
       <div>
-        <Text as="strong" weight="semibold" >Area (kosong = semua area)</Text>
+        <Text as="strong" weight="semibold" >Area</Text>
+        <Text as="p" className="muted">Admin bawaan: kosong = semua area tenant. Pilih area untuk membatasi akses.</Text>
         {areas.length === 0 && <Text as="p" className="muted">Belum ada area.</Text>}
         {areas.map((area) => (
           <div key={area.id} style={{ marginTop: '0.2rem' }}>
