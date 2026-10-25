@@ -23,7 +23,7 @@ class ReferenceWorkIntakeIT : WarehouseMasterHttpFixture() {
         assertThat(response.status).withFailMessage(response.contentAsString).isEqualTo(status)
         return mapper.readTree(response.contentAsString)
     }
-    private fun setup(): Setup {
+    private fun setup(adminAreas: Boolean = true): Setup {
         val slug = "intake-${UUID.randomUUID().toString().take(8)}"
         onboarding.onboard(OnboardTenantCommand(slug, "ISP", "owner@$slug.test", "Owner", "secret12345"))
         val owner = login(slug, "owner@$slug.test")
@@ -34,7 +34,8 @@ class ReferenceWorkIntakeIT : WarehouseMasterHttpFixture() {
             val email = "member-${UUID.randomUUID().toString().take(8)}@$slug.test"
             val id = ok("POST", "/api/users", owner, mapOf("name" to name, "email" to email, "password" to "secret12345",
                 "roleIds" to listOf(role)), 201).path("id").asString()
-            ok("PUT", "/api/users/$id/access", owner, mapOf("roleIds" to listOf(role), "areaIds" to listOf(area)))
+            ok("PUT", "/api/users/$id/access", owner, mapOf("roleIds" to listOf(role),
+                "areaIds" to if (name == "Admin" && !adminAreas) emptyList<String>() else listOf(area)))
             return login(slug, email) to id
         }
         val (admin, _) = member("Admin")
@@ -59,6 +60,16 @@ class ReferenceWorkIntakeIT : WarehouseMasterHttpFixture() {
             .andReturn().response
         assertThat(upload.status).withFailMessage(upload.contentAsString).isEqualTo(201)
         ok("POST", "/api/v2/work-orders/$id/complete", s.technician, mapOf("expectedRevision" to 1, "notes" to "Selesai", "materials" to emptyList<Any>()))
+    }
+
+    @Test fun `builtin admin without area assignments dispatches PSB work`() {
+        val s = setup(adminAreas = false)
+        val created = psb(s)
+        val id = created.path("workOrderId").asString()
+        val assigned = ok("POST", "/api/v2/work-orders/intake/$id/dispatch", s.admin, dispatch(s, type(s, "PSB")))
+        assertThat(assigned.path("areaId").asString()).isEqualTo(s.area)
+        assertThat(assigned.path("technicianId").asString()).isEqualTo(s.technicianId)
+        assertThat(ok("GET", "/api/v2/work-orders/$id", s.technician).path("workOrder").path("id").asString()).isEqualTo(id)
     }
 
     @Test fun `PSB source keeps its identity through scoped dispatch retry and installation completion`() {

@@ -44,7 +44,8 @@ harus cocok; reference site/area/user asing tidak dapat digunakan.
 ## Setup tenant kosong
 
 1. Daftar `/api/signup`, lalu login `/api/auth/login`.
-2. Buat area `/api/areas`; beri administrator area itu melalui
+2. Buat area `/api/areas`. Admin bawaan tanpa penetapan area dapat memakai semua
+   area tenant. Untuk membatasinya, pilih area melalui
    `PUT /api/users/{id}/access`, mempertahankan roleIds-nya.
 3. Buat root WAREHOUSE dengan areaId tersebut, lalu BIN dengan parentLocationId.
 4. Buat SKU dan supplier. Receiving disediakan task08, bukan scan atau setup master.
@@ -55,8 +56,11 @@ Contoh body root:
 {"code":"MAIN","name":"Gudang utama","kind":"WAREHOUSE","areaId":"<area UUID>","issueEligible":true}
 ```
 
-CurrentAuthority task06 memperlakukan area kosong sebagai nol akses, bukan akses
-seluruh tenant. Location manager boleh membuat root dalam area yang diizinkan;
+CurrentAuthority memberi scope seluruh area tenant kepada Admin bawaan
+(`default_key=ADMIN`) jika penetapan area kosong. Area eksplisit membatasi Admin,
+dan role lain dengan area restricted kosong tetap memiliki nol akses area.
+Permission operasi dan scope lokasi tidak berubah. Location manager boleh membuat
+root dalam area yang diizinkan;
 creator mendapat scope lokasi baru secara atomik di bawah exclusive IAM fence dan
 epoch increment. Grant parent yang ada mewariskan akses anak sesuai scope task06.
 Perubahan hierarchy/custodian/area/kind/eligibility diblokir bila referensi masih

@@ -9,8 +9,15 @@ atau kebijakan approval task11/12.
 `CurrentAuthorityPersistence` mengambil shared catalog fence lalu shared row lock
 epoch tenant, dan membaca ulang enabled user, role, permission aktif dan area
 melalui JDBC. JWT hanya identitas dan ID sesi opsional, bukan sumber permission.
-Fence berlaku hanya pada transaksi/thread asal. Area restricted kosong bukan
-unrestricted. Scope gudang dibaca pemilik inventory di bawah fence IAM yang sama.
+Fence berlaku hanya pada transaksi/thread asal. Owner dan platform admin memiliki
+scope area unrestricted. Role Admin bawaan (`default_key=ADMIN`) tanpa penetapan
+area juga mengakses semua area tenant, termasuk area yang baru dibuat. Penetapan
+area eksplisit membatasi Admin ke area tersebut. Kebijakan ini membaca role
+database saat ini, bukan nama role atau klaim JWT. Role lain dengan area restricted
+kosong tetap tidak memperoleh akses area. V223 menyamakan validasi command WO
+di database dengan kebijakan ini tanpa mengubah penetapan area pengguna.
+Permission operasi serta scope gudang
+dan lokasi tetap diperiksa terpisah di bawah fence IAM yang sama.
 
 Mutasi user, role, area, bootstrap grant dan 2FA mengambil fence eksklusif sebelum
 membaca target. Mutasi administratif juga mengecek permission database sekarang:
