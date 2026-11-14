@@ -40,7 +40,9 @@ internal class PostingLineBindings(private val sql: PostingSql, private val comm
             require(debit==incoming.fold(zero) { sum,leg -> sum+leg.quantity }) { "Each posting line must have paired base quantities" }
             val retained=incoming.filter { leg ->
                 val child=pending[leg.dimension.stockIdentityId]
-                child!=null && child.second.kind==SegmentKind.REMNANT && child.second.quantity==leg.quantity && outgoing.any { source ->
+                child!=null && (child.second.kind==SegmentKind.REMNANT ||
+                    child.second.kind==SegmentKind.BULK && child.second.quantity.unit==StockUnit.EA) &&
+                    child.second.quantity==leg.quantity && outgoing.any { source ->
                     child.first==source.dimension.stockIdentityId && unchangedPosition(leg,source)
                 }
             }

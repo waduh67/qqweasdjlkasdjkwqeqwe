@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { Button } from '@/components/atoms'
 import { useWarehouseQuery } from '@/hooks/useWarehouseQuery'
 import { usePortalAuth } from './PortalAuthContext'
-import { getPortalAssets } from './portalAssets'
+import { getPortalAssets } from './portalAssetApi'
 
 export function PortalAssets() {
   const { customer } = usePortalAuth()

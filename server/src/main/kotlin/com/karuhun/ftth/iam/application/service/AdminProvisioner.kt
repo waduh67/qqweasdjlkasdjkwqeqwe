@@ -56,6 +56,9 @@ class AdminProvisioner(
         listOf(ne, fo).forEach { ensureFeaturePermissions(it, setOf("field.report.view", "field.report.submit"), "FIELD_REPORT_V1") }
         ensureFeaturePermissions(admin, setOf("network.ip.view", "network.ip.manage"), "NETWORK_IP_V1")
         listOf(manager, ne).forEach { ensureFeaturePermissions(it, setOf("network.ip.view"), "NETWORK_IP_V1") }
+        listOf(admin, manager, ne).forEach { ensureFeaturePermissions(it, setOf("network.ip.check"), "NETWORK_IP_PROBES_V1") }
+        ensureFeaturePermissions(admin, setOf("warehouse.loan.view", "warehouse.loan.manage", "warehouse.warranty.view", "warehouse.warranty.manage"), "WAREHOUSE_CLIENT_OPERATIONS_V1")
+        ensureFeaturePermissions(manager, setOf("warehouse.loan.view", "warehouse.warranty.view"), "WAREHOUSE_CLIENT_OPERATIONS_V1")
         return admin
     }
 

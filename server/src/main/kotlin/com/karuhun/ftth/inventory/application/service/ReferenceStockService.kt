@@ -42,7 +42,7 @@ class ReferenceStockService(private val authority: CurrentAuthorityApi, private 
     fun positions(skuId: UUID, page: Int, size: Int, search: String?, locationId: UUID?,
         holderKind: String?, availableOnly: Boolean): WarehousePage<ReferenceStockPosition> {
         validatePage(page, size)
-        if ((search != null && search.length > 200) || (holderKind != null && holderKind !in setOf("WAREHOUSE", "TECHNICIAN", "VEHICLE", "CUSTOMER")))
+        if ((search != null && search.length > 200) || (holderKind != null && holderKind !in setOf("WAREHOUSE", "TECHNICIAN", "VEHICLE", "CUSTOMER", "EXTERNAL", "REPAIR", "TRANSIT")))
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST)
         val scope = scope(skuId)
         if (locationId != null && locationId !in scope.ids) masterFailure(WarehouseErrorCode.NOT_FOUND)

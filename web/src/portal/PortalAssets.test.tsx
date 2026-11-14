@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { portalTokenStore } from './portalClient'
 import { PortalAssets } from './PortalAssets'
-import { getPortalAssets } from './portalAssets'
+import { getPortalAssets } from './portalAssetApi'
 
 vi.mock('./PortalAuthContext', () => ({ usePortalAuth: () => ({ customer: { customerId: 'customer', tenantId: 'tenant' } }) }))
 afterEach(() => { vi.unstubAllGlobals(); portalTokenStore.clear() })

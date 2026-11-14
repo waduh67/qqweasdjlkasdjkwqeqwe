@@ -26,7 +26,8 @@ class NetworkInventoryController(private val service: NetworkInventoryService) {
     }
     @GetMapping("/ips") @PreAuthorize("@authz.can('network.ip.view')")
     fun ips(@RequestParam(defaultValue="") q: String, @RequestParam(required=false) status: String?, @RequestParam(required=false) vendorId: UUID?,
-        @RequestParam(defaultValue="0") page: Int, @RequestParam(defaultValue="20") size: Int) = service.ips(q,status,vendorId,PageRequest(page,size))
+        @RequestParam(defaultValue="0") page: Int, @RequestParam(defaultValue="20") size: Int,
+        @RequestParam(required=false) blockId: UUID?, @RequestParam(required=false) reachability: String?) = service.ips(q,status,vendorId,PageRequest(page,size),blockId,reachability)
     @PostMapping("/ips") @PreAuthorize("@authz.can('network.ip.manage')")
     fun createIp(@RequestBody input: PublicIpInput, @RequestHeader("Idempotency-Key") key: UUID) = ResponseEntity.status(201).body(service.saveIp(null,input,key))
     @PutMapping("/ips/{id}") @PreAuthorize("@authz.can('network.ip.manage')")

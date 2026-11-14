@@ -220,7 +220,7 @@ class ReferenceRequestService(private val cutovers: InventoryTenantCutoverApi, p
         return ids
     }
     internal fun permission(current: CurrentAuthority, code: String) { if (!permits(current, code)) masterFailure(WarehouseErrorCode.FORBIDDEN) }
-    private fun permits(current: CurrentAuthority, code: String) = current.platformAdmin || code in current.permissions
+    internal fun permits(current: CurrentAuthority, code: String) = current.platformAdmin || code in current.permissions
     private fun owner(current: CurrentAuthority) { if (owners.findUserId() != current.fence.identity.userId) masterFailure(WarehouseErrorCode.FORBIDDEN) }
     internal fun notes(value: String) { if (value.length > 1000 || value.any { it.isISOControl() && it != '\n' }) masterFailure(WarehouseErrorCode.MALFORMED_REQUEST) }
     internal fun quantity(value: String, unit: WarehouseBaseUnit): Long = com.karuhun.ftth.inventory.domain.model.StockQuantity.parseBase(value,

@@ -29,6 +29,9 @@ import { WarehouseTransitionPage } from './WarehouseTransitionPage'
 import { WarehouseArchivePage } from './WarehouseArchivePage'
 import { REFERENCE_WAREHOUSE_PAGES } from './navigation'
 import { ReferenceWarehouseOverview } from '../OperationalDashboard'
+import { WarehousePurchasesPage } from './WarehousePurchasesPage'
+import { WarehouseLoansPage } from './WarehouseLoansPage'
+import { WarehouseWarrantiesPage } from './WarehouseWarrantiesPage'
 
 const pages = {
   catalog: WarehouseCatalogPage, receipts: WarehouseReceiptsPage, approvals: WarehouseApprovalsPage,
@@ -58,6 +61,9 @@ function ReferenceRoutes() {
     <Route path="receipts" element={<WarehouseGate permissions={['warehouse.stock.view']}><ReferenceReceiptsPage /></WarehouseGate>} />
     <Route path="transfers" element={<WarehouseGate permissions={['warehouse.stock.view']}><ReferenceTransfersPage /></WarehouseGate>} />
     <Route path="requests" element={<WarehouseGate permissions={['warehouse.request.view', 'warehouse.request.own']}><ReferenceRequestsPage /></WarehouseGate>} />
+    <Route path="purchases" element={<WarehouseGate permissions={['warehouse.request.view']}><WarehousePurchasesPage /></WarehouseGate>} />
+    <Route path="loans" element={<WarehouseGate permissions={['warehouse.loan.view']}><WarehouseLoansPage /></WarehouseGate>} />
+    <Route path="warranties" element={<WarehouseGate permissions={['warehouse.warranty.view']}><WarehouseWarrantiesPage /></WarehouseGate>} />
     <Route path="returns" element={<WarehouseGate permissions={['warehouse.return.own', 'warehouse.return.manage']}><ReferenceReturnsPage /></WarehouseGate>} />
     <Route path="counts" element={<WarehouseGate permissions={['warehouse.count.manage']}><ReferenceCountsPage /></WarehouseGate>} />
     <Route path="settings" element={<ReferenceSettingsPage />} />

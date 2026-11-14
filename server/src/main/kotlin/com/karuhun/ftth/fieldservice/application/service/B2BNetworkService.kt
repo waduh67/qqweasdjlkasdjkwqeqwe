@@ -42,6 +42,8 @@ class B2BNetworkService(private val cipher: SecretCipher) {
         activeVendor(sql, input.details.backupVendorId, previous?.details?.backupVendorId)
         input.publicIpIds.forEach { id ->
             val ip = sql.ip(id)
+            if (ip.addressRole != "HOST" || ip.clientId == null && ip.usedBy.isNotBlank())
+                throw ConflictException("IP " + ip.address + " tidak tersedia untuk alokasi pelanggan")
             if (ip.clientId != null && ip.clientId != client) throw ConflictException("IP " + ip.address + " sudah dipakai " + ip.clientName)
         }
         val password = when {

@@ -19,7 +19,7 @@ export function referencePosition(value: unknown) {
   return { stockIdentityId: uuid(row.stockIdentityId), skuId: uuid(row.skuId), skuCode: text(row.skuCode), skuName: text(row.skuName),
     tracking: oneOf(row.tracking, ['BULK', 'LOT', 'SERIAL']), baseUnit: oneOf(row.baseUnit, ['EA', 'MM']), quantityBase: decimal(row.quantityBase),
     locationId: uuid(row.locationId), locationName: text(row.locationName), holderId: uuid(row.holderId), holderName: text(row.holderName), holderEmail: nullable(row.holderEmail, text, 'holderEmail'),
-    holderKind: oneOf(row.holderKind, ['WAREHOUSE', 'TECHNICIAN', 'VEHICLE', 'CUSTOMER']), status: text(row.status),
+    holderKind: oneOf(row.holderKind, ['WAREHOUSE', 'TECHNICIAN', 'VEHICLE', 'CUSTOMER', 'EXTERNAL', 'REPAIR', 'TRANSIT']), status: text(row.status),
     serial: nullable(row.serial, text, 'serial'), mac: nullable(row.mac, text, 'mac'), revision: integer(row.revision) }
 }
 export type ReferencePosition = ReturnType<typeof referencePosition>

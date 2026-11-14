@@ -6,16 +6,21 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.sql.ResultSet
 import java.util.UUID
 
-internal const val PUBLIC_IP_SELECT = """SELECT p.*,host(p.address) ip_address,v.name vendor_name,a.client_id,s.name client_name
+internal const val PUBLIC_IP_SELECT = """SELECT p.*,host(p.address) ip_address,v.name vendor_name,a.client_id,s.name client_name,
+    coalesce(a.used_by,'') usage_label,probe.result::text probe_result
     FROM network_public_ip p LEFT JOIN network_vendor v ON v.tenant_id=p.tenant_id AND v.id=p.vendor_id
     LEFT JOIN network_ip_allocation a ON a.tenant_id=p.tenant_id AND a.ip_id=p.id
+    LEFT JOIN network_ip_probe probe ON probe.tenant_id=p.tenant_id AND probe.ip_id=p.id
     LEFT JOIN LATERAL (SELECT name FROM b2b_client_setting WHERE tenant_id=a.tenant_id AND client_id=a.client_id
         ORDER BY effective_month DESC LIMIT 1) s ON true"""
 internal fun networkVendor(row: ResultSet) = NetworkVendorView(row.uuid("id"), row.getString("name"),
     row.getString("contact"), row.getString("notes"), row.getBoolean("active"), row.getLong("revision"))
 internal fun publicIp(row: ResultSet) = PublicIpView(row.uuid("id"), row.getString("ip_address"), row.getString("subnet"),
     row.getString("gateway"), row.getObject("vendor_id", UUID::class.java), row.getString("vendor_name"),
-    row.getString("notes"), row.getLong("revision"), row.getObject("client_id", UUID::class.java), row.getString("client_name"))
+    row.getString("notes"), row.getLong("revision"), row.getObject("client_id", UUID::class.java), row.getString("client_name"),
+    row.getObject("block_id", UUID::class.java), row.getString("address_role"),
+    row.getString("client_name") ?: row.getString("usage_label"),
+    row.getString("probe_result")?.let { jacksonObjectMapper().readValue(it, IpProbeResult::class.java) })
 internal fun B2BSql.vendor(id: UUID): NetworkVendorView = query("SELECT * FROM network_vendor WHERE tenant_id=? AND id=?",
     tenant, id, map=::networkVendor).singleOrNull() ?: throw NotFoundException("Vendor tidak ditemukan")
 internal fun B2BSql.ip(id: UUID): PublicIpView = query("$PUBLIC_IP_SELECT WHERE p.tenant_id=? AND p.id=?",

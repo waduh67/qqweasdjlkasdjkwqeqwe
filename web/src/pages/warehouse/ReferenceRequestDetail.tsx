@@ -29,6 +29,7 @@ export function ReferenceRequestDetail({ id, onBack, onChanged }: { readonly id:
           <p>Penerima: <strong>{request.technicianName ?? request.warehouseName}</strong> · Diajukan oleh {request.requesterName}</p>
           <p>{request.reason}</p><p className="muted">{request.requiresManagerApproval ? 'Memerlukan keputusan Manager setelah tinjauan Admin.' : 'Tinjauan Admin langsung menyetujui permintaan.'} Kebijakan saat pengajuan: revisi {request.policyRevision}.</p>
           <div className="row wrap">
+            {movable && request.kind === 'PROCUREMENT' && can('warehouse.request.receive') && <Link to={'/warehouse/purchases?requestId=' + request.id}>Catat pembelian dari request ini</Link>}
             {request.state === 'SUBMITTED' && can('warehouse.request.review') && <><Button variant="primary" onClick={() => setAction({ kind: 'REVIEW' })}>Tinjau jumlah</Button><Button onClick={() => setAction({ kind: 'REJECT' })}>Tolak permintaan</Button></>}
             {request.state === 'MANAGER_REVIEW' && can('warehouse.request.approve') && <><Button variant="primary" onClick={() => setAction({ kind: 'APPROVE' })}>Setujui permintaan</Button><Button onClick={() => setAction({ kind: 'REJECT' })}>Tolak permintaan</Button></>}
           </div>

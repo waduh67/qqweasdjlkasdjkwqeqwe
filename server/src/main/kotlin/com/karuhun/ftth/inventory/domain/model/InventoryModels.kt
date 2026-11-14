@@ -34,7 +34,7 @@ data class CustodyClaim(
     val locationId: UUID?,
 )
 
-enum class OwnerKind { WAREHOUSE, VEHICLE, TECHNICIAN, CUSTOMER, REPAIR, TRANSIT, LOST, DISPOSED }
+enum class OwnerKind { WAREHOUSE, VEHICLE, TECHNICIAN, CUSTOMER, EXTERNAL, REPAIR, TRANSIT, LOST, DISPOSED }
 
 data class SerializedAsset(
     val id: UUID,

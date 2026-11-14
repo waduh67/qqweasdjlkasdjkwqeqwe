@@ -6,7 +6,7 @@ import { tokenStore } from './client'
 
 const id = '11111111-1111-4111-8111-111111111111'
 const vendor = { id, name: 'Telkom', contact: 'NOC', notes: '', active: true, revision: 0 }
-const ip = { id, address: '157.15.122.100', subnet: '255.255.255.248', gateway: '157.15.122.99', vendorId: id, vendorName: 'Telkom', notes: '', revision: 0, clientId: null, clientName: null }
+const ip = { id, address: '157.15.122.100', subnet: '255.255.255.248', gateway: '157.15.122.99', vendorId: id, vendorName: 'Telkom', notes: '', revision: 0, clientId: null, clientName: null, usedBy: '', blockId: null, addressRole: 'HOST', probe: null }
 const setting = { name: 'Harper', address: 'Jl. Hotel', contact: 'PIC', technicianId: id, technicianName: 'NE', target: 4, active: true }
 const network = { details: emptyNetwork, publicIps: [ip], tunnelPasswordSet: true }
 const client = { id, revision: 0, createdMonth: '2026-10', current: { clientId: id, month: '2026-10', setting, counted: 0, remaining: 4, weeks: [] }, next: setting, network }

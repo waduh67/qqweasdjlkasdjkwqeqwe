@@ -73,6 +73,7 @@ class ReferenceWarehouseService(private val cutovers: InventoryTenantPolicyServi
     fun receive(input: ReferenceReceiptInput, key: String): WarehouseOperationReceipt = receive(input, key, "warehouse.stock.manage")
 
     internal fun receiveForRequest(input: ReferenceReceiptInput, key: String): WarehouseOperationReceipt = receive(input, key, "warehouse.request.receive")
+    internal fun receiveForWarranty(input: ReferenceReceiptInput, key: String): WarehouseOperationReceipt = receive(input, key, "warehouse.warranty.manage")
     internal fun receiveForCount(input: ReferenceReceiptInput, key: String, countId: UUID): WarehouseOperationReceipt =
         receive(input, key, "warehouse.count.manage", countId)
 

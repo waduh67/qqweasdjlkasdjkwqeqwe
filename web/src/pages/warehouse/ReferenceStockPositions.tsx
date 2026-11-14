@@ -20,8 +20,9 @@ export function ReferenceStockPositions({ skuId }: { readonly skuId: string }) {
     <div className="resource-field-grid">
       <TextField label="Cari posisi" placeholder="Nama barang, serial, atau MAC" value={search} maxLength={200} onChange={(_, data) => { setSearch(data.value); setPage(0) }} />
       <WarehousePicker optional label="Lokasi stok" load={referenceLocations} value={location} name={row => (row.name ?? row.code) + ' · ' + row.code} onChange={row => { setLocation(row); setPage(0) }} />
-      <SelectField label="Pemegang stok" value={holder ?? ''} onChange={(_, data) => { setHolder(data.value === 'WAREHOUSE' ? 'WAREHOUSE' : data.value === 'TECHNICIAN' ? 'TECHNICIAN' : data.value === 'VEHICLE' ? 'VEHICLE' : data.value === 'CUSTOMER' ? 'CUSTOMER' : undefined); setPage(0) }}>
+      <SelectField label="Pemegang stok" value={holder ?? ''} onChange={(_, data) => { setHolder(['WAREHOUSE', 'TECHNICIAN', 'VEHICLE', 'CUSTOMER', 'EXTERNAL', 'REPAIR', 'TRANSIT'].includes(data.value) ? data.value as ReferencePositionFilter['holderKind'] : undefined); setPage(0) }}>
         <option value="">Semua dalam akses Anda</option><option value="WAREHOUSE">Gudang</option><option value="TECHNICIAN">Teknisi</option><option value="VEHICLE">Kendaraan</option><option value="CUSTOMER">Pelanggan</option>
+        <option value="EXTERNAL">Client peminjam</option><option value="REPAIR">Vendor garansi</option><option value="TRANSIT">Dalam perjalanan</option>
       </SelectField>
     </div><Button onClick={result.reload}>Muat ulang posisi</Button>
     <WarehouseState {...result}>{data => <>
@@ -30,7 +31,7 @@ export function ReferenceStockPositions({ skuId }: { readonly skuId: string }) {
         { key: 'holder', header: 'Pemegang', cell: row => row.holderName, description: row => row.holderEmail },
         { key: 'quantity', header: 'Jumlah', cell: row => <WarehouseQuantity value={row.quantityBase} unit={row.baseUnit} /> },
         { key: 'serial', header: 'Serial / MAC', cell: row => row.serial ?? 'Tanpa serial', description: row => row.mac },
-        { key: 'status', header: 'Status', cell: row => row.status === 'AVAILABLE' ? 'Tersedia di gudang' : row.status === 'ISSUED' ? 'Di tangan teknisi' : row.status === 'LOST' ? 'Hilang' : row.status },
+        { key: 'status', header: 'Status', cell: row => row.status === 'AVAILABLE' ? 'Tersedia di gudang' : row.status === 'ISSUED' ? row.holderKind === 'EXTERNAL' ? 'Dipinjam client' : 'Di tangan teknisi' : row.status === 'LOST' ? 'Hilang' : row.status === 'QUARANTINE' ? 'Karantina' : row.status === 'IN_TRANSIT' ? 'Di vendor / perjalanan' : row.status },
       ]} /><WarehousePagination page={page} size={data.size} total={data.totalElements} onChange={setPage} />
     </>}</WarehouseState>
   </section>

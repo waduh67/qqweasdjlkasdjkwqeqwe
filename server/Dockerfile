@@ -6,7 +6,7 @@
 # ============================================================================
 
 # ---- Tahap build: kompilasi bootJar dengan Gradle wrapper ----
-FROM eclipse-temurin:21-jdk AS build
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk AS build
 WORKDIR /workspace
 COPY . .
 # Cache direktori Gradle antar-build. Pipeline wajib menuntaskan seluruh gate
@@ -23,6 +23,7 @@ RUN set -eu; \
 FROM eclipse-temurin:21-jre AS runtime
 WORKDIR /app
 RUN groupadd --system ftth && useradd --system --gid ftth --home /app ftth
+RUN apt-get update && apt-get install -y --no-install-recommends iputils-ping && rm -rf /var/lib/apt/lists/*
 COPY --from=build /workspace/app.jar /app/app.jar
 USER ftth
 EXPOSE 8080

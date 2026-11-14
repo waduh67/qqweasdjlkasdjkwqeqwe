@@ -5,7 +5,7 @@ import { parameters, query } from './transport'
 const root = '/api/v2/warehouse'
 export interface ReferencePositionFilter {
   page?: number; size?: number; search?: string; locationId?: string;
-  holderKind?: 'WAREHOUSE' | 'TECHNICIAN' | 'VEHICLE' | 'CUSTOMER'; availableOnly?: boolean;
+  holderKind?: 'WAREHOUSE' | 'TECHNICIAN' | 'VEHICLE' | 'CUSTOMER' | 'EXTERNAL' | 'REPAIR' | 'TRANSIT'; availableOnly?: boolean;
 }
 export const listReferencePositions = (skuId: string, filter: ReferencePositionFilter = {}) =>
   query(`${root}/stock/${uuid(skuId)}/positions${parameters({ ...filter, availableOnly: filter.availableOnly === undefined ? undefined : String(filter.availableOnly) })}`, pageOf(referencePosition))

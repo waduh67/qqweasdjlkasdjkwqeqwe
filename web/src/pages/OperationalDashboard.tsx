@@ -5,6 +5,7 @@ import { b2b } from '@/api/b2b'
 import { field } from '@/api/field'
 import { listReferenceWork } from '@/api/warehouse/reference'
 import { getRequestOverview, getStockOverview } from '@/api/warehouse/referenceOverview'
+import { WarehouseClientMetrics } from './warehouse/WarehouseClientMetrics'
 import { REQUEST_LABELS } from '@/api/warehouse/referenceRequests'
 import { WarehouseDataError } from '@/api/warehouse/codec'
 import { useAuth } from '@/auth/useAuth'
@@ -39,6 +40,7 @@ export function ReferenceWarehouseOverview({ title = true }: { title?: boolean }
   const result = useWarehouseQuery(load, scope)
   return <div className="stack">
     <PageHeader title={title ? 'Dashboard Gudang' : 'Gudang & Material'} subtitle="Permintaan dan stok yang perlu ditindaklanjuti pada akses gudang Anda." actions={<Button onClick={result.reload}>Segarkan</Button>} />
+    {['warehouse.request.view', 'warehouse.loan.view', 'warehouse.warranty.view'].some(hasPermission) && <WarehouseClientMetrics />}
     <WarehouseState {...result}>{data => <>
       {data.requests && <>
         <div className="operational-metrics">

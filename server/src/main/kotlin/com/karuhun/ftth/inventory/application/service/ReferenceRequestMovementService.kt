@@ -10,8 +10,8 @@ import java.util.UUID
 @Service
 @Transactional
 class ReferenceRequestMovementService(private val requests: ReferenceRequestService, private val store: ReferenceRequestStore,
-    private val stock: ReferenceWarehouseService) {
-    fun receive(id: UUID, input: ReferenceRequestReceipt, key: String): WarehouseOperationReceipt {
+    private val stock: ReferenceWarehouseService, private val purchases: com.karuhun.ftth.inventory.adapter.outbound.persistence.WarehouseClientStore) {
+    fun receive(id: UUID, input: ReferenceRequestReceipt, key: String, purchaseId: UUID? = null): WarehouseOperationReceipt {
         val access = requests.access(key)
         requests.permission(access.current, "warehouse.request.receive")
         requests.notes(input.notes)
@@ -26,6 +26,8 @@ class ReferenceRequestMovementService(private val requests: ReferenceRequestServ
         val quantity = positiveReceiptQuantity(input.quantityBase, line.baseUnit).quantityBase
         if (quantity > line.approvedBase.toLong() - line.receivedBase.toLong())
             masterFailure(WarehouseErrorCode.MALFORMED_REQUEST, "Penerimaan melebihi sisa persetujuan")
+        if (quantity > line.approvedBase.toLong() - line.receivedBase.toLong() - purchases.reservedPurchaseBase(id,line.id,purchaseId))
+            masterFailure(WarehouseErrorCode.MALFORMED_REQUEST, "Jumlah telah dipesan. Terima melalui detail pembelian terkait")
         val sku = requests.sku(line.skuId ?: masterFailure(WarehouseErrorCode.MALFORMED_REQUEST), line.baseUnit)
         val movement = stock.receiveForRequest(ReferenceReceiptInput(input.warehouseId, listOf(ReceiptLineInput(sku.id, input.quantityBase,
             input.serials, input.lotCode, input.conversion, input.cost)), input.notes, input.supplierId, input.reference), movementKey(prior, "RECEIVE"))
