@@ -23,7 +23,8 @@ RUN set -eu; \
 FROM eclipse-temurin:21-jre AS runtime
 WORKDIR /app
 RUN groupadd --system ftth && useradd --system --gid ftth --home /app ftth
-RUN apt-get update && apt-get install -y --no-install-recommends iputils-ping && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends iputils-ping libcap2-bin \
+    && setcap cap_net_raw+ep /usr/bin/ping && rm -rf /var/lib/apt/lists/*
 COPY --from=build /workspace/app.jar /app/app.jar
 USER ftth
 EXPOSE 8080
